@@ -45,7 +45,7 @@ class CoreInterface {
 
   bool isInitialized() {
     try {
-      bgClient; // touch it
+      final CoreClient _ = bgClient;
       return true;
     } catch (_) {
       return false;

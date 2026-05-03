@@ -1,11 +1,7 @@
-library json_editor_flutter;
-
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
-import 'dart:ui';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -492,7 +488,7 @@ class _JsonEditorState extends State<JsonEditor> {
 
   Map<String, bool> getExpandedParents() {
     final map = <String, bool>{};
-    for (var key in widget.expandedObjects) {
+    for (final key in widget.expandedObjects) {
       if (key is List) {
         final newExpandList = ["config", ...key];
         for (int i = newExpandList.length - 1; i > 0; i--) {
@@ -532,7 +528,7 @@ class _JsonEditorState extends State<JsonEditor> {
     });
   }
 
-  void copyData() async {
+  Future<void> copyData() async {
     await Clipboard.setData(ClipboardData(text: const JsonEncoder.withIndent(' ').convert(_data)));
   }
 
@@ -548,10 +544,10 @@ class _JsonEditorState extends State<JsonEditor> {
     return needsRebuilding;
   }
 
-  void findMatchingKeys(data, String text, List nestedParents) {
+  void findMatchingKeys(dynamic data, String text, List nestedParents) {
     if (data is Map) {
       final keys = data.keys.toList();
-      for (var key in keys) {
+      for (final key in keys) {
         final keyName = key.toString();
         if (keyName.toLowerCase().contains(text) ||
             (data[key] is String && data[key].toString().toLowerCase().contains(text))) {
@@ -580,7 +576,7 @@ class _JsonEditorState extends State<JsonEditor> {
   void onSearch(String text) {
     if (_searchTimer?.isActive ?? false) _searchTimer?.cancel();
 
-    _searchTimer = Timer(widget.searchDuration, () async {
+    _searchTimer = Timer(widget.searchDuration, () {
       _matchedKeys.clear();
       _matchedKeysLocation.clear();
       _focusedKey = null;
@@ -607,7 +603,7 @@ class _JsonEditorState extends State<JsonEditor> {
     void calculateOffset(data, List parents, List toFind) {
       if (keyFound) return;
       if (data is Map) {
-        for (var entry in data.entries) {
+        for (final entry in data.entries) {
           if (keyFound) return;
           offset++;
           final newList = [...parents, entry.key];
@@ -670,9 +666,9 @@ class _JsonEditorState extends State<JsonEditor> {
     scrollTo(_focusedKey!);
   }
 
-  void expandAllObjects(data, List expandedList) {
+  void expandAllObjects(dynamic data, List expandedList) {
     if (data is Map) {
-      for (var entry in data.entries) {
+      for (final entry in data.entries) {
         if (entry.value is Map || entry.value is List) {
           final newList = [...expandedList, entry.key];
           _expandedObjects[newList.toString()] = true;
@@ -847,7 +843,6 @@ class _JsonEditorState extends State<JsonEditor> {
                     controller: _controller,
                     onChanged: parseData,
                     maxLines: null,
-                    minLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
                     decoration: const InputDecoration(
@@ -882,7 +877,7 @@ class _Holder extends StatefulWidget {
   final dynamic data;
   final double paddingLeft;
   final VoidCallback onChanged;
-  final dynamic parentObject;
+  final Object parentObject;
   final StateSetter setState;
   final Map<String, bool> matchedKeys;
   final List allParents;
@@ -895,7 +890,7 @@ class _Holder extends StatefulWidget {
     //     ? '.${parentObject['type']}'
     //     : '';
 
-    return '$basePath';
+    return basePath;
   }
 
   @override
@@ -918,46 +913,56 @@ class _HolderState extends State<_Holder> {
 
   void onSelected(_OptionItems selectedItem) {
     if (selectedItem == "delete") {
-      if (widget.parentObject is Map) {
-        widget.parentObject.remove(widget.keyName);
-      } else {
-        widget.parentObject.removeAt(widget.keyName);
+      final parentObject = widget.parentObject;
+      if (parentObject is Map) {
+        parentObject.remove(widget.keyName);
+      } else if (parentObject is List) {
+        parentObject.removeAt(widget.keyName as int);
       }
 
       widget.setState(() {});
     } else if (selectedItem == "map") {
-      if (widget.data is Map) {
-        widget.data[_newKey] = Map<String, dynamic>();
-      } else {
-        widget.data.add(Map<String, dynamic>());
+      final data = widget.data;
+      if (data is Map) {
+        data[_newKey] = <String, dynamic>{};
+      } else if (data is List) {
+        data.add(<String, dynamic>{});
       }
 
       setState(() {});
       widget.onChanged();
     } else if (exampleSchemaValues.containsKey(selectedItem.split("___")[0])) {
       final jsonItem = exampleSchemaValues[selectedItem.split("___")[0]]![selectedItem.split("___")[1]]!;
-      for (final key in jsonItem.keys) {
-        widget.data[key] = jsonDecode(jsonEncode(jsonItem[key]));
+      final data = widget.data;
+      if (data is Map) {
+        for (final key in jsonItem.keys) {
+          data[key] = jsonDecode(jsonEncode(jsonItem[key]));
+        }
       }
 
       setState(() {});
     } else if (protocolSchemaValues.containsKey(selectedItem)) {
       final jsonItem = protocolSchemaValues[selectedItem]!;
-      widget.data.add(jsonDecode(jsonEncode(jsonItem)));
+      final data = widget.data;
+      if (data is List) {
+        data.add(jsonDecode(jsonEncode(jsonItem)));
+      }
       setState(() {});
     } else if (selectedItem == "list") {
-      if (widget.data is Map) {
-        widget.data[_newKey] = [];
-      } else {
-        widget.data.add([]);
+      final data = widget.data;
+      if (data is Map) {
+        data[_newKey] = [];
+      } else if (data is List) {
+        data.add([]);
       }
 
       setState(() {});
     } else {
-      if (widget.data is Map) {
-        widget.data[_newKey] = _newDataValue[selectedItem];
-      } else {
-        widget.data.add(_newDataValue[selectedItem]);
+      final data = widget.data;
+      if (data is Map) {
+        data[_newKey] = _newDataValue[selectedItem];
+      } else if (data is List) {
+        data.add(_newDataValue[selectedItem]);
       }
 
       setState(() {});
@@ -967,15 +972,22 @@ class _HolderState extends State<_Holder> {
   }
 
   void onKeyChanged(Object key) {
-    final val = widget.parentObject.remove(widget.keyName);
-    widget.parentObject[key] = val;
+    final parentObject = widget.parentObject;
+    if (parentObject is! Map) return;
+    final val = parentObject.remove(widget.keyName);
+    parentObject[key] = val;
 
     widget.onChanged();
     widget.setState(() {});
   }
 
   void onValueChanged(Object value) {
-    widget.parentObject[widget.keyName] = value;
+    final parentObject = widget.parentObject;
+    if (parentObject is Map) {
+      parentObject[widget.keyName] = value;
+    } else if (parentObject is List) {
+      parentObject[widget.keyName as int] = value;
+    }
 
     widget.onChanged();
   }
@@ -993,7 +1005,7 @@ class _HolderState extends State<_Holder> {
     var res = "{";
     if (data is Map<String, dynamic>) {
       if (widget.expandedObjects[widget.allParents.toString()] ?? false) return "";
-      final content = data as Map<String, dynamic>;
+      final content = data;
       //res += "${data.length}";
       if (content["type"] != null) {
         res += "${content["type"]}";
@@ -1005,10 +1017,9 @@ class _HolderState extends State<_Holder> {
         res += " [${d.substring(0, min(20, d.length))}...]";
       }
     } else if (data is List) {
-      final content = data as List;
-      res += "${content.length}";
+      res += "${data.length}";
     }
-    return res + "}";
+    return "$res}";
   }
 
   @override
@@ -1017,14 +1028,14 @@ class _HolderState extends State<_Holder> {
       final mapWidget = <Widget>[];
       final widgetData = widget.data as Map<String, dynamic>;
       final List<String> keys = widgetData.keys.toList();
-      for (var key in keys) {
+      for (final key in keys) {
         mapWidget.add(
           _Holder(
             key: Key(key),
-            data: widget.data[key],
+            data: widgetData[key],
             keyName: key,
             onChanged: widget.onChanged,
-            parentObject: widget.data,
+            parentObject: widgetData,
             paddingLeft: widget.paddingLeft + _space,
             setState: setState,
             matchedKeys: widget.matchedKeys,
@@ -1094,7 +1105,7 @@ class _HolderState extends State<_Holder> {
             keyName: i,
             data: widgetData[i],
             onChanged: widget.onChanged,
-            parentObject: widget.data,
+            parentObject: widgetData,
             paddingLeft: widget.paddingLeft + _space,
             setState: setState,
             matchedKeys: widget.matchedKeys,
@@ -1133,7 +1144,7 @@ class _HolderState extends State<_Holder> {
                     isHighlighted: widget.matchedKeys["${widget.keyName}"] == true,
                   ),
                   _textSpacer,
-                  Text("[${widget.data.length}]", style: _textStyle),
+                  Text("[${widgetData.length}]", style: _textStyle),
                 ] else
                   InkWell(
                     hoverColor: Colors.transparent,
@@ -1144,7 +1155,7 @@ class _HolderState extends State<_Holder> {
                       children: [
                         wrapWithColoredBox(Text("${widget.keyName}", style: _textStyle), "${widget.keyName}"),
                         _textSpacer,
-                        Text("[${widget.data.length}]", style: _textStyle),
+                        Text("[${widgetData.length}]", style: _textStyle),
                       ],
                     ),
                   ),
@@ -1310,7 +1321,6 @@ class _ReplaceTextWithFieldState extends State<_ReplaceTextWithField> {
               hint: Text('Select ${widget.keyPath.replaceAll("config.outbounds", "")}'),
               value: _text,
               icon: const Icon(Icons.arrow_downward),
-              iconSize: 24,
               elevation: 16,
               underline: Container(height: 2),
               onChanged: (String? newValue) {
@@ -1451,7 +1461,7 @@ class _Options<T> extends StatelessWidget {
                     PopupMenuItem<_OptionItems>(
                       height: _popupMenuHeight,
                       padding: const EdgeInsets.only(left: _popupMenuItemPadding),
-                      value: key + "___" + key2,
+                      value: "${key}___$key2",
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1562,7 +1572,7 @@ class _PopupMenuWidget extends PopupMenuEntry<Never> {
   final Widget child;
 
   @override
-  final double height = _popupMenuHeight;
+  double get height => _popupMenuHeight;
 
   @override
   bool represents(_) => false;
@@ -1638,51 +1648,51 @@ class _SearchField extends StatelessWidget {
 List<String> _getSpace(int count) {
   if (count == 0) return ['', '  '];
 
-  String space = '';
-  for (int i = 0; i < count; i++) {
-    space += '  ';
-  }
+  final space = '  ' * count;
   return [space, '$space  '];
 }
 
-String _stringifyData(data, int spacing, [bool isLast = false]) {
-  String str = '';
+String _stringifyData(dynamic data, int spacing, [bool isLast = false]) {
   final spaceList = _getSpace(spacing);
   final objectSpace = spaceList[0];
   final dataSpace = spaceList[1];
+  final buffer = StringBuffer();
 
   if (data is Map) {
-    str += '$objectSpace{';
-    str += '\n';
+    buffer
+      ..write(objectSpace)
+      ..writeln('{');
     final keys = data.keys.toList();
     for (int i = 0; i < keys.length; i++) {
-      str += '$dataSpace"${keys[i]}": ${_stringifyData(data[keys[i]], spacing + 1, i == keys.length - 1)}';
-      str += '\n';
+      buffer
+        ..write(dataSpace)
+        ..write('"${keys[i]}": ')
+        ..write(_stringifyData(data[keys[i]], spacing + 1, i == keys.length - 1))
+        ..writeln();
     }
-    str += '$objectSpace}';
-    if (!isLast) str += ',';
+    buffer.write('$objectSpace}');
   } else if (data is List) {
-    str += '$objectSpace[';
-    str += '\n';
+    buffer
+      ..write(objectSpace)
+      ..writeln('[');
     for (int i = 0; i < data.length; i++) {
       final item = data[i];
       if (item is Map || item is List) {
-        str += _stringifyData(item, spacing + 1, i == data.length - 1);
+        buffer.write(_stringifyData(item, spacing + 1, i == data.length - 1));
       } else {
-        str += '$dataSpace${_stringifyData(item, spacing + 1, i == data.length - 1)}';
+        buffer
+          ..write(dataSpace)
+          ..write(_stringifyData(item, spacing + 1, i == data.length - 1));
       }
-      str += '\n';
+      buffer.writeln();
     }
-    str += '$objectSpace]';
-    if (!isLast) str += ',';
+    buffer.write('$objectSpace]');
+  } else if (data is String) {
+    buffer.write('"$data"');
   } else {
-    if (data is String) {
-      str = '"$data"';
-    } else {
-      str = '$data';
-    }
-    if (!isLast) str += ',';
+    buffer.write(data);
   }
 
-  return str;
+  if (!isLast) buffer.write(',');
+  return buffer.toString();
 }

@@ -7,12 +7,14 @@ class AppTheme {
   AppTheme(this.mode, this.fontFamily);
   final AppThemeMode mode;
   final String fontFamily;
+  static const Color _brandSeedColor = Colors.white;
 
   ThemeData lightTheme(ColorScheme? lightColorScheme) {
-    final ColorScheme scheme = lightColorScheme ?? ColorScheme.fromSeed(seedColor: const Color(0xFF293CA0));
+    final ColorScheme scheme = lightColorScheme ?? ColorScheme.fromSeed(seedColor: _brandSeedColor);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      scaffoldBackgroundColor: Colors.white,
       fontFamily: fontFamily,
       extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
     );
@@ -20,11 +22,11 @@ class AppTheme {
 
   ThemeData darkTheme(ColorScheme? darkColorScheme) {
     final ColorScheme scheme =
-        darkColorScheme ?? ColorScheme.fromSeed(seedColor: const Color(0xFF293CA0), brightness: Brightness.dark);
+        darkColorScheme ?? ColorScheme.fromSeed(seedColor: _brandSeedColor, brightness: Brightness.dark);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : scheme.background,
+      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : scheme.surface,
       fontFamily: fontFamily,
       extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
     );

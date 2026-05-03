@@ -16,7 +16,6 @@ import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/common/general_pref_tiles.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/settings/widget/preference_tile.dart';
-import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -80,18 +79,13 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                           ? IntroConst.maxwidth
                           : constraints.maxWidth;
                       final size = width * 0.4;
-                      return Assets.images.logo.svg(width: size, height: size);
+                      return Image.asset('assets/logo.png', width: size, height: size);
                     },
                   ),
                   const Gap(16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      t.intro.banner,
-                      style: theme.textTheme.bodyLarge,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Text(t.intro.banner, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
                   ),
                   const Gap(24),
                   const LocalePrefTile(),

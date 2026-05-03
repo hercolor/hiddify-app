@@ -147,6 +147,11 @@ class SettingsPage extends HookConsumerWidget {
             namedLocation: context.namedLocation('general'),
           ),
           SettingsSection(
+            title: '用户中心',
+            icon: Icons.account_circle_rounded,
+            namedLocation: context.namedLocation('userProfile'),
+          ),
+          SettingsSection(
             title: t.pages.settings.routing.title,
             icon: Icons.route_rounded,
             namedLocation: context.namedLocation('routeOptions'),

@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "4376加速",
     "start": "Start",
     "version": "Version",
     "ok": "OK",
@@ -86,14 +86,14 @@
     }
   },
   "intro": {
-    "banner": "All you need for an unrestricted internet",
+    "banner": "4376加速 provides a stable, fast, and simple connection experience.",
     "termsAndPolicyCaution(rich)": "By continuing you agree to ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "Made with ❤️ by Hiddify - ${tap_source(Open Source)} (${tap_license(License)})"
+    "info(rich)": "4376加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
   },
   "pages": {
     "home": {
-      "title": "Home",
-      "quickSettings": "Quick settings"
+      "title": "4376加速",
+      "quickSettings": "Connection settings"
     },
     "proxies": {
       "title": "Proxies",
@@ -121,11 +121,11 @@
     },
     "profiles": {
       "title": "Profiles",
-      "add": "Add profile",
+      "add": "Import subscription",
       "update": "Update profile",
-      "viewAllProfiles": "View all profiles",
-      "activeProfileName": "Active profile name: \"${name}\".",
-      "nonActiveProfileName": "Select \"${name}\" as active profile",
+      "viewAllProfiles": "View all subscriptions",
+      "activeProfileName": "Active subscription: \"${name}\".",
+      "nonActiveProfileName": "Select \"${name}\" as active subscription",
       "freeSubNotFound": "No free subscription was found",
       "freeSubNotFoundForRegion": "No free subscription was found for \"${region}\" region.",
       "failedToLoad": "Failed to load",
@@ -173,13 +173,13 @@
       "shareAppLogs": "Share app logs"
     },
     "about": {
-      "title": "About",
+      "title": "About 4376加速",
       "notAvailableMsg": "Already using the latest version",
       "checkForUpdate": "Check for update",
       "openWorkingDir": "Open working directory",
-      "sourceCode": "Source code",
-      "telegramChannel": "Telegram channel",
-      "termsAndConditions": "Terms and conditions",
+      "sourceCode": "Official site",
+      "telegramChannel": "Contact support",
+      "termsAndConditions": "Terms of service",
       "privacyPolicy": "Privacy policy"
     },
     "settings": {
@@ -559,11 +559,11 @@
       "disable": "Don't show again"
     },
     "noActiveProfile": {
-      "title": "Choose a profile",
-      "msg": "Let's get started by adding a connection profile that includes your VPN connection details.\n\nDon’t have a VPN server yet? No worries—just follow the tutorial below to set one up quickly and for free.",
+      "title": "Import subscription",
+      "msg": "Welcome to 4376加速. Import your subscription link first, then use one-click connect.\n\nIf you do not have a subscription yet, open the user center or contact support.",
       "helpBtn": {
-        "label": "Show me how",
-        "url": "https://hiddify.com/manager/"
+        "label": "Open user center",
+        "url": "https://api.y88.pro"
       }
     },
     "unknownDomainsWarning": {
@@ -599,14 +599,14 @@
     }
   },
   "connection": {
-    "tapToConnect": "Tap to connect",
-    "connect": "Connect",
-    "connecting": "Connecting...",
-    "connected": "Connected",
-    "disconnect": "Disconnect",
-    "disconnecting": "Disconnecting...",
-    "reconnect": "Reconnect",
-    "reconnectMsg": "Reconnecting for taking into account the changes...",
+    "tapToConnect": "Tap to accelerate",
+    "connect": "Accelerate",
+    "connecting": "Accelerating...",
+    "connected": "Accelerated",
+    "disconnect": "Stop acceleration",
+    "disconnecting": "Stopping...",
+    "reconnect": "Accelerate again",
+    "reconnectMsg": "Accelerating again to apply changes...",
     "secure": "Secured by WARP"
   },
   "errors": {

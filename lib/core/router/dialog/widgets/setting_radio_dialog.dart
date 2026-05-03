@@ -35,16 +35,16 @@ class SettingRadioDialog<T> extends ConsumerWidget {
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: values
-                .map(
-                  (e) => RadioListTile<T>(
-                    title: Text(textWithTranslation(e)),
-                    value: e,
-                    groupValue: value,
-                    onChanged: (_) => context.pop(e),
-                  ),
-                )
-                .toList(),
+            children: [
+              RadioGroup<T>(
+                groupValue: value,
+                onChanged: context.pop,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: values.map((e) => RadioListTile<T>(title: Text(textWithTranslation(e)), value: e)).toList(),
+                ),
+              ),
+            ],
           ),
         ),
       ),

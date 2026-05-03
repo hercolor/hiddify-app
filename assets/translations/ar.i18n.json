@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "4376加速",
     "start": "ابدأ",
     "version": "الإصدار",
     "ok": "موافق",
@@ -92,9 +92,9 @@
     }
   },
   "intro": {
-    "banner": "كل ما تحتاجه لإنترنت بلا قيود",
+    "banner": "4376加速 provides a stable, fast, and simple connection experience.",
     "termsAndPolicyCaution(rich)": "بالاستمرار، أنت توافق على ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "صُنع بـ ❤️ بواسطة Hiddify - ${tap_source(مفتوح المصدر)} (${tap_license(الرخصة)})"
+    "info(rich)": "4376加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
   },
   "pages": {
     "home": {
@@ -568,7 +568,7 @@
       "msg": "للبدء، قم بإضافة ملف اتصال يحتوي على تفاصيل اتصال VPN الخاصة بك.\n\nأليس لديك خادم VPN بعد؟ لا تقلق، اتبع الدليل أدناه لإعداد واحد بسرعة ومجانًا.",
       "helpBtn": {
         "label": "أرني كيف",
-        "url": "https://hiddify.com/manager/"
+        "url": "https://api.y88.pro"
       }
     },
     "unknownDomainsWarning": {

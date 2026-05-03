@@ -5,12 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/localization/locale_extensions.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/theme/app_theme.dart';
@@ -93,13 +91,13 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                   title: Constants.appName,
                   builder: (context, child) {
                     final theme = Theme.of(context);
-                    child = UpgradeAlert(
+                    final effectiveChild = UpgradeAlert(
                       upgrader: upgrader,
                       navigatorKey: router.routerDelegate.navigatorKey,
                       child: child ?? const SizedBox(),
                     );
                     if (kDebugMode && _debugAccessibility) {
-                      return AccessibilityTools(checkFontOverflows: true, child: child);
+                      return AccessibilityTools(checkFontOverflows: true, child: effectiveChild);
                     }
                     return AnnotatedRegion<SystemUiOverlayStyle>(
                       value: SystemUiOverlayStyle(
@@ -109,7 +107,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                             ? Brightness.light
                             : Brightness.dark,
                       ),
-                      child: child,
+                      child: effectiveChild,
                     );
                   },
                 );

@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "4376加速",
     "start": "Mulai",
     "version": "Versi",
     "ok": "Oke",
@@ -86,9 +86,9 @@
     }
   },
   "intro": {
-    "banner": "Semua yang Anda butuhkan untuk internet tanpa batasan",
+    "banner": "4376加速 provides a stable, fast, and simple connection experience.",
     "termsAndPolicyCaution(rich)": "Dengan melanjutkan, Anda menyetujui ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "Dibuat dengan ❤️ oleh Hiddify - ${tap_source(Sumber Terbuka)} (${tap_license(Lisensi)})"
+    "info(rich)": "4376加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
   },
   "pages": {
     "home": {
@@ -562,7 +562,7 @@
       "msg": "Mari kita mulai dengan menambahkan profil koneksi yang berisi detail koneksi VPN Anda.\n\nBelum punya server VPN? Jangan khawatir, ikuti tutorial di bawah ini untuk mengaturnya dengan cepat dan gratis.",
       "helpBtn": {
         "label": "Tunjukkan caranya",
-        "url": "https://hiddify.com/manager/"
+        "url": "https://api.y88.pro"
       }
     },
     "unknownDomainsWarning": {

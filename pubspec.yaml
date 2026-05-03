@@ -34,6 +34,7 @@ dependencies:
   drift: ^2.21.0
   drift_flutter: ^0.2.1
   shared_preferences: ^2.5.2
+  flutter_secure_storage: ^10.0.0
   # shared_preferences_android: ^2.4.8
   dio: ^5.4.1
   ffi: ^2.1.2
@@ -148,6 +149,8 @@ dev_dependencies:
   slang_build_runner: ^4.4.0
   flutter_gen_runner: ^5.4.0
   dart_mappable_builder: ^4.2.1
+  flutter_test:
+    sdk: flutter
   # protoc_builder: ^0.4.1
   # google_protobuf: ^3.20.1;
 
@@ -156,6 +159,8 @@ flutter:
   assets:
     # - assets/core/geoip.db
     # - assets/core/geosite.db
+    - assets/logo.png
+    - assets/config/app_config.json
     - assets/images/logo.svg
     - assets/images/tray_icon.ico
     - assets/images/tray_icon.png
@@ -188,11 +193,11 @@ flutter_gen:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: assets/images/source/ic_launcher_splash.png
+  image: assets/logo.png
   android_gravity: center
   android_12:
     color: "#ffffff"
-    image: assets/images/source/ic_launcher_foreground.png
+    image: assets/logo.png
 
 ffigen:
   name: "HiddifyCoreNativeLibrary"

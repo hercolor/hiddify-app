@@ -14,7 +14,7 @@ class WindowsProtocolHandler extends ProtocolHandler {
 
     final prefix = _regPrefix(scheme);
     final capitalized = scheme[0].toUpperCase() + scheme.substring(1);
-    final args = getArguments(arguments).map((a) => _sanitize(a));
+    final args = getArguments(arguments).map(_sanitize);
     final cmd = '${executable ?? Platform.resolvedExecutable} ${args.join(' ')}';
 
     _regCreateStringKey(_hive, prefix, '', 'URL:$capitalized');
@@ -50,7 +50,7 @@ class WindowsProtocolHandler extends ProtocolHandler {
   }
 
   String _sanitize(String value) {
-    value = value.replaceAll(r'%s', '%1').replaceAll(r'"', '\\"');
-    return '"$value"';
+    final sanitized = value.replaceAll('%s', '%1').replaceAll('"', '\\"');
+    return '"$sanitized"';
   }
 }

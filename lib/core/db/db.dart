@@ -1,3 +1,5 @@
+// ignore_for_file: experimental_member_use
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:hiddify/core/db/converters/duration_converter.dart';

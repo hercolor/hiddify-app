@@ -10,7 +10,7 @@ import 'package:hiddify/utils/custom_loggers.dart';
 class DioHttpClient with InfraLogger {
   final Map<String, Dio> _dio = {};
   DioHttpClient({required Duration timeout, required this.userAgent, required bool debug}) {
-    for (var mode in ["proxy", "direct", "both"]) {
+    for (final mode in ["proxy", "direct", "both"]) {
       _dio[mode] = Dio(
         BaseOptions(
           connectTimeout: timeout,
@@ -88,6 +88,7 @@ class DioHttpClient with InfraLogger {
     CancelToken? cancelToken,
     String? userAgent,
     ({String username, String password})? credentials,
+    Map<String, dynamic>? headers,
     bool proxyOnly = false,
   }) async {
     final mode = proxyOnly
@@ -100,7 +101,31 @@ class DioHttpClient with InfraLogger {
     return dio.get<T>(
       url,
       cancelToken: cancelToken,
-      options: _options(url, userAgent: userAgent, credentials: credentials),
+      options: _options(url, userAgent: userAgent, credentials: credentials, headers: headers),
+    );
+  }
+
+  Future<Response<T>> post<T>(
+    String url, {
+    Object? data,
+    CancelToken? cancelToken,
+    String? userAgent,
+    ({String username, String password})? credentials,
+    Map<String, dynamic>? headers,
+    bool proxyOnly = false,
+  }) async {
+    final mode = proxyOnly
+        ? "proxy"
+        : await isPortOpen("127.0.0.1", port)
+        ? "both"
+        : "direct";
+    final dio = _dio[mode]!;
+
+    return dio.post<T>(
+      url,
+      data: data,
+      cancelToken: cancelToken,
+      options: _options(url, userAgent: userAgent, credentials: credentials, headers: headers),
     );
   }
 
@@ -110,6 +135,7 @@ class DioHttpClient with InfraLogger {
     CancelToken? cancelToken,
     String? userAgent,
     ({String username, String password})? credentials,
+    Map<String, dynamic>? headers,
     bool proxyOnly = false,
   }) async {
     final mode = proxyOnly
@@ -122,11 +148,16 @@ class DioHttpClient with InfraLogger {
       url,
       path,
       cancelToken: cancelToken,
-      options: _options(url, userAgent: userAgent, credentials: credentials),
+      options: _options(url, userAgent: userAgent, credentials: credentials, headers: headers),
     );
   }
 
-  Options _options(String url, {String? userAgent, ({String username, String password})? credentials}) {
+  Options _options(
+    String url, {
+    String? userAgent,
+    ({String username, String password})? credentials,
+    Map<String, dynamic>? headers,
+  }) {
     final uri = Uri.parse(url);
 
     String? userInfo;
@@ -143,6 +174,7 @@ class DioHttpClient with InfraLogger {
 
     return Options(
       headers: {
+        if (headers != null) ...headers,
         if (userAgent != null) "User-Agent": userAgent,
         if (basicAuth != null) "authorization": basicAuth,
         // "Accept": "application/json",

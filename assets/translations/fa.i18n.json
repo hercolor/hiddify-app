@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "هیدیفای",
+    "appTitle": "4376加速",
     "start": "شروع",
     "version": "نسخه",
     "ok": "باشه",
@@ -86,9 +86,9 @@
     }
   },
   "intro": {
-    "banner": "هرآنچه برای اینترنت بدون محدودیت نیاز دارید",
+    "banner": "4376加速 provides a stable, fast, and simple connection experience.",
     "termsAndPolicyCaution(rich)": "با ادامه، شما با ${tap(@:pages.about.termsAndConditions)} موافقت می‌کنید",
-    "info(rich)": "ساخته شده با ❤️ توسط هیدیفای - ${tap_source(متن‌باز)} (${tap_license(مجوز)})"
+    "info(rich)": "4376加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
   },
   "pages": {
     "home": {
@@ -562,7 +562,7 @@
       "msg": "بیایید با افزودن یک پروفایل اتصال که شامل جزئیات اتصال VPN شماست، شروع کنیم.\n\nهنوز سرور VPN ندارید؟ نگران نباشید، با دنبال کردن راهنمای زیر می‌توانید به سرعت و رایگان یکی برای خودتان بسازید.",
       "helpBtn": {
         "label": "راهنمایی کن",
-        "url": "https://hiddify.com/manager/"
+        "url": "https://api.y88.pro"
       }
     },
     "unknownDomainsWarning": {

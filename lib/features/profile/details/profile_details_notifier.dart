@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
@@ -55,7 +54,7 @@ class ProfileDetailsNotifier extends _$ProfileDetailsNotifier with AppLogger {
       } else {
         // print('No outbounds found in the config');
       }
-      final endpoints = jsonObject['endpoints'] as List? ?? [];
+      final endpoints = jsonObject is Map<String, dynamic> ? jsonObject['endpoints'] as List? ?? [] : [];
       profContent = '{"outbounds": ${json.encode(outbounds)},"endpoints":${json.encode(endpoints)} }';
       loggy.info(profContent);
     } catch (e, st) {

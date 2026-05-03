@@ -14,10 +14,7 @@ import 'package:hiddify/hiddifycore/generated/v2/hello/hello_service.pbgrpc.dart
 import 'package:hiddify/singbox/model/core_status.dart';
 
 import 'package:hiddify/utils/utils.dart';
-import 'package:loggy/loggy.dart';
 import 'package:rxdart/rxdart.dart';
-
-final _logger = Loggy('FFIHiddifyCoreService');
 
 class CoreInterfaceMobile extends CoreInterface with InfraLogger {
   static const channelPrefix = "com.hiddify.app";
@@ -138,7 +135,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
     }
     loggy.info("Waiting for starting core finished");
 
-    if (!await waitUntilPort(portBack, true, null, maxTry: 10)) {
+    if (!await waitUntilPort(portBack, true, null)) {
       await stopMethodChannel();
       return const CoreStatus.stopped(alert: CoreAlert.startService, message: "starting background core...");
     }
@@ -148,7 +145,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
   @override
   Future<bool> stop() async {
     await stopMethodChannel();
-    if (!await waitUntilPort(portBack, false, null, maxTry: 10)) {
+    if (!await waitUntilPort(portBack, false, null)) {
       return false;
     }
 
@@ -156,7 +153,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
     return true;
   }
 
-  Future stopMethodChannel() async {
+  Future<void> stopMethodChannel() async {
     await methodChannel.invokeMethod("stop");
   }
 
@@ -185,7 +182,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
 Future<bool> waitUntilPort(
   int portNumber,
   bool isOpen,
-  Future Function()? callFunctionAfterEachFail, {
+  Future<void> Function()? callFunctionAfterEachFail, {
   int maxTry = 10,
 }) async {
   for (var i = 0; i < maxTry; i++) {

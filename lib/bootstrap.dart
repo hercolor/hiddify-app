@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +16,6 @@ import 'package:hiddify/core/preferences/preferences_migration.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/features/app/widget/app.dart';
 import 'package:hiddify/features/auto_start/notifier/auto_start_notifier.dart';
-
 import 'package:hiddify/features/log/data/log_data_providers.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
@@ -39,7 +37,10 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
 
   final stopWatch = Stopwatch()..start();
 
-  final container = ProviderContainer(overrides: [environmentProvider.overrideWithValue(env)]);
+  final container = ProviderContainer(
+    overrides: [environmentProvider.overrideWithValue(env)],
+    observers: [RiverpodObserver()],
+  );
 
   await _init("directories", () => container.read(appDirectoriesProvider.future));
   LoggerController.init(container.read(logPathResolverProvider).appFile().path);
@@ -111,9 +112,8 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   stopWatch.stop();
 
   runApp(
-    ProviderScope(
-      parent: container,
-      observers: [RiverpodObserver()],
+    UncontrolledProviderScope(
+      container: container,
       child: SentryUserInteractionWidget(child: const App()),
     ),
   );

@@ -9,7 +9,6 @@ import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/profile/widget/profile_tile.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_card.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
-import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
@@ -34,7 +33,7 @@ class HomePage extends HookConsumerWidget {
         //     : null,
         title: Row(
           children: [
-            Assets.images.logo.svg(height: 24),
+            Image.asset('assets/logo.png', height: 32),
             const Gap(8),
             Text.rich(
               TextSpan(

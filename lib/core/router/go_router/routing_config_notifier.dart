@@ -7,6 +7,7 @@ import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.
 import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
 import 'package:hiddify/features/about/widget/about_page.dart';
+import 'package:hiddify/features/auth/widget/user_profile_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/log/overview/logs_page.dart';
@@ -79,10 +80,11 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
         if (!introCompleted) {
           return url != null ? '/intro?url=$url' : '/intro';
         } else if (isIntro) {
-          if (url != null)
+          if (url != null) {
             WidgetsBinding.instance.addPostFrameCallback(
               (_) => ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile(url: url),
             );
+          }
           return '/home';
         } else if (url != null) {
           WidgetsBinding.instance.addPostFrameCallback(
@@ -167,6 +169,12 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                       path: '/general',
                       pageBuilder: (_, state) =>
                           customTransition(TransitionType.slide, state.pageKey, const GeneralPage()),
+                    ),
+                    GoRoute(
+                      name: 'userProfile',
+                      path: '/user-profile',
+                      pageBuilder: (_, state) =>
+                          customTransition(TransitionType.slide, state.pageKey, const UserProfilePage()),
                     ),
                     GoRoute(
                       name: 'routeOptions',
