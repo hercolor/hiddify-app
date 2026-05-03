@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:hiddify/core/haptic/haptic_service.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
@@ -145,6 +146,12 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       ConnectionFailure err,
     ) async {
       loggy.warning("error connecting", err);
+      if (err is MissingVpnPermission) {
+        ref.read(inAppNotificationControllerProvider).showErrorToast('需要 VPN 权限才能加速');
+        await ref.read(Preferences.startedByUser.notifier).update(false);
+        state = AsyncError(err, StackTrace.current);
+        return;
+      }
       //Go err is not normal object to see the go errors are string and need to be dumped
       await ref
           .read(dialogNotifierProvider.notifier)

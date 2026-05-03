@@ -21,6 +21,9 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
   static const _uploadKey = 'xboard.auth.upload';
   static const _downloadKey = 'xboard.auth.download';
   static const _transferEnableKey = 'xboard.auth.transfer_enable';
+  static const _planNameKey = 'xboard.auth.plan_name';
+  static const _onlineDevicesKey = 'xboard.auth.online_devices';
+  static const _maxDevicesKey = 'xboard.auth.max_devices';
 
   final FlutterSecureStorage _storage;
 
@@ -37,6 +40,9 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
     await _storage.write(key: _uploadKey, value: subscription?.upload.toString());
     await _storage.write(key: _downloadKey, value: subscription?.download.toString());
     await _storage.write(key: _transferEnableKey, value: subscription?.transferEnable.toString());
+    await _storage.write(key: _planNameKey, value: subscription?.planName);
+    await _storage.write(key: _onlineDevicesKey, value: subscription?.onlineDevices?.toString());
+    await _storage.write(key: _maxDevicesKey, value: subscription?.maxDevices?.toString());
   }
 
   @override
@@ -65,6 +71,9 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
               upload: int.tryParse(await _storage.read(key: _uploadKey) ?? '') ?? 0,
               download: int.tryParse(await _storage.read(key: _downloadKey) ?? '') ?? 0,
               transferEnable: int.tryParse(await _storage.read(key: _transferEnableKey) ?? '') ?? 0,
+              planName: await _storage.read(key: _planNameKey),
+              onlineDevices: int.tryParse(await _storage.read(key: _onlineDevicesKey) ?? ''),
+              maxDevices: int.tryParse(await _storage.read(key: _maxDevicesKey) ?? ''),
             ),
     );
   }
@@ -82,6 +91,9 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
       _uploadKey,
       _downloadKey,
       _transferEnableKey,
+      _planNameKey,
+      _onlineDevicesKey,
+      _maxDevicesKey,
     ]) {
       await _storage.delete(key: key);
     }

@@ -278,19 +278,7 @@ class ProfileActionsMenu extends HookConsumerWidget {
               },
             ),
           ],
-          AdaptiveMenuItem(
-            title: t.pages.profiles.share.jsonToClipboard,
-            onTap: () async => await ref.read(profilesNotifierProvider.notifier).exportConfigToClipboard(profile),
-          ),
         ],
-      ),
-      AdaptiveMenuItem(
-        icon: Icons.edit_rounded,
-        title: t.common.edit,
-        onTap: () {
-          if (Breakpoint(context).isMobile()) context.pop();
-          context.goNamed('profileDetails', pathParameters: {'id': profile.id});
-        },
       ),
       // if (!profile.active)
       AdaptiveMenuItem(

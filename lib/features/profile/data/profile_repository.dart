@@ -5,6 +5,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/db/db.dart';
 
 import 'package:hiddify/core/utils/exception_handler.dart';
+import 'package:hiddify/features/profile/data/final_config_guard.dart';
 import 'package:hiddify/features/profile/data/profile_data_mapper.dart';
 import 'package:hiddify/features/profile/data/profile_data_source.dart';
 import 'package:hiddify/features/profile/data/profile_parser.dart';
@@ -54,6 +55,7 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
   final HiddifyCoreService _singbox;
   final ConfigOptionRepository _configOptionRepo;
   final ProfileParser _profileParser;
+  final FinalConfigGuard _finalConfigGuard = const FinalConfigGuard();
 
   @override
   TaskEither<ProfileFailure, Unit> init() {
@@ -143,7 +145,7 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
                   (profEntity) =>
                       validateConfig(file.path, tempFile.path, profEntity.profileOverride.value, false).flatMap(
                         (unit) => TaskEither.tryCatch(() async {
-                          await _profileDataSource.edit(id, profEntity);
+                          await _profileDataSource.edit(id, profEntity.copyWith(active: const Value(true)));
                           return unit;
                         }, ProfileFailure.unexpected),
                       ),
@@ -246,6 +248,15 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
                 .flatMap(
                   (_) => _singbox.validateConfigByPath(path, tempPath, debug).mapLeft(ProfileFailure.invalidConfig),
                 ),
+          )
+          .flatMap(
+            (_) => TaskEither.tryCatch(() async {
+              final result = await _finalConfigGuard.inspectAndSanitizeFile(path, stage: 'profile-validate');
+              if (result.hasResidualFakeIp) {
+                throw const ProfileFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);
+              }
+              return unit;
+            }, (err, st) => err is ProfileFailure ? err : ProfileFailure.unexpected(err, st)),
           );
 
   @override

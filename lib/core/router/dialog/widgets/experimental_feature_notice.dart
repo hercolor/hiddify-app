@@ -42,16 +42,6 @@ class ExperimentalFeatureNoticeDialog extends HookConsumerWidget {
                     await ref.read(disableExperimentalFeatureNoticeProvider.notifier).update(value ?? false),
                 dense: true,
               ),
-              ListTile(
-                title: Text(t.pages.settings.title),
-                leading: const Icon(FluentIcons.box_edit_24_regular),
-                trailing: const Icon(FluentIcons.chevron_right_20_regular),
-                onTap: () {
-                  context.pop(false);
-                  context.goNamed('settings');
-                },
-                dense: true,
-              ),
             ],
           ),
         ),

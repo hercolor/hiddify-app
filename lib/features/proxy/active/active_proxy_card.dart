@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-import 'package:hiddify/features/proxy/active/ip_widget.dart';
-import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
-import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
+class ActiveProxyFooter extends ConsumerWidget {
   const ActiveProxyFooter({super.key});
 
   @override
@@ -28,17 +24,6 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
     }
 
     final theme = Theme.of(context);
-
-    // Handle URL test in a way that won't trigger during build
-    Future<void> handleUrlTest() async {
-      try {
-        if (!context.mounted) return;
-        await ref.read(activeProxyNotifierProvider.notifier).urlTest("");
-      } catch (e) {
-        // Handle error here
-        loggy.error("Error during URL test: $e");
-      }
-    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -60,18 +45,11 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
         },
         child: Row(
           children: [
-            InkWell(
-              onTap: () async {
-                await handleUrlTest();
-                await ref.read(dialogNotifierProvider.notifier).showProxyInfo(outboundInfo: activeProxy);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: IPCountryFlag(
-                  countryCode: activeProxy.ipinfo.countryCode,
-                  organization: activeProxy.ipinfo.org,
-                  size: 48,
-                ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: CircleAvatar(
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(Icons.hub_rounded, color: theme.colorScheme.onPrimaryContainer),
               ),
             ),
             Expanded(
@@ -92,18 +70,13 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      if (activeProxy.ipinfo.ip.isNotEmpty)
-                        IPText(ip: activeProxy.ipinfo.ip, onLongPress: handleUrlTest, constrained: true)
-                      else
-                        UnknownIPText(text: t.pages.proxies.unknownIp, onTap: handleUrlTest),
+                      Text('当前节点', style: theme.textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                       const Spacer(),
-                      Text(
-                        // getRealOutboundTag(activeProxy),
-                        activeProxy.type,
-                        style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      if (activeProxy.urlTestDelay != 0)
+                        Text(
+                          activeProxy.urlTestDelay > 65000 ? '延迟不可用' : '${activeProxy.urlTestDelay} ms',
+                          style: theme.textTheme.bodySmall,
+                        ),
                     ],
                   ),
                 ],
@@ -118,14 +91,6 @@ class ActiveProxyFooter extends ConsumerWidget with InfraLogger {
       ),
     );
   }
-}
-
-String getRealOutboundTag(OutboundInfo group) {
-  var tag = group.tagDisplay;
-  if (group.groupSelectedTagDisplay != "" && group.groupSelectedTagDisplay != tag) {
-    tag = "$tag → ${group.groupSelectedTagDisplay}";
-  }
-  return tag;
 }
 
 // class _StatsColumn extends HookConsumerWidget {

@@ -366,7 +366,7 @@ abstract class ConfigOptions {
 
   static final singboxConfigOptions = Provider<SingboxConfigOption>((ref) {
     // final region = ref.watch(Preferences.region);
-    final rules = <SingboxRule>[];
+    const rules = <SingboxRule>[];
     // final rules = switch (region) {
     //   Region.ir => [
     //       const SingboxRule(
@@ -406,82 +406,81 @@ abstract class ConfigOptions {
     //   _ => <SingboxRule>[],
     // };
 
-    final mode = ref.watch(serviceMode);
     // final reg = ref.watch(Preferences.region.notifier).raw();
 
     return SingboxConfigOption(
       region: ref.watch(region).name,
-      balancerStrategy: ref.watch(balancerStrategy),
-      blockAds: ref.watch(blockAds),
-      useXrayCoreWhenPossible: ref.watch(useXrayCoreWhenPossible),
+      balancerStrategy: BalancerStrategy.roundRobin,
+      blockAds: false,
+      useXrayCoreWhenPossible: false,
       executeConfigAsIs: false,
-      logLevel: ref.watch(logLevel),
-      resolveDestination: ref.watch(resolveDestination),
-      ipv6Mode: ref.watch(ipv6Mode),
-      remoteDnsAddress: ref.watch(remoteDnsAddress),
-      remoteDnsDomainStrategy: ref.watch(remoteDnsDomainStrategy),
-      directDnsAddress: ref.watch(directDnsAddress),
-      directDnsDomainStrategy: ref.watch(directDnsDomainStrategy),
-      mixedPort: ref.watch(mixedPort),
-      tproxyPort: ref.watch(tproxyPort),
-      directPort: ref.watch(directPort),
-      redirectPort: ref.watch(redirectPort),
-      tunImplementation: ref.watch(tunImplementation),
-      mtu: ref.watch(mtu),
-      strictRoute: ref.watch(strictRoute),
-      connectionTestUrl: ref.watch(connectionTestUrl),
-      urlTestInterval: ref.watch(urlTestInterval),
-      enableClashApi: ref.watch(enableClashApi),
-      clashApiPort: ref.watch(clashApiPort),
-      enableTun: mode == ServiceMode.tun,
+      logLevel: LogLevel.warn,
+      resolveDestination: false,
+      ipv6Mode: IPv6Mode.disable,
+      remoteDnsAddress: "tcp://8.8.8.8",
+      remoteDnsDomainStrategy: DomainStrategy.ipv4Only,
+      directDnsAddress: "udp://1.1.1.1",
+      directDnsDomainStrategy: DomainStrategy.ipv4Only,
+      mixedPort: 12334,
+      tproxyPort: 12335,
+      directPort: 12337,
+      redirectPort: 12336,
+      tunImplementation: TunImplementation.gvisor,
+      mtu: 9000,
+      strictRoute: true,
+      connectionTestUrl: "http://captive.apple.com/hotspot-detect.html",
+      urlTestInterval: const Duration(minutes: 10),
+      enableClashApi: false,
+      clashApiPort: 16756,
+      enableTun: true,
       // enableTunService: mode == false, //ServiceMode.tunService,
-      setSystemProxy: mode == ServiceMode.systemProxy,
-      bypassLan: ref.watch(bypassLan),
-      allowConnectionFromLan: ref.watch(allowConnectionFromLan),
-      enableFakeDns: ref.watch(enableFakeDns),
+      setSystemProxy: false,
+      bypassLan: false,
+      allowConnectionFromLan: false,
+      enableFakeDns: false,
       // enableDnsRouting: ref.watch(enableDnsRouting),
-      independentDnsCache: ref.watch(independentDnsCache),
+      independentDnsCache: true,
       // mux: SingboxMuxOption(
       //   enable: ref.watch(enableMux),
       //   padding: ref.watch(muxPadding),
       //   maxStreams: ref.watch(muxMaxStreams),
       //   protocol: ref.watch(muxProtocol),
       // ),
-      tlsTricks: SingboxTlsTricks(
-        enableFragment: ref.watch(enableTlsFragment),
-        fragmentSize: ref.watch(tlsFragmentSize),
-        fragmentSleep: ref.watch(tlsFragmentSleep),
-        mixedSniCase: ref.watch(enableTlsMixedSniCase),
-        enablePadding: ref.watch(enableTlsPadding),
-        paddingSize: ref.watch(tlsPaddingSize),
+      tlsTricks: const SingboxTlsTricks(
+        enableFragment: false,
+        fragmentSize: OptionalRange(min: 10, max: 30),
+        fragmentSleep: OptionalRange(min: 2, max: 8),
+        mixedSniCase: false,
+        enablePadding: false,
+        paddingSize: OptionalRange(min: 1, max: 1500),
       ),
-      warp: SingboxWarpOption(
-        enable: ref.watch(enableWarp),
-        mode: ref.watch(warpDetourMode),
-        wireguardConfig: ref.watch(warpWireguardConfig),
-        licenseKey: ref.watch(warpLicenseKey),
-        accountId: ref.watch(warpAccountId),
-        accessToken: ref.watch(warpAccessToken),
-        cleanIp: ref.watch(warpCleanIp),
-        cleanPort: ref.watch(warpPort),
-        noise: ref.watch(warpNoise),
-        noiseMode: ref.watch(warpNoiseMode),
-        noiseSize: ref.watch(warpNoiseSize),
-        noiseDelay: ref.watch(warpNoiseDelay),
+      warp: const SingboxWarpOption(
+        enable: false,
+        mode: WarpDetourMode.warpOverProxy,
+        wireguardConfig: "",
+        licenseKey: "",
+        accountId: "",
+        accessToken: "",
+        cleanIp: "auto",
+        cleanPort: 0,
+        noise: OptionalRange(min: 1, max: 3),
+        noiseMode: "m4",
+        noiseSize: OptionalRange(min: 10, max: 30),
+        noiseDelay: OptionalRange(min: 10, max: 30),
       ),
-      warp2: SingboxWarpOption(
-        enable: ref.watch(enableWarp),
-        mode: ref.watch(warpDetourMode),
-        wireguardConfig: ref.watch(warp2WireguardConfig),
-        licenseKey: ref.watch(warp2LicenseKey),
-        accountId: ref.watch(warp2AccountId),
-        accessToken: ref.watch(warp2AccessToken),
-        cleanIp: ref.watch(warpCleanIp),
-        cleanPort: ref.watch(warpPort),
-        noise: ref.watch(warpNoise),
-        noiseMode: ref.watch(warpNoiseMode),
-        noiseSize: ref.watch(warpNoiseSize),
-        noiseDelay: ref.watch(warpNoiseDelay),
+      warp2: const SingboxWarpOption(
+        enable: false,
+        mode: WarpDetourMode.warpOverProxy,
+        wireguardConfig: "",
+        licenseKey: "",
+        accountId: "",
+        accessToken: "",
+        cleanIp: "auto",
+        cleanPort: 0,
+        noise: OptionalRange(min: 1, max: 3),
+        noiseMode: "m4",
+        noiseSize: OptionalRange(min: 10, max: 30),
+        noiseDelay: OptionalRange(min: 10, max: 30),
       ),
       rules: rules,
     );
@@ -496,13 +495,93 @@ class ConfigOptionRepository with ExceptionHandler, InfraLogger {
   final SingboxConfigOption Function() _getConfigOptions;
 
   Either<ConfigOptionFailure, SingboxConfigOption> fullOptions() =>
-      Either.tryCatch(() => _getConfigOptions(), ConfigOptionFailure.unexpected);
+      Either.tryCatch(() => _lockedProductionOptions(_getConfigOptions), ConfigOptionFailure.unexpected);
 
   Either<ConfigOptionFailure, SingboxConfigOption> fullOptionsOverrided(String? profileOverride) =>
       Either.tryCatch(() => _getConfigOptions(), ConfigOptionFailure.unexpected).flatMap(
         (options) => Either.tryCatch(() {
           final json = ProfileParser.applyProfileOverride(options.toJson(), profileOverride);
-          return SingboxConfigOption.fromJson(json);
+          final lockedOptions = _lockedProductionOptions(() => SingboxConfigOption.fromJson(json));
+          loggy.debug(
+            'locked production config: '
+            'dnsMode=real-ip, '
+            'dnsStrategy=ipv4_only, '
+            'fakeIp=${lockedOptions.enableFakeDns}, '
+            'ipv6=false, '
+            'tunDnsServer=${lockedOptions.remoteDnsAddress}, '
+            'routeFinal=proxy, '
+            'outboundTag=proxy',
+          );
+          return lockedOptions;
         }, ConfigOptionFailure.unexpected),
       );
+
+  SingboxConfigOption _lockedProductionOptions(SingboxConfigOption Function() source) {
+    final options = source();
+    return options.copyWith(
+      balancerStrategy: BalancerStrategy.roundRobin,
+      blockAds: false,
+      useXrayCoreWhenPossible: false,
+      executeConfigAsIs: false,
+      logLevel: LogLevel.warn,
+      resolveDestination: false,
+      ipv6Mode: IPv6Mode.disable,
+      remoteDnsAddress: "tcp://8.8.8.8",
+      remoteDnsDomainStrategy: DomainStrategy.ipv4Only,
+      directDnsAddress: "udp://1.1.1.1",
+      directDnsDomainStrategy: DomainStrategy.ipv4Only,
+      mixedPort: 12334,
+      tproxyPort: 12335,
+      directPort: 12337,
+      redirectPort: 12336,
+      tunImplementation: TunImplementation.gvisor,
+      mtu: 9000,
+      strictRoute: true,
+      enableClashApi: false,
+      clashApiPort: 16756,
+      enableTun: true,
+      setSystemProxy: false,
+      bypassLan: false,
+      allowConnectionFromLan: false,
+      enableFakeDns: false,
+      independentDnsCache: true,
+      rules: <SingboxRule>[],
+      tlsTricks: const SingboxTlsTricks(
+        enableFragment: false,
+        fragmentSize: OptionalRange(min: 10, max: 30),
+        fragmentSleep: OptionalRange(min: 2, max: 8),
+        mixedSniCase: false,
+        enablePadding: false,
+        paddingSize: OptionalRange(min: 1, max: 1500),
+      ),
+      warp: const SingboxWarpOption(
+        enable: false,
+        mode: WarpDetourMode.warpOverProxy,
+        wireguardConfig: "",
+        licenseKey: "",
+        accountId: "",
+        accessToken: "",
+        cleanIp: "auto",
+        cleanPort: 0,
+        noise: OptionalRange(min: 1, max: 3),
+        noiseMode: "m4",
+        noiseSize: OptionalRange(min: 10, max: 30),
+        noiseDelay: OptionalRange(min: 10, max: 30),
+      ),
+      warp2: const SingboxWarpOption(
+        enable: false,
+        mode: WarpDetourMode.warpOverProxy,
+        wireguardConfig: "",
+        licenseKey: "",
+        accountId: "",
+        accessToken: "",
+        cleanIp: "auto",
+        cleanPort: 0,
+        noise: OptionalRange(min: 1, max: 3),
+        noiseMode: "m4",
+        noiseSize: OptionalRange(min: 10, max: 30),
+        noiseDelay: OptionalRange(min: 10, max: 30),
+      ),
+    );
+  }
 }

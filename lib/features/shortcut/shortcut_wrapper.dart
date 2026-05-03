@@ -27,9 +27,6 @@ class ShortcutWrapper extends HookConsumerWidget {
           if (Platform.isMacOS) ...{
             // close window using Command+W on macOS
             const SingleActivator(LogicalKeyboardKey.keyW, meta: true): CloseWindowIntent(),
-
-            // open settings using Command+, on macOS
-            const SingleActivator(LogicalKeyboardKey.comma, meta: true): OpenSettingsIntent(),
           },
         },
         // try adding profile using Command+V and Control+V
@@ -47,14 +44,6 @@ class ShortcutWrapper extends HookConsumerWidget {
           QuitAppIntent: CallbackAction(
             onInvoke: (_) async {
               await ref.read(windowNotifierProvider.notifier).exit();
-              return null;
-            },
-          ),
-          OpenSettingsIntent: CallbackAction(
-            onInvoke: (_) {
-              if (rootNavKey.currentContext != null) {
-                // const SettingsRoute().go(rootNavigatorKey.currentContext!);
-              }
               return null;
             },
           ),
@@ -77,7 +66,5 @@ class ShortcutWrapper extends HookConsumerWidget {
 class CloseWindowIntent extends Intent {}
 
 class QuitAppIntent extends Intent {}
-
-class OpenSettingsIntent extends Intent {}
 
 class PasteIntent extends Intent {}

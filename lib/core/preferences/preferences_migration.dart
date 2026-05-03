@@ -11,7 +11,10 @@ class PreferencesMigration with InfraLogger {
   Future<void> migrate() async {
     final currentVersion = sharedPreferences.getInt(versionKey) ?? 0;
 
-    final migrationSteps = [PreferencesVersion1Migration(sharedPreferences)];
+    final List<PreferencesMigrationStep> migrationSteps = [
+      PreferencesVersion1Migration(sharedPreferences),
+      PreferencesVersion2Migration(sharedPreferences),
+    ];
 
     if (currentVersion == migrationSteps.length) {
       loggy.debug("already using the latest version (v$currentVersion)");
@@ -106,4 +109,45 @@ class PreferencesVersion1Migration extends PreferencesMigrationStep with InfraLo
     "ipv6Only" => "ipv6_only",
     _ => "",
   };
+}
+
+class PreferencesVersion2Migration extends PreferencesMigrationStep with InfraLogger {
+  PreferencesVersion2Migration(super.sharedPreferences);
+
+  @override
+  Future<void> migrate() async {
+    loggy.debug("locking consumer startup and network config preferences");
+    await sharedPreferences.setBool("intro_completed", true);
+
+    for (final key in const [
+      "dnsMode",
+      "dns-mode",
+      "routeMode",
+      "route-mode",
+      "customConfig",
+      "custom-config",
+      "custom_config",
+      "fake-ip",
+      "fake_ip",
+      "fakeip",
+      "fake-ip-range",
+      "fakeIpRange",
+      "enhanced-mode",
+      "enhancedMode",
+      "enable-dns-routing",
+      "route-rules",
+      "rules",
+    ]) {
+      await sharedPreferences.remove(key);
+    }
+
+    await sharedPreferences.setBool("enable-fake-dns", false);
+    await sharedPreferences.setString("ipv6-mode", "ipv4_only");
+    await sharedPreferences.setString("remote-dns-domain-strategy", "ipv4_only");
+    await sharedPreferences.setString("direct-dns-domain-strategy", "ipv4_only");
+    await sharedPreferences.setBool("bypass-lan", false);
+    await sharedPreferences.setBool("allow-connection-from-lan", false);
+    await sharedPreferences.setBool("block-ads", false);
+    await sharedPreferences.setBool("resolve-destination", false);
+  }
 }

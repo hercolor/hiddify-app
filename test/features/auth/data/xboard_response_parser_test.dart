@@ -85,5 +85,25 @@ void main() {
       expect(subscription.remainingTraffic, 75);
       expect(subscription.expiredAt, DateTime.parse('2030-01-01T00:00:00Z'));
     });
+
+    test('parses nested XBoard plan and device fields without exposing map text', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {
+          'subscribe_url': 'https://example.com/sub',
+          'u': 10,
+          'd': 20,
+          'transfer_enable': 100,
+          'plan': {'name': '标准会员'},
+          'online_devices': 1,
+          'device_limit': 3,
+        },
+      });
+
+      expect(subscription.planName, '标准会员');
+      expect(subscription.onlineDevices, 1);
+      expect(subscription.maxDevices, 3);
+      expect(subscription.usedTraffic, 30);
+      expect(subscription.remainingTraffic, 70);
+    });
   });
 }

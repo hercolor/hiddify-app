@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
+import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/theme_extensions.dart';
 import 'package:hiddify/core/widget/animated_text.dart';
+import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
-import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 // TODO: rewrite
@@ -106,13 +105,31 @@ class ConnectionButton extends HookConsumerWidget {
     //   //   animationValue: animationValue,
     //   // );
     // }
-    var secureLabel =
-        (ref.watch(ConfigOptions.enableWarp) && ref.watch(ConfigOptions.warpDetourMode) == WarpDetourMode.warpOverProxy)
-        ? t.connection.secure
-        : "";
-    if (delay <= 0 || delay > 65000 || connectionStatus.value != const Connected()) {
-      secureLabel = "";
+    const secureLabel = "";
+    Future<bool> ensureReadyToConnect() async {
+      final notification = ref.read(inAppNotificationControllerProvider);
+      final authState = ref.read(authNotifierProvider);
+      if (authState.valueOrNull?.isLoggedIn != true) {
+        notification.showInfoToast('请先登录账号');
+        if (context.mounted) context.goNamed('settings');
+        return false;
+      }
+
+      if (ref.read(activeProfileProvider).valueOrNull == null) {
+        final synced = await ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
+        if (!synced) return false;
+        ref.invalidate(activeProfileProvider);
+        final activeProfile = await ref
+            .read(activeProfileProvider.future)
+            .timeout(const Duration(seconds: 3), onTimeout: () => null);
+        if (activeProfile == null) {
+          notification.showErrorToast('获取节点失败，请稍后重试');
+          return false;
+        }
+      }
+      return true;
     }
+
     return _ConnectionButton(
       onTap: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => () async {
@@ -120,17 +137,11 @@ class ConnectionButton extends HookConsumerWidget {
           return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
         },
         AsyncData(value: Disconnected()) || AsyncError() => () async {
-          if (ref.read(activeProfileProvider).valueOrNull == null) {
-            await ref.read(dialogNotifierProvider.notifier).showNoActiveProfile();
-            ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
-          }
-          if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
-            return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-          }
+          if (!await ensureReadyToConnect()) return;
+          return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
         },
         AsyncData(value: Connected()) => () async {
-          if (requiresReconnect == true &&
-              await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
+          if (requiresReconnect == true) {
             return await ref
                 .read(connectionNotifierProvider.notifier)
                 .reconnect(await ref.read(activeProfileProvider.future));

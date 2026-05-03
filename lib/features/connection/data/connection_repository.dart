@@ -1,13 +1,12 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/model/directories.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/utils/exception_handler.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
+import 'package:hiddify/features/profile/data/final_config_guard.dart';
 import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
-import 'package:hiddify/features/settings/notifier/warp_option/warp_option_notifier.dart';
 import 'package:hiddify/hiddifycore/hiddify_core_service.dart';
 import 'package:hiddify/singbox/model/core_status.dart';
 import 'package:hiddify/singbox/model/singbox_config_option.dart';
@@ -41,6 +40,7 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
 
   final ConfigOptionRepository configOptionRepository;
   final ProfilePathResolver profilePathResolver;
+  final FinalConfigGuard finalConfigGuard = const FinalConfigGuard();
 
   SingboxConfigOption? _configOptionsSnapshot;
   @override
@@ -80,8 +80,10 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @override
   TaskEither<ConnectionFailure, Unit> connect(ProfileEntity activeProfile, bool disableMemoryLimit) => setup().flatMap(
     (_) => applyConfigOption(activeProfile).flatMap(
-      (_) => singbox.start(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit),
-      // .mapLeft(UnexpectedConnectionFailure.new),
+      (_) => guardFinalConfig(activeProfile, stage: 'connect').flatMap((_) {
+        _logFinalConfigSummary(activeProfile);
+        return singbox.start(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit);
+      }),
     ),
   );
 
@@ -91,9 +93,12 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @override
   TaskEither<ConnectionFailure, Unit> reconnect(ProfileEntity activeProfile, bool disableMemoryLimit) =>
       applyConfigOption(activeProfile).flatMap(
-        (_) => singbox
-            .restart(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit)
-            .mapLeft(UnexpectedConnectionFailure.new),
+        (_) => guardFinalConfig(activeProfile, stage: 'reconnect').flatMap((_) {
+          _logFinalConfigSummary(activeProfile);
+          return singbox
+              .restart(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit)
+              .mapLeft(UnexpectedConnectionFailure.new);
+        }),
       );
 
   @visibleForTesting
@@ -102,20 +107,34 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           .mapLeft((l) => ConnectionFailure.invalidConfigOption(null, l))
           .flatMap(
             (overridedOptions) => TaskEither.tryCatch(() async {
-              final isWarpLicenseAgreed = ref.read(warpLicenseNotifierProvider);
-              final isWarpEnabled = overridedOptions.warp.enable || overridedOptions.warp2.enable;
-              if (!isWarpLicenseAgreed && isWarpEnabled) {
-                final isAgreed = await ref.read(dialogNotifierProvider.notifier).showWarpLicense();
-                if (isAgreed == true) {
-                  await ref.read(warpLicenseNotifierProvider.notifier).agree();
-                  // return (await applyConfigOption(prof).run()).match((l) => throw l, (_) => unit);
-                } else {
-                  throw const MissingWarpLicense();
-                }
-              }
               _configOptionsSnapshot = overridedOptions;
               await singbox.changeOptions(overridedOptions).run();
               return unit;
             }, (err, st) => err is ConnectionFailure ? err : ConnectionFailure.unexpected(err, st)),
           );
+
+  @visibleForTesting
+  TaskEither<ConnectionFailure, Unit> guardFinalConfig(ProfileEntity prof, {required String stage}) =>
+      TaskEither.tryCatch(() async {
+        final result = await finalConfigGuard.inspectAndSanitizeFile(
+          profilePathResolver.file(prof.id).path,
+          stage: stage,
+        );
+        if (result.hasResidualFakeIp) {
+          throw const ConnectionFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);
+        }
+        return unit;
+      }, (err, st) => err is ConnectionFailure ? err : ConnectionFailure.unexpected(err, st));
+
+  void _logFinalConfigSummary(ProfileEntity profile) {
+    final nodeName = profile.name.replaceAll(RegExp(r'https?://[^\s]+'), 'https://***');
+    loggy.debug(
+      'final generated core config summary: '
+      'fakeIp=false, '
+      'ipv6=false, '
+      'dnsStrategy=ipv4_only, '
+      'routeFinal=proxy, '
+      'selectedNodeName=$nodeName',
+    );
+  }
 }

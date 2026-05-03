@@ -127,7 +127,9 @@ class MethodHandler(private val scope: CoroutineScope) : FlutterPlugin,
 //                        }
                         Settings.startCoreAfterStartingService = false
 
+                        Log.d(TAG, "core start requested: profileNameLength=${Settings.activeProfileName.length}, debug=${Settings.debugMode}")
                         mainActivity.startService()
+                        Log.d(TAG, "core start delegated to Android service")
                         success(true)
                     }
                 }

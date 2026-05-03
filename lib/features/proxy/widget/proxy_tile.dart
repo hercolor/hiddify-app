@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
-import 'package:hiddify/features/proxy/active/ip_widget.dart';
 import 'package:hiddify/gen/fonts.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
-import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class ProxyTile extends HookConsumerWidget with PresLogger {
+class ProxyTile extends HookConsumerWidget {
   const ProxyTile(this.proxy, {super.key, required this.selected, required this.onTap});
 
   final OutboundInfo proxy;
@@ -25,26 +22,7 @@ class ProxyTile extends HookConsumerWidget with PresLogger {
         overflow: TextOverflow.ellipsis,
         style: PlatformUtils.isWindows ? const TextStyle(fontFamily: FontFamily.emoji) : null,
       ),
-      leading: IPCountryFlag(
-        countryCode: proxy.ipinfo.countryCode,
-        organization: proxy.ipinfo.org,
-        size: 40,
-        padding: const EdgeInsetsDirectional.only(end: 8),
-      ),
-      subtitle: Text.rich(
-        TextSpan(
-          text: proxy.type,
-          children: [
-            if (proxy.isGroup)
-              TextSpan(
-                text: ' (${proxy.groupSelectedTagDisplay.trim()})',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      leading: IPCountryFlag(selected: selected),
       trailing: Column(
         children: [
           if (proxy.urlTestDelay != 0)
@@ -60,7 +38,6 @@ class ProxyTile extends HookConsumerWidget with PresLogger {
       selected: selected,
       selectedTileColor: theme.colorScheme.primaryContainer,
       onTap: onTap,
-      onLongPress: () async => await ref.read(dialogNotifierProvider.notifier).showProxyInfo(outboundInfo: proxy),
       horizontalTitleGap: 4,
     );
   }
@@ -78,5 +55,25 @@ class ProxyTile extends HookConsumerWidget with PresLogger {
       < 1500 => Colors.deepOrangeAccent,
       _ => Colors.red,
     };
+  }
+}
+
+class IPCountryFlag extends StatelessWidget {
+  const IPCountryFlag({super.key, required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: selected
+          ? Theme.of(context).colorScheme.primary
+          : Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Icon(
+        Icons.bolt_rounded,
+        color: selected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
   }
 }

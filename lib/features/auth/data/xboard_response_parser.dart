@@ -24,14 +24,7 @@ class XBoardResponseParser {
 
   static UserSubscription parseSubscription(Object? responseData) {
     final data = _decodeIfString(responseData);
-    final subscribeUrl = _findStringByKeys(data, const [
-      'subscribe_url',
-      'subscribeUrl',
-      'subscription_url',
-      'subscriptionUrl',
-      'subscribe',
-      'url',
-    ]);
+    final subscribeUrl = _findSubscriptionUrl(data);
     if (subscribeUrl == null || subscribeUrl.trim().isEmpty) {
       throw const AuthFailure.badResponse('未获取到订阅链接');
     }
@@ -48,8 +41,69 @@ class XBoardResponseParser {
       ]),
       upload: _findIntByKeys(data, const ['u', 'upload', 'uploaded']) ?? 0,
       download: _findIntByKeys(data, const ['d', 'download', 'downloaded']) ?? 0,
-      transferEnable: _findIntByKeys(data, const ['transfer_enable', 'transferEnable', 'total', 'traffic']) ?? 0,
+      transferEnable:
+          _findIntByKeys(data, const ['transfer_enable', 'transferEnable', 'transfer', 'total', 'traffic']) ?? 0,
+      planName: _findPlanName(data),
+      onlineDevices: _findIntByKeys(data, const [
+        'online_devices',
+        'onlineDevices',
+        'online_device',
+        'onlineDevice',
+        'device_online',
+        'deviceOnline',
+        'online',
+      ]),
+      maxDevices: _findIntByKeys(data, const [
+        'max_devices',
+        'maxDevices',
+        'device_limit',
+        'deviceLimit',
+        'device_limit_count',
+        'deviceLimitCount',
+        'max_device',
+        'maxDevice',
+      ]),
     );
+  }
+
+  static String? _findSubscriptionUrl(Object? data) {
+    final value = _findStringByKeys(data, const [
+      'subscribe_url',
+      'subscribeUrl',
+      'subscription_url',
+      'subscriptionUrl',
+      'clash_url',
+      'clashUrl',
+      'mihomo_url',
+      'mihomoUrl',
+      'url',
+    ]);
+    final trimmed = value?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    return _findUrlString(data);
+  }
+
+  static String? _findPlanName(Object? data) {
+    final direct = _findStringByKeys(data, const [
+      'plan_name',
+      'planName',
+      'package_name',
+      'packageName',
+      'product_name',
+      'productName',
+      'group_name',
+      'groupName',
+    ]);
+    if (direct != null && direct.trim().isNotEmpty) return direct.trim();
+
+    for (final containerKey in const ['plan', 'subscribe', 'subscription', 'package', 'product']) {
+      final container = _findValueByKeys(data, [containerKey]);
+      if (container is String && container.trim().isNotEmpty) return container.trim();
+      final name = _findStringByKeys(container, const ['name', 'title', 'subject']);
+      if (name != null && name.trim().isNotEmpty) return name.trim();
+    }
+
+    return null;
   }
 
   static Object? _decodeIfString(Object? value) {
@@ -83,6 +137,7 @@ class XBoardResponseParser {
     final found = _findValueByKeys(value, keys);
     if (found == null) return null;
     if (found is String) return found;
+    if (found is Map || (found is Iterable && found is! String)) return null;
     return found.toString();
   }
 
@@ -130,6 +185,26 @@ class XBoardResponseParser {
       for (final item in value) {
         final nested = _findValueByKeys(item, keys);
         if (nested != null) return nested;
+      }
+    }
+    return null;
+  }
+
+  static String? _findUrlString(Object? value) {
+    if (value is Map) {
+      for (final entry in value.entries) {
+        final nested = _findUrlString(entry.value);
+        if (nested != null) return nested;
+      }
+    } else if (value is Iterable && value is! String) {
+      for (final item in value) {
+        final nested = _findUrlString(item);
+        if (nested != null) return nested;
+      }
+    } else if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        return trimmed;
       }
     }
     return null;

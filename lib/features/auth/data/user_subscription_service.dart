@@ -32,6 +32,7 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
           throw const AuthFailure.badResponse('订阅接口返回异常');
         }
 
+        loggy.debug('xboard subscription response keys: ${_sanitizedKeys(response.data).join(',')}');
         return XBoardResponseParser.parseSubscription(response.data);
       },
       (error, stackTrace) {
@@ -55,5 +56,19 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
       'length=${trimmed.length}, '
       'startsWithBearer=${trimmed.toLowerCase().startsWith('bearer ')}',
     );
+  }
+
+  List<String> _sanitizedKeys(Object? value, {String prefix = '', int depth = 0}) {
+    if (depth > 2 || value is! Map) return const [];
+    final keys = <String>[];
+    for (final entry in value.entries) {
+      final key = entry.key.toString();
+      final path = prefix.isEmpty ? key : '$prefix.$key';
+      keys.add(path);
+      if (entry.value is Map) {
+        keys.addAll(_sanitizedKeys(entry.value, prefix: path, depth: depth + 1));
+      }
+    }
+    return keys.take(80).toList(growable: false);
   }
 }

@@ -5,6 +5,9 @@ class UserSubscription {
     this.upload = 0,
     this.download = 0,
     this.transferEnable = 0,
+    this.planName,
+    this.onlineDevices,
+    this.maxDevices,
   });
 
   final String subscribeUrl;
@@ -12,6 +15,9 @@ class UserSubscription {
   final int upload;
   final int download;
   final int transferEnable;
+  final String? planName;
+  final int? onlineDevices;
+  final int? maxDevices;
 
   int get usedTraffic => upload + download;
 
@@ -25,6 +31,9 @@ class UserSubscription {
     int? upload,
     int? download,
     int? transferEnable,
+    String? planName,
+    int? onlineDevices,
+    int? maxDevices,
   }) {
     return UserSubscription(
       subscribeUrl: subscribeUrl ?? this.subscribeUrl,
@@ -32,6 +41,9 @@ class UserSubscription {
       upload: upload ?? this.upload,
       download: download ?? this.download,
       transferEnable: transferEnable ?? this.transferEnable,
+      planName: planName ?? this.planName,
+      onlineDevices: onlineDevices ?? this.onlineDevices,
+      maxDevices: maxDevices ?? this.maxDevices,
     );
   }
 }
