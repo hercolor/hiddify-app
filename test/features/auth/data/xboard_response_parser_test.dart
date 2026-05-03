@@ -4,24 +4,48 @@ import 'package:hiddify/features/auth/model/auth_failure.dart';
 
 void main() {
   group('XBoardResponseParser', () {
-    test('parses token from data.token', () {
-      final token = XBoardResponseParser.parseToken({
-        'data': {'token': 'abc123'},
-      });
-
-      expect(token, 'abc123');
-    });
-
-    test('parses token from data.auth_data and strips bearer prefix', () {
-      final token = XBoardResponseParser.parseToken({
+    test('parses authData from data.auth_data and keeps bearer prefix', () {
+      final authData = XBoardResponseParser.parseAuthData({
         'data': {'auth_data': 'Bearer xyz789'},
       });
 
-      expect(token, 'xyz789');
+      expect(authData, 'Bearer xyz789');
     });
 
-    test('throws readable failure when token missing', () {
-      expect(() => XBoardResponseParser.parseToken({'data': {}}), throwsA(isA<AuthBadResponseFailure>()));
+    test('normalizes authData when bearer prefix is missing', () {
+      final authData = XBoardResponseParser.parseAuthData({
+        'data': {'auth_data': 'xyz789'},
+      });
+
+      expect(authData, 'Bearer xyz789');
+    });
+
+    test('deduplicates repeated bearer prefix in authData', () {
+      final authData = XBoardResponseParser.parseAuthData({
+        'data': {'auth_data': 'Bearer Bearer xyz789'},
+      });
+
+      expect(authData, 'Bearer xyz789');
+    });
+
+    test('parses subscribeToken from data.token separately', () {
+      final subscribeToken = XBoardResponseParser.parseSubscribeToken({
+        'data': {'token': 'abc123'},
+      });
+
+      expect(subscribeToken, 'abc123');
+    });
+
+    test('strips bearer prefix from subscribeToken only', () {
+      final subscribeToken = XBoardResponseParser.parseSubscribeToken({
+        'data': {'token': 'Bearer sub-token'},
+      });
+
+      expect(subscribeToken, 'sub-token');
+    });
+
+    test('throws readable failure when authData missing', () {
+      expect(() => XBoardResponseParser.parseAuthData({'data': {}}), throwsA(isA<AuthBadResponseFailure>()));
     });
 
     test('parses subscription url and traffic fields', () {

@@ -11,7 +11,9 @@ abstract interface class AuthTokenStorage {
 class SecureAuthTokenStorage implements AuthTokenStorage {
   SecureAuthTokenStorage(this._storage);
 
-  static const _tokenKey = 'xboard.auth.token';
+  static const _authDataKey = 'xboard.auth.auth_data';
+  static const _legacyTokenKey = 'xboard.auth.token';
+  static const _subscribeTokenKey = 'xboard.auth.subscribe_token';
   static const _emailKey = 'xboard.auth.email';
   static const _createdAtKey = 'xboard.auth.created_at';
   static const _subscribeUrlKey = 'xboard.auth.subscribe_url';
@@ -24,7 +26,8 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
 
   @override
   Future<void> save(AuthSession session) async {
-    await _storage.write(key: _tokenKey, value: session.token);
+    await _storage.write(key: _authDataKey, value: session.authData);
+    await _storage.write(key: _subscribeTokenKey, value: session.subscribeToken);
     await _storage.write(key: _emailKey, value: session.email);
     await _storage.write(key: _createdAtKey, value: session.createdAt.toIso8601String());
 
@@ -38,20 +41,22 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
 
   @override
   Future<AuthSession?> read() async {
-    final token = await _storage.read(key: _tokenKey);
+    final authData = await _storage.read(key: _authDataKey);
     final email = await _storage.read(key: _emailKey);
-    if (token == null || token.isEmpty || email == null || email.isEmpty) {
+    if (authData == null || authData.isEmpty || email == null || email.isEmpty) {
       return null;
     }
 
     final createdAtText = await _storage.read(key: _createdAtKey);
+    final subscribeToken = await _storage.read(key: _subscribeTokenKey);
     final subscribeUrl = await _storage.read(key: _subscribeUrlKey);
     final expiredAtText = await _storage.read(key: _expiredAtKey);
 
     return AuthSession(
-      token: token,
+      authData: authData,
       email: email,
       createdAt: DateTime.tryParse(createdAtText ?? '') ?? DateTime.now(),
+      subscribeToken: subscribeToken == null || subscribeToken.isEmpty ? null : subscribeToken,
       subscription: subscribeUrl == null || subscribeUrl.isEmpty
           ? null
           : UserSubscription(
@@ -67,7 +72,9 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
   @override
   Future<void> clear() async {
     for (final key in [
-      _tokenKey,
+      _authDataKey,
+      _legacyTokenKey,
+      _subscribeTokenKey,
       _emailKey,
       _createdAtKey,
       _subscribeUrlKey,

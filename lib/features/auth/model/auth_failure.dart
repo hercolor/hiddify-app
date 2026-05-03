@@ -44,9 +44,9 @@ sealed class AuthFailure with _$AuthFailure, Failure {
   }
 }
 
-AuthFailure authFailureFromDioException(DioException error) {
+AuthFailure authFailureFromDioException(DioException error, {bool treatUnauthorizedAsExpired = true}) {
   final statusCode = error.response?.statusCode;
-  if (statusCode == 401 || statusCode == 403) {
+  if (treatUnauthorizedAsExpired && (statusCode == 401 || statusCode == 403)) {
     return const AuthFailure.tokenExpired();
   }
   if (statusCode == 422) {

@@ -7,7 +7,7 @@ import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 
 abstract interface class UserSubscriptionService {
-  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String token);
+  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData);
 }
 
 class XBoardUserSubscriptionService with InfraLogger implements UserSubscriptionService {
@@ -19,12 +19,13 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
   final String _apiBaseUrl;
 
   @override
-  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String token) {
+  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData) {
     return TaskEither.tryCatch(
       () async {
+        _logAuthDataForFirstUserRequest(authData);
         final response = await _httpClient.get<Map<String, dynamic>>(
           '$_apiBaseUrl/api/v1/user/getSubscribe',
-          headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+          headers: {'Accept': 'application/json', 'Authorization': authData},
         );
 
         if ((response.statusCode ?? 0) >= 400 || response.data == null) {
@@ -43,6 +44,16 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         loggy.warning('xboard subscription fetch failed', error, stackTrace);
         return AuthFailure.unexpected(error, stackTrace);
       },
+    );
+  }
+
+  void _logAuthDataForFirstUserRequest(String authData) {
+    final trimmed = authData.trim();
+    loggy.debug(
+      'xboard first user info request authData: '
+      'exists=${trimmed.isNotEmpty}, '
+      'length=${trimmed.length}, '
+      'startsWithBearer=${trimmed.toLowerCase().startsWith('bearer ')}',
     );
   }
 }

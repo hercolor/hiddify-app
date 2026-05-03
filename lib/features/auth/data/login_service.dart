@@ -32,13 +32,19 @@ class XBoardLoginService with InfraLogger implements LoginService {
           throw const AuthFailure.badResponse('登录接口返回异常');
         }
 
-        final token = XBoardResponseParser.parseToken(response.data);
-        return AuthSession(token: token, email: email.trim(), createdAt: DateTime.now());
+        final authData = XBoardResponseParser.parseAuthData(response.data);
+        final subscribeToken = XBoardResponseParser.parseSubscribeToken(response.data);
+        return AuthSession(
+          authData: authData,
+          email: email.trim(),
+          createdAt: DateTime.now(),
+          subscribeToken: subscribeToken,
+        );
       },
       (error, stackTrace) {
         if (error is AuthFailure) return error;
         if (error is DioException) {
-          final failure = authFailureFromDioException(error);
+          final failure = authFailureFromDioException(error, treatUnauthorizedAsExpired: false);
           loggy.warning('xboard login request failed', failure);
           return failure;
         }

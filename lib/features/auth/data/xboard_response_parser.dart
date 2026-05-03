@@ -6,13 +6,20 @@ import 'package:hiddify/features/auth/model/user_subscription.dart';
 class XBoardResponseParser {
   const XBoardResponseParser._();
 
-  static String parseToken(Object? responseData) {
+  static String parseAuthData(Object? responseData) {
     final data = _decodeIfString(responseData);
-    final token = _findStringByKeys(data, const ['token', 'auth_data', 'access_token', 'accessToken', 'authorization']);
-    if (token == null || token.trim().isEmpty) {
-      throw const AuthFailure.badResponse('登录成功但未返回 token');
+    final authData = _findStringByKeys(data, const ['auth_data', 'authData', 'authorization']);
+    if (authData == null || authData.trim().isEmpty) {
+      throw const AuthFailure.badResponse('登录成功但未返回 auth_data');
     }
-    return _stripBearer(token.trim());
+    return _normalizeBearer(authData.trim());
+  }
+
+  static String? parseSubscribeToken(Object? responseData) {
+    final data = _decodeIfString(responseData);
+    final token = _findStringByKeys(data, const ['token', 'subscribe_token', 'subscribeToken']);
+    final trimmed = token?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : _stripBearer(trimmed);
   }
 
   static UserSubscription parseSubscription(Object? responseData) {
@@ -60,10 +67,16 @@ class XBoardResponseParser {
 
   static String _stripBearer(String token) {
     const prefix = 'Bearer ';
-    if (token.toLowerCase().startsWith(prefix.toLowerCase())) {
-      return token.substring(prefix.length).trim();
+    var value = token.trim();
+    while (value.toLowerCase().startsWith(prefix.toLowerCase())) {
+      value = value.substring(prefix.length).trim();
     }
-    return token;
+    return value;
+  }
+
+  static String _normalizeBearer(String authData) {
+    final token = _stripBearer(authData);
+    return 'Bearer $token';
   }
 
   static String? _findStringByKeys(Object? value, List<String> keys) {

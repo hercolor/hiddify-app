@@ -30,7 +30,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
           .login(email: email, password: password)
           .flatMap(
             (session) => subscriptionService
-                .fetchSubscription(session.token)
+                .fetchSubscription(session.authData)
                 .map((subscription) => session.copyWith(subscription: subscription)),
           )
           .match((err) => throw err, (session) => session)
@@ -54,7 +54,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     state = await AsyncValue.guard(() async {
       final subscriptionService = await ref.read(userSubscriptionServiceProvider.future);
       final session = await subscriptionService
-          .fetchSubscription(current.token)
+          .fetchSubscription(current.authData)
           .match((err) => throw err, (subscription) => current.copyWith(subscription: subscription))
           .run();
 
