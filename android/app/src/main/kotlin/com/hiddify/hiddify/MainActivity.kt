@@ -12,6 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
+import com.hiddify.hiddify.BuildConfig
 import com.hiddify.hiddify.bg.ServiceConnection
 import com.hiddify.hiddify.bg.ServiceNotification
 import com.hiddify.hiddify.constant.Alert
@@ -63,7 +64,7 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
     fun startService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ServiceNotification.checkPermission()) {
             pendingConnect = true
-            Log.d(TAG, "VPN start requested: notification permission required, pendingConnect=$pendingConnect")
+            debugLog("VPN start requested: notification permission required, pendingConnect=$pendingConnect")
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
@@ -78,7 +79,7 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
             if (Settings.serviceMode == ServiceMode.VPN) {
                 if (prepare()) {
                     pendingConnect = true
-                    Log.d(TAG, "VPN permission requested, pendingConnect=$pendingConnect")
+                    debugLog("VPN permission requested, pendingConnect=$pendingConnect")
                     return@launch
                 }
             }
@@ -88,7 +89,7 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
             }
             Settings.startedByUser = true
             pendingConnect = false
-            Log.d(TAG, "VPN service start requested, pendingConnect=$pendingConnect")
+            debugLog("VPN service start requested, pendingConnect=$pendingConnect")
         }
     }
 
@@ -112,10 +113,10 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
         ) { isGranted ->
             if (Settings.dynamicNotification && !isGranted) {
                 pendingConnect = false
-                Log.d(TAG, "Notification permission denied, pendingConnect=$pendingConnect")
+                debugLog("Notification permission denied, pendingConnect=$pendingConnect")
                 onServiceAlert(Alert.RequestNotificationPermission, null)
             } else {
-                Log.d(TAG, "Notification permission granted, continuing pending connect")
+                debugLog("Notification permission granted, continuing pending connect")
                 startService0()
             }
         }
@@ -125,11 +126,11 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
             if (result.resultCode == RESULT_OK) {
-                Log.d(TAG, "VPN permission granted, continuing pending connect")
+                debugLog("VPN permission granted, continuing pending connect")
                 startService0()
             } else {
                 pendingConnect = false
-                Log.d(TAG, "VPN permission denied, pendingConnect=$pendingConnect")
+                debugLog("VPN permission denied, pendingConnect=$pendingConnect")
                 onServiceAlert(Alert.RequestVPNPermission, null)
             }
         }
@@ -182,6 +183,12 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
         } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
             if (resultCode == RESULT_OK) startService()
             else onServiceAlert(Alert.RequestNotificationPermission, null)
+        }
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG || Settings.debugMode) {
+            Log.d(TAG, message)
         }
     }
 }

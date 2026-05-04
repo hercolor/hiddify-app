@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
@@ -6,6 +8,8 @@ import 'package:hiddify/features/auth/data/auth_data_providers.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
+import 'package:hiddify/features/profile/model/profile_entity.dart';
+import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -15,8 +19,26 @@ part 'auth_notifier.g.dart';
 class AuthNotifier extends _$AuthNotifier with AppLogger {
   @override
   Future<AuthState> build() async {
-    final session = await ref.watch(authTokenStorageProvider).read();
-    return AuthState(session: session);
+    const initialState = AuthState.initializing();
+    unawaited(_logAuthDebug(initialState, userInfoLoaded: false));
+    try {
+      final session = await ref.read(authTokenStorageProvider).read();
+      if (session == null || session.authData.trim().isEmpty) {
+        const nextState = AuthState.loggedOut();
+        await _logAuthDebug(nextState, userInfoLoaded: false);
+        return nextState;
+      }
+
+      final nextState = AuthState.loggedIn(session);
+      await _logAuthDebug(nextState, userInfoLoaded: session.subscription != null);
+      unawaited(_syncNodesInBackground(session));
+      return nextState;
+    } catch (error, stackTrace) {
+      loggy.warning('xboard auth bootstrap failed', error, stackTrace);
+      const nextState = AuthState.loggedOut();
+      await _logAuthDebug(nextState, userInfoLoaded: false);
+      return nextState;
+    }
   }
 
   Future<void> login(String email, String password) async {
@@ -30,10 +52,22 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
           .run();
 
       await ref.read(authTokenStorageProvider).save(session);
-      final syncedSession = await _fetchSubscriptionAndImport(session);
+      var syncedSession = session;
+      var syncSucceeded = false;
+      try {
+        syncedSession = await _fetchSubscriptionAndImport(session);
+        syncSucceeded = true;
+      } catch (error, stackTrace) {
+        loggy.warning('failed to sync xboard nodes after login', error, stackTrace);
+        ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
+      }
       await ref.read(authTokenStorageProvider).save(syncedSession);
-      ref.read(inAppNotificationControllerProvider).showSuccessToast('登录成功');
-      return AuthState(session: syncedSession);
+      if (syncSucceeded) {
+        ref.read(inAppNotificationControllerProvider).showSuccessToast('登录成功');
+      }
+      final nextState = AuthState.loggedIn(syncedSession);
+      await _logAuthDebug(nextState, userInfoLoaded: syncedSession.subscription != null);
+      return nextState;
     });
   }
 
@@ -42,26 +76,28 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   }
 
   Future<bool> syncNodes({bool showSuccessToast = true}) async {
-    if (state.isLoading) return false;
     final current = state.valueOrNull?.session;
     if (current == null) {
       ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
       return false;
     }
 
-    state = const AsyncLoading();
     try {
       final session = await _fetchSubscriptionAndImport(current);
       await ref.read(authTokenStorageProvider).save(session);
-      state = AsyncData(AuthState(session: session));
+      final nextState = AuthState.loggedIn(session);
+      state = AsyncData(nextState);
+      await _logAuthDebug(nextState, userInfoLoaded: true);
       if (showSuccessToast) {
         ref.read(inAppNotificationControllerProvider).showSuccessToast('节点已同步');
       }
       return true;
     } catch (error, stackTrace) {
       loggy.warning('failed to sync xboard nodes', error, stackTrace);
-      state = AsyncData(AuthState(session: current));
-      ref.read(inAppNotificationControllerProvider).showErrorToast('获取节点失败，请稍后重试');
+      final nextState = AuthState.loggedIn(current);
+      state = AsyncData(nextState);
+      await _logAuthDebug(nextState, userInfoLoaded: current.subscription != null);
+      ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
       return false;
     }
   }
@@ -72,7 +108,8 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
   Future<void> logout() async {
     await ref.read(authTokenStorageProvider).clear();
-    state = const AsyncData(AuthState());
+    state = const AsyncData(AuthState.loggedOut());
+    await _logAuthDebug(const AuthState.loggedOut(), userInfoLoaded: false);
     ref.read(inAppNotificationControllerProvider).showSuccessToast('已退出登录');
   }
 
@@ -93,8 +130,74 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
     final repo = await ref.read(profileRepositoryProvider.future);
     await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
-    loggy.info('xboard nodes imported from subscription url, urlLength=${subscriptionUrl.length}');
+    ref.invalidate(activeProfileProvider);
+    final nodeSummary = await _readNodeDebugSummary();
+    loggy.info(
+      'xboard nodes imported from subscription url, '
+      'urlLength=${subscriptionUrl.length}, '
+      'nodeCount=${nodeSummary.nodeCount}, '
+      'selectedNodeName=${nodeSummary.selectedNodeName}',
+    );
     return session.copyWith(subscription: subscription);
+  }
+
+  Future<void> _syncNodesInBackground(AuthSession session) async {
+    try {
+      final syncedSession = await _fetchSubscriptionAndImport(session);
+      if (!_isCurrentSession(session)) return;
+      await ref.read(authTokenStorageProvider).save(syncedSession);
+      final nextState = AuthState.loggedIn(syncedSession);
+      state = AsyncData(nextState);
+      await _logAuthDebug(nextState, userInfoLoaded: true);
+    } catch (error, stackTrace) {
+      loggy.warning('failed to sync xboard nodes during bootstrap', error, stackTrace);
+      if (!_isCurrentSession(session)) return;
+      final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? session);
+      state = AsyncData(nextState);
+      await _logAuthDebug(nextState, userInfoLoaded: nextState.session?.subscription != null);
+      ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
+    }
+  }
+
+  bool _isCurrentSession(AuthSession session) {
+    final current = state.valueOrNull?.session;
+    return state.valueOrNull?.isLoggedIn == true && current?.authData == session.authData;
+  }
+
+  Future<void> _logAuthDebug(AuthState authState, {required bool userInfoLoaded}) async {
+    final nodeSummary = await _readNodeDebugSummary();
+    final authData = authState.session?.authData.trim();
+    loggy.debug(
+      'xboard auth debug: '
+      'authState=${authState.status.name}, '
+      'hasAuthData=${authData?.isNotEmpty == true}, '
+      'nodeCount=${nodeSummary.nodeCount}, '
+      'selectedNodeName=${nodeSummary.selectedNodeName}, '
+      'userInfoLoaded=$userInfoLoaded, '
+      'customerServiceConfigured=${authState.session?.subscription?.customerService?.trim().isNotEmpty == true}',
+    );
+  }
+
+  Future<({int nodeCount, String selectedNodeName})> _readNodeDebugSummary() async {
+    try {
+      final repo = await ref.read(profileRepositoryProvider.future);
+      final profilesEither = await repo.watchAll().first.timeout(const Duration(seconds: 2));
+      final profiles = profilesEither.getOrElse((_) => const <ProfileEntity>[]);
+      String? selectedName;
+      for (final profile in profiles) {
+        if (profile.active) {
+          selectedName = profile.name;
+          break;
+        }
+      }
+      return (
+        nodeCount: profiles.length,
+        selectedNodeName: selectedName?.trim().isNotEmpty == true ? selectedName! : '--',
+      );
+    } catch (error, stackTrace) {
+      loggy.debug('failed to read sanitized node debug summary', error, stackTrace);
+      return (nodeCount: 0, selectedNodeName: '--');
+    }
   }
 }
 

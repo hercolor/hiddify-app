@@ -428,6 +428,12 @@ class HiddifyCoreService with InfraLogger {
   }
 
   Stream<CoreStatus> watchStatus() async* {
+    if (!core.isInitialized()) {
+      loggy.warning("core is not initialized, emitting stopped status");
+      statusController.add(currentState = const CoreStatus.stopped());
+      yield currentState;
+      return;
+    }
     await startListeningStatus("bg", core.bgClient);
     yield* statusController.stream;
     // .endWith(const CoreStatus.stopped());

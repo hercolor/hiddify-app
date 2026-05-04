@@ -35,10 +35,15 @@ def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    def requiredKeystoreKeys = ['storePassword', 'keyPassword', 'keyAlias', 'storeFile']
+    def missingKeystoreKeys = requiredKeystoreKeys.findAll { !keystoreProperties[it] }
+    if (!missingKeystoreKeys.isEmpty()) {
+        throw new GradleException("android/key.properties is missing required keys: ${missingKeystoreKeys.join(', ')}")
+    }
     hasKeyStore = true
 } else {
     println "+++"
-    println "No keystore defined. The app will not be signed."
+    println "No release keystore defined. Release builds will be unsigned unless android/key.properties is configured locally."
     println "Create a android/key.properties file with the following properties:"
     println "storePassword"
     println "keyPassword"
@@ -71,7 +76,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "app.hiddify.com"
+        applicationId "pro.y88.accelerator"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
@@ -105,9 +110,8 @@ android {
         release {
             if (hasKeyStore) {
                 signingConfig signingConfigs.release
-            } else {
-                signingConfig signingConfigs.debug
             }
+            debuggable false
             ndk {
                 //noinspection ChromeOsAbiSupport
                 abiFilters "x86_64", "armeabi-v7a", "arm64-v8a"

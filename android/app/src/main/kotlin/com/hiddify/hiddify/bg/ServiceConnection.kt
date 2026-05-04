@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.os.RemoteException
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import com.hiddify.hiddify.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -35,9 +36,9 @@ class ServiceConnection(private val context: Context, callback: Callback, privat
                 withContext(Dispatchers.IO) {
                     Intent(context, Settings.serviceClass()).setAction(Action.SERVICE)
                 }
-            }
+        }
         context.bindService(intent, this, AppCompatActivity.BIND_AUTO_CREATE)
-        Log.d(TAG, "request connect")
+        debugLog("request connect")
     }
 
     fun disconnect() {
@@ -45,7 +46,7 @@ class ServiceConnection(private val context: Context, callback: Callback, privat
             context.unbindService(this)
         } catch (_: IllegalArgumentException) {
         }
-        Log.d(TAG, "request disconnect")
+        debugLog("request disconnect")
     }
 
     fun reconnect() {
@@ -58,9 +59,9 @@ class ServiceConnection(private val context: Context, callback: Callback, privat
                 withContext(Dispatchers.IO) {
                     Intent(context, Settings.serviceClass()).setAction(Action.SERVICE)
                 }
-            }
+        }
         context.bindService(intent, this, AppCompatActivity.BIND_AUTO_CREATE)
-        Log.d(TAG, "request reconnect")
+        debugLog("request reconnect")
     }
 
     override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -72,7 +73,7 @@ class ServiceConnection(private val context: Context, callback: Callback, privat
         } catch (e: RemoteException) {
             Log.e(TAG, "initialize service connection", e)
         }
-        Log.d(TAG, "service connected")
+        debugLog("service connected")
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
@@ -81,12 +82,18 @@ class ServiceConnection(private val context: Context, callback: Callback, privat
         } catch (e: RemoteException) {
             Log.e(TAG, "cleanup service connection", e)
         }
-        Log.d(TAG, "service disconnected")
+        debugLog("service disconnected")
     }
 
     override fun onBindingDied(name: ComponentName?) {
         reconnect()
-        Log.d(TAG, "service dead")
+        debugLog("service dead")
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG || Settings.debugMode) {
+            Log.d(TAG, message)
+        }
     }
 
     interface Callback {

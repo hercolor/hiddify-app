@@ -26,7 +26,7 @@ class XBoardResponseParser {
     final data = _decodeIfString(responseData);
     final subscribeUrl = _findSubscriptionUrl(data);
     if (subscribeUrl == null || subscribeUrl.trim().isEmpty) {
-      throw const AuthFailure.badResponse('未获取到订阅链接');
+      throw const AuthFailure.badResponse('未获取到节点信息');
     }
 
     return UserSubscription(
@@ -63,7 +63,22 @@ class XBoardResponseParser {
         'max_device',
         'maxDevice',
       ]),
+      customerService: parseCustomerService(data),
     );
+  }
+
+  static String? parseCustomerService(Object? responseData) {
+    final data = _decodeIfString(responseData);
+    final value = _findStringByKeys(data, const [
+      'customer_service',
+      'customerService',
+      'customer_service_url',
+      'customerServiceUrl',
+      'customer_service_link',
+      'customerServiceLink',
+    ]);
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
   static String? _findSubscriptionUrl(Object? data) {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:meta/meta.dart';
 
@@ -15,6 +16,7 @@ class FinalConfigGuardResult {
     required this.dnsServerCount,
     required this.routeRuleCount,
     required this.removedFakeDnsServers,
+    required this.removedIpv6DnsServers,
     required this.removedFakeDnsRules,
     required this.removedFakeRouteRules,
     required this.removedIpv6DnsRules,
@@ -37,6 +39,7 @@ class FinalConfigGuardResult {
   final int dnsServerCount;
   final int routeRuleCount;
   final int removedFakeDnsServers;
+  final int removedIpv6DnsServers;
   final int removedFakeDnsRules;
   final int removedFakeRouteRules;
   final int removedIpv6DnsRules;
@@ -86,6 +89,7 @@ class FinalConfigGuard with InfraLogger {
         dnsServerCount: 0,
         routeRuleCount: 0,
         removedFakeDnsServers: 0,
+        removedIpv6DnsServers: 0,
         removedFakeDnsRules: 0,
         removedFakeRouteRules: 0,
         removedIpv6DnsRules: 0,
@@ -110,6 +114,7 @@ class FinalConfigGuard with InfraLogger {
         dnsServerCount: 0,
         routeRuleCount: 0,
         removedFakeDnsServers: 0,
+        removedIpv6DnsServers: 0,
         removedFakeDnsRules: 0,
         removedFakeRouteRules: 0,
         removedIpv6DnsRules: 0,
@@ -127,8 +132,9 @@ class FinalConfigGuard with InfraLogger {
     final stats = _SanitizeStats();
     final beforeJson = jsonEncode(root);
 
-    _sanitizeDns(root['dns'], stats);
-    _sanitizeRoute(root['route'], stats);
+    _removeUnsafeKeysDeep(root);
+    _sanitizeDns(_ensureDns(root, stats), stats);
+    _sanitizeRoute(_ensureRoute(root), stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
 
     final afterJson = jsonEncode(root);
@@ -146,6 +152,7 @@ class FinalConfigGuard with InfraLogger {
       dnsServerCount: _listValue(_mapValue(root['dns'])?['servers'])?.length ?? 0,
       routeRuleCount: _listValue(_mapValue(root['route'])?['rules'])?.length ?? 0,
       removedFakeDnsServers: stats.removedFakeDnsServers,
+      removedIpv6DnsServers: stats.removedIpv6DnsServers,
       removedFakeDnsRules: stats.removedFakeDnsRules,
       removedFakeRouteRules: stats.removedFakeRouteRules,
       removedIpv6DnsRules: stats.removedIpv6DnsRules,
@@ -165,9 +172,9 @@ class FinalConfigGuard with InfraLogger {
     loggy.debug(
       'final config check [$stage]: '
       'parsedJson=${result.parsedJson}, '
-      'dnsMode=real-ip, '
-      'dnsStrategy=ipv4_only, '
-      'ipv6=false, '
+      'dnsMode=${LockedCoreConfig.dnsMode}, '
+      'dnsStrategy=${LockedCoreConfig.dnsStrategy}, '
+      'ipv6=${LockedCoreConfig.ipv6}, '
       'fakeIpBefore=${result.fakeIpBefore}, '
       'fakeIpAfter=${result.fakeIpAfter}, '
       'sanitized=${result.changed}, '
@@ -176,6 +183,7 @@ class FinalConfigGuard with InfraLogger {
       'routeFinal=${_safeLogValue(result.routeFinal)}, '
       'routeRules=${result.routeRuleCount}, '
       'removedFakeDnsServers=${result.removedFakeDnsServers}, '
+      'removedIpv6DnsServers=${result.removedIpv6DnsServers}, '
       'removedFakeDnsRules=${result.removedFakeDnsRules}, '
       'removedFakeRouteRules=${result.removedFakeRouteRules}, '
       'removedIpv6DnsRules=${result.removedIpv6DnsRules}, '
@@ -185,7 +193,9 @@ class FinalConfigGuard with InfraLogger {
       'removedIpv6TunValues=${result.removedIpv6TunValues}, '
       'forcedDnsDetours=${result.forcedDnsDetours}, '
       'forcedDnsStrategies=${result.forcedDnsStrategies}, '
-      'outboundTags=[$tags]',
+      'nodeCount=${result.outboundTags.length}, '
+      'outboundTags=[$tags], '
+      'coreConfigVersion=${LockedCoreConfig.schemaVersion}',
     );
     if (result.hasResidualFakeIp) {
       loggy.warning('final config check [$stage]: residual fake-ip marker detected after sanitize');
@@ -198,24 +208,29 @@ class FinalConfigGuard with InfraLogger {
 
     _removeFakeIpKeys(dns);
 
-    final removedTags = <String>{};
+    final removedFakeTags = <String>{};
+    final removedIpv6Tags = <String>{};
     final servers = _listValue(dns['servers']);
     if (servers != null) {
       final keptServers = <Object?>[];
       for (final server in servers) {
         if (_isFakeDnsServer(server)) {
           final tag = _stringValue(_mapValue(server)?['tag']);
-          if (tag != null && tag.isNotEmpty) removedTags.add(tag);
+          if (tag != null && tag.isNotEmpty) removedFakeTags.add(tag);
           stats.removedFakeDnsServers += 1;
+        } else if (_isIpv6DnsServer(server)) {
+          final tag = _stringValue(_mapValue(server)?['tag']);
+          if (tag != null && tag.isNotEmpty) removedIpv6Tags.add(tag);
+          stats.removedIpv6DnsServers += 1;
         } else {
           final serverMap = _mapValue(server);
           if (serverMap != null) {
-            if (serverMap['detour'] != 'proxy') {
-              serverMap['detour'] = 'proxy';
+            if (serverMap['detour'] != LockedCoreConfig.outboundTag) {
+              serverMap['detour'] = LockedCoreConfig.outboundTag;
               stats.forcedDnsDetours += 1;
             }
-            if (serverMap['strategy'] != 'ipv4_only') {
-              serverMap['strategy'] = 'ipv4_only';
+            if (serverMap['strategy'] != LockedCoreConfig.dnsStrategy) {
+              serverMap['strategy'] = LockedCoreConfig.dnsStrategy;
               stats.forcedDnsStrategies += 1;
             }
           }
@@ -225,15 +240,20 @@ class FinalConfigGuard with InfraLogger {
       if (keptServers.length != servers.length) {
         dns['servers'] = keptServers;
       }
+      if (keptServers.isEmpty) {
+        dns['servers'] = [_defaultDnsServer()];
+        stats.forcedDnsDetours += 1;
+        stats.forcedDnsStrategies += 1;
+      }
     }
 
     final rules = _listValue(dns['rules']);
     if (rules != null) {
       final keptRules = <Object?>[];
       for (final rule in rules) {
-        if (_referencesFakeIp(rule, removedTags)) {
+        if (_referencesFakeIp(rule, removedFakeTags)) {
           stats.removedFakeDnsRules += 1;
-        } else if (_referencesIpv6Route(rule)) {
+        } else if (_referencesFakeIp(rule, removedIpv6Tags) || _referencesIpv6Route(rule)) {
           stats.removedIpv6DnsRules += 1;
         } else {
           keptRules.add(rule);
@@ -245,11 +265,14 @@ class FinalConfigGuard with InfraLogger {
     }
 
     final dnsFinal = _stringValue(dns['final']);
-    if (dnsFinal == null || removedTags.contains(dnsFinal) || _containsFakeIpMarker(dnsFinal)) {
+    if (dnsFinal == null ||
+        removedFakeTags.contains(dnsFinal) ||
+        removedIpv6Tags.contains(dnsFinal) ||
+        _containsFakeIpMarker(dnsFinal)) {
       dns['final'] = _firstDnsServerTag(dns) ?? 'dns-remote';
     }
-    if (dns['strategy'] != 'ipv4_only') {
-      dns['strategy'] = 'ipv4_only';
+    if (dns['strategy'] != LockedCoreConfig.dnsStrategy) {
+      dns['strategy'] = LockedCoreConfig.dnsStrategy;
       stats.forcedDnsStrategies += 1;
     }
   }
@@ -258,8 +281,8 @@ class FinalConfigGuard with InfraLogger {
     final route = _mapValue(value);
     if (route == null) return;
 
-    if (route['final'] != 'proxy') {
-      route['final'] = 'proxy';
+    if (route['final'] != LockedCoreConfig.routeFinal) {
+      route['final'] = LockedCoreConfig.routeFinal;
     }
 
     if (route.containsKey('rule_set')) {
@@ -268,7 +291,10 @@ class FinalConfigGuard with InfraLogger {
     }
 
     final rules = _listValue(route['rules']);
-    if (rules == null) return;
+    if (rules == null) {
+      route['rules'] = <Object?>[];
+      return;
+    }
     final keptRules = <Object?>[];
     for (final rule in rules) {
       if (_referencesFakeIp(rule, const {})) {
@@ -277,7 +303,7 @@ class FinalConfigGuard with InfraLogger {
         stats.removedIpv6RouteRules += 1;
       } else if (_referencesGeoRule(rule)) {
         stats.removedGeoRouteRules += 1;
-      } else if (_isCatchAllBlockOrDirectRule(rule)) {
+      } else if (_isDefaultBlockOrDirectRule(rule)) {
         stats.removedCatchAllRules += 1;
       } else {
         keptRules.add(rule);
@@ -333,6 +359,14 @@ class FinalConfigGuard with InfraLogger {
     return _containsFakeIpMarker(type) || _containsFakeIpMarker(address);
   }
 
+  static bool _isIpv6DnsServer(Object? value) {
+    final map = _mapValue(value);
+    if (map == null) return _looksLikeIpv6Text(value?.toString() ?? '');
+    final address = _stringValue(map['address']) ?? _stringValue(map['server']);
+    if (address != null && _looksLikeIpv6Text(_uriHostOrRaw(address))) return true;
+    return false;
+  }
+
   static bool _referencesFakeIp(Object? value, Set<String> fakeTags) {
     if (_containsFakeIpMarker(value)) return true;
     if (fakeTags.isEmpty) return false;
@@ -361,7 +395,11 @@ class FinalConfigGuard with InfraLogger {
       return value.any(_referencesIpv6Route);
     }
     final text = value.toString().trim().toLowerCase();
-    return text == '::/0' || text == '::' || text.contains('ipv6_only') || text.contains('prefer_ipv6');
+    return text == '::/0' ||
+        text == '::' ||
+        text.contains('ipv6_only') ||
+        text.contains('prefer_ipv6') ||
+        _looksLikeIpv6Text(text);
   }
 
   static bool _referencesGeoRule(Object? value) {
@@ -381,11 +419,12 @@ class FinalConfigGuard with InfraLogger {
     return text.contains('geosite:') || text.contains('geoip:');
   }
 
-  static bool _isCatchAllBlockOrDirectRule(Object? value) {
+  static bool _isDefaultBlockOrDirectRule(Object? value) {
     final map = _mapValue(value);
     if (map == null) return false;
     final outbound = _stringValue(map['outbound']) ?? _stringValue(map['action']);
     if (outbound != 'block' && outbound != 'direct' && outbound != 'reject') return false;
+    if (_containsCatchAllCidr(map['ip_cidr']) || _containsCatchAllCidr(map['ip_cidr_match_source'])) return true;
     const matcherKeys = {
       'domain',
       'domain_suffix',
@@ -403,6 +442,65 @@ class FinalConfigGuard with InfraLogger {
       'geoip',
     };
     return map.keys.every((key) => !matcherKeys.contains(key));
+  }
+
+  static Object _ensureDns(Map<String, dynamic> root, _SanitizeStats stats) {
+    final existing = _mapValue(root['dns']);
+    if (existing != null) {
+      root['dns'] = existing;
+      return existing;
+    }
+    final dns = <String, dynamic>{
+      'servers': [_defaultDnsServer()],
+      'final': 'dns-remote',
+      'strategy': LockedCoreConfig.dnsStrategy,
+      'independent_cache': true,
+    };
+    root['dns'] = dns;
+    stats.forcedDnsDetours += 1;
+    stats.forcedDnsStrategies += 1;
+    return dns;
+  }
+
+  static Object _ensureRoute(Map<String, dynamic> root) {
+    final existing = _mapValue(root['route']);
+    if (existing != null) {
+      root['route'] = existing;
+      return existing;
+    }
+    final route = <String, dynamic>{'rules': <Object?>[], 'final': LockedCoreConfig.routeFinal};
+    root['route'] = route;
+    return route;
+  }
+
+  static Map<String, dynamic> _defaultDnsServer() => {
+    'tag': 'dns-remote',
+    'address': LockedCoreConfig.remoteDnsAddress,
+    'detour': LockedCoreConfig.outboundTag,
+    'strategy': LockedCoreConfig.dnsStrategy,
+  };
+
+  static void _removeUnsafeKeysDeep(Object? value) {
+    if (value is Map) {
+      for (final key in value.keys.toList()) {
+        final normalized = _normalizeKey(key.toString());
+        if (normalized.contains('fakeip') || normalized == 'enhancedmode') {
+          value.remove(key);
+        } else {
+          _removeUnsafeKeysDeep(value[key]);
+        }
+      }
+    } else if (value is Iterable && value is! String) {
+      for (final item in value) {
+        _removeUnsafeKeysDeep(item);
+      }
+    }
+  }
+
+  static bool _containsCatchAllCidr(Object? value) {
+    if (value is Iterable && value is! String) return value.any(_containsCatchAllCidr);
+    final text = value?.toString().trim().toLowerCase();
+    return text == '0.0.0.0/0' || text == '::/0';
   }
 
   static bool _containsFakeIpMarker(Object? value) {
@@ -469,6 +567,20 @@ class FinalConfigGuard with InfraLogger {
 
   static String _normalizeKey(String value) => value.toLowerCase().replaceAll(RegExp('[-_]'), '');
 
+  static String _uriHostOrRaw(String value) {
+    final uri = Uri.tryParse(value);
+    if (uri != null && uri.host.isNotEmpty) return uri.host;
+    return value.replaceAll('[', '').replaceAll(']', '');
+  }
+
+  static bool _looksLikeIpv6Text(String value) {
+    final text = value.toLowerCase();
+    return RegExp(
+      r'(^|[\s\[,/])([0-9a-f]{0,4}:){2,}[0-9a-f]{0,4}(/[0-9]{1,3})?($|[\s\],/])',
+      caseSensitive: false,
+    ).hasMatch(text);
+  }
+
   static String _safeLogValue(String value) {
     var sanitized = value
         .replaceAll(RegExp(r'Bearer\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false), 'Bearer ***')
@@ -481,6 +593,7 @@ class FinalConfigGuard with InfraLogger {
 
 class _SanitizeStats {
   int removedFakeDnsServers = 0;
+  int removedIpv6DnsServers = 0;
   int removedFakeDnsRules = 0;
   int removedFakeRouteRules = 0;
   int removedIpv6DnsRules = 0;

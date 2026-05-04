@@ -83,7 +83,7 @@ class MethodHandler(private val scope: CoroutineScope) : FlutterPlugin,
                         Settings.debugMode = args["debug"] as Boolean? ?: false
                         val mode = args["mode"] as Int
                         val grpcPort = args["grpcPort"] as Int
-                        Log.d("debugmode","${Settings.debugMode}")
+                        debugLog("debug mode updated")
                         runCatching {
                             Mobile.setup(
                                 SetupOptions().also {
@@ -127,9 +127,9 @@ class MethodHandler(private val scope: CoroutineScope) : FlutterPlugin,
 //                        }
                         Settings.startCoreAfterStartingService = false
 
-                        Log.d(TAG, "core start requested: profileNameLength=${Settings.activeProfileName.length}, debug=${Settings.debugMode}")
+                        debugLog("core start requested: profileNameLength=${Settings.activeProfileName.length}, debug=${Settings.debugMode}")
                         mainActivity.startService()
-                        Log.d(TAG, "core start delegated to Android service")
+                        debugLog("core start delegated to Android service")
                         success(true)
                     }
                 }
@@ -178,6 +178,12 @@ class MethodHandler(private val scope: CoroutineScope) : FlutterPlugin,
 //            }
 
             else -> result.notImplemented()
+        }
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG || Settings.debugMode) {
+            Log.d(TAG, message)
         }
     }
 }

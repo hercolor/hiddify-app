@@ -105,5 +105,31 @@ void main() {
       expect(subscription.usedTraffic, 30);
       expect(subscription.remainingTraffic, 70);
     });
+
+    test('parses customer service without using subscription url as fallback', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {'subscribe_url': 'https://example.com/sub?token=secret', 'customer_service': 'https://t.me/support'},
+      });
+
+      expect(subscription.customerService, 'https://t.me/support');
+      expect(XBoardResponseParser.parseCustomerService({'data': {}}), isNull);
+    });
+
+    test('parses millisecond expire timestamp without multiplying twice', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {'subscribe_url': 'https://example.com/sub', 'expired_at': 1893456000000},
+      });
+
+      expect(subscription.expiredAt, DateTime.fromMillisecondsSinceEpoch(1893456000000));
+    });
+
+    test('clamps negative remaining traffic to zero', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {'subscribe_url': 'https://example.com/sub', 'u': 70, 'd': 50, 'transfer_enable': 100},
+      });
+
+      expect(subscription.usedTraffic, 120);
+      expect(subscription.remainingTraffic, 0);
+    });
   });
 }

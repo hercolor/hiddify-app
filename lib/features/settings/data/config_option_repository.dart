@@ -1,5 +1,6 @@
 import 'package:dartx/dartx.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/core/model/optional_range.dart';
 import 'package:hiddify/core/model/region.dart';
 import 'package:hiddify/core/utils/exception_handler.dart';
@@ -417,21 +418,21 @@ abstract class ConfigOptions {
       logLevel: LogLevel.warn,
       resolveDestination: false,
       ipv6Mode: IPv6Mode.disable,
-      remoteDnsAddress: "tcp://8.8.8.8",
+      remoteDnsAddress: LockedCoreConfig.remoteDnsAddress,
       remoteDnsDomainStrategy: DomainStrategy.ipv4Only,
-      directDnsAddress: "udp://1.1.1.1",
+      directDnsAddress: LockedCoreConfig.directDnsAddress,
       directDnsDomainStrategy: DomainStrategy.ipv4Only,
-      mixedPort: 12334,
-      tproxyPort: 12335,
-      directPort: 12337,
-      redirectPort: 12336,
+      mixedPort: LockedCoreConfig.mixedPort,
+      tproxyPort: LockedCoreConfig.tproxyPort,
+      directPort: LockedCoreConfig.directPort,
+      redirectPort: LockedCoreConfig.redirectPort,
       tunImplementation: TunImplementation.gvisor,
-      mtu: 9000,
+      mtu: LockedCoreConfig.mtu,
       strictRoute: true,
       connectionTestUrl: "http://captive.apple.com/hotspot-detect.html",
       urlTestInterval: const Duration(minutes: 10),
       enableClashApi: false,
-      clashApiPort: 16756,
+      clashApiPort: LockedCoreConfig.clashApiPort,
       enableTun: true,
       // enableTunService: mode == false, //ServiceMode.tunService,
       setSystemProxy: false,
@@ -504,13 +505,14 @@ class ConfigOptionRepository with ExceptionHandler, InfraLogger {
           final lockedOptions = _lockedProductionOptions(() => SingboxConfigOption.fromJson(json));
           loggy.debug(
             'locked production config: '
-            'dnsMode=real-ip, '
-            'dnsStrategy=ipv4_only, '
+            'dnsMode=${LockedCoreConfig.dnsMode}, '
+            'dnsStrategy=${LockedCoreConfig.dnsStrategy}, '
             'fakeIp=${lockedOptions.enableFakeDns}, '
-            'ipv6=false, '
+            'ipv6=${LockedCoreConfig.ipv6}, '
             'tunDnsServer=${lockedOptions.remoteDnsAddress}, '
-            'routeFinal=proxy, '
-            'outboundTag=proxy',
+            'routeFinal=${LockedCoreConfig.routeFinal}, '
+            'outboundTag=${LockedCoreConfig.outboundTag}, '
+            'coreConfigVersion=${LockedCoreConfig.schemaVersion}',
           );
           return lockedOptions;
         }, ConfigOptionFailure.unexpected),
@@ -526,19 +528,19 @@ class ConfigOptionRepository with ExceptionHandler, InfraLogger {
       logLevel: LogLevel.warn,
       resolveDestination: false,
       ipv6Mode: IPv6Mode.disable,
-      remoteDnsAddress: "tcp://8.8.8.8",
+      remoteDnsAddress: LockedCoreConfig.remoteDnsAddress,
       remoteDnsDomainStrategy: DomainStrategy.ipv4Only,
-      directDnsAddress: "udp://1.1.1.1",
+      directDnsAddress: LockedCoreConfig.directDnsAddress,
       directDnsDomainStrategy: DomainStrategy.ipv4Only,
-      mixedPort: 12334,
-      tproxyPort: 12335,
-      directPort: 12337,
-      redirectPort: 12336,
+      mixedPort: LockedCoreConfig.mixedPort,
+      tproxyPort: LockedCoreConfig.tproxyPort,
+      directPort: LockedCoreConfig.directPort,
+      redirectPort: LockedCoreConfig.redirectPort,
       tunImplementation: TunImplementation.gvisor,
-      mtu: 9000,
+      mtu: LockedCoreConfig.mtu,
       strictRoute: true,
       enableClashApi: false,
-      clashApiPort: 16756,
+      clashApiPort: LockedCoreConfig.clashApiPort,
       enableTun: true,
       setSystemProxy: false,
       bypassLan: false,

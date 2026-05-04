@@ -28,10 +28,17 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async {
+  Timer? splashFailsafeTimer;
   if (!kIsWeb) {
     FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   }
   LoggerController.preInit();
+  if (!kIsWeb) {
+    splashFailsafeTimer = Timer(const Duration(seconds: 12), () {
+      Logger.bootstrap.warning("startup splash failsafe triggered");
+      FlutterNativeSplash.remove();
+    });
+  }
   FlutterError.onError = Logger.logFlutterError;
   WidgetsBinding.instance.platformDispatcher.onError = Logger.logPlatformDispatcherError;
 
@@ -64,7 +71,7 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
     }
   });
 
-  final debug = container.read(debugModeNotifierProvider) || kDebugMode;
+  final debug = !kReleaseMode && (container.read(debugModeNotifierProvider) || kDebugMode);
 
   if (PlatformUtils.isDesktop) {
     await _init("window controller", () => container.read(windowNotifierProvider.future));
@@ -88,7 +95,7 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   await _init("translations", () => container.read(translationsProvider.future));
 
   await _safeInit("active profile", () => container.read(activeProfileProvider.future), timeout: 1000);
-  await _init("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init());
+  await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 8000);
 
   if (!kIsWeb) {
     // await _safeInit(
@@ -119,6 +126,7 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   );
 
   if (!kIsWeb) {
+    splashFailsafeTimer?.cancel();
     FlutterNativeSplash.remove();
   }
   // SentryFlutter.s(DateTime.now().toUtc());

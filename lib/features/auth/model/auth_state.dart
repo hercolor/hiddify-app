@@ -1,13 +1,33 @@
 import 'package:hiddify/features/auth/model/auth_session.dart';
 
+enum AuthStatus { initializing, loggedOut, loggedIn }
+
 class AuthState {
-  const AuthState({this.session});
+  const AuthState._({required this.status, this.session});
+
+  const AuthState.initializing() : this._(status: AuthStatus.initializing);
+
+  const AuthState.loggedOut() : this._(status: AuthStatus.loggedOut);
+
+  const AuthState.loggedIn(AuthSession session) : this._(status: AuthStatus.loggedIn, session: session);
+
+  final AuthStatus status;
 
   final AuthSession? session;
 
-  bool get isLoggedIn => session != null;
+  bool get isInitializing => status == AuthStatus.initializing;
 
-  AuthState copyWith({AuthSession? session}) {
-    return AuthState(session: session ?? this.session);
+  bool get isLoggedOut => status == AuthStatus.loggedOut;
+
+  bool get isLoggedIn => status == AuthStatus.loggedIn && session != null;
+
+  AuthState copyWith({AuthStatus? status, AuthSession? session}) {
+    final nextStatus = status ?? this.status;
+    final nextSession = session ?? this.session;
+    return switch (nextStatus) {
+      AuthStatus.initializing => const AuthState.initializing(),
+      AuthStatus.loggedOut => const AuthState.loggedOut(),
+      AuthStatus.loggedIn => nextSession == null ? const AuthState.loggedOut() : AuthState.loggedIn(nextSession),
+    };
   }
 }

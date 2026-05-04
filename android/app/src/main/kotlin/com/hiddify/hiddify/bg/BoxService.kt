@@ -1,21 +1,16 @@
 package com.hiddify.hiddify.bg
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import com.hiddify.hiddify.Application
@@ -37,7 +32,6 @@ import com.hiddify.core.libbox.Notification
 import com.hiddify.core.libbox.PlatformInterface
 import com.hiddify.core.libbox.SystemProxyStatus
 import com.hiddify.hiddify.BuildConfig
-import com.hiddify.hiddify.MainActivity
 import com.hiddify.hiddify.constant.Bugs
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +52,12 @@ class BoxService(
 
         private var initializeOnce = false
         private lateinit var workingDir: File
+        private fun debugLogStatic(message: String) {
+            if (BuildConfig.DEBUG || Settings.debugMode) {
+                Log.d(TAG, message)
+            }
+        }
+
         private fun initialize() {
             System.setProperty("GODEBUG", "efence=1,stacktraceback=2");
             System.setProperty("GOGC", "off");
@@ -69,9 +69,9 @@ class BoxService(
             workingDir.mkdirs()
             val tempDir = Application.application.cacheDir
             tempDir.mkdirs()
-            Log.d(TAG, "base dir: ${baseDir.path}")
-            Log.d(TAG, "working dir: ${workingDir.path}")
-            Log.d(TAG, "temp dir: ${tempDir.path}")
+            debugLogStatic("base dir initialized")
+            debugLogStatic("working dir initialized")
+            debugLogStatic("temp dir initialized")
 
 //
             //Mobile.setup(baseDir.path, workingDir.path, tempDir.path,  2L ,"127.0.0.1:{Setting}","",false,this)
@@ -139,7 +139,7 @@ class BoxService(
     private suspend fun startService() {
         try {
             status.postValue(Status.Starting)
-            Log.d(TAG, "starting service")
+            debugLog("starting service")
             withContext(Dispatchers.Main) {
                 notification.show(activeProfileName, R.string.status_starting)
             }
@@ -360,51 +360,20 @@ class BoxService(
         stopService()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     internal fun sendNotification(notification: Notification) {
-        return
-        val builder =
-            NotificationCompat.Builder(service, notification.identifier).setShowWhen(false)
-                .setContentTitle(notification.title).setContentText(notification.body)
-                .setOnlyAlertOnce(true).setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setCategory(NotificationCompat.CATEGORY_EVENT)
-                .setPriority(NotificationCompat.PRIORITY_HIGH).setAutoCancel(true)
-        if (!notification.subtitle.isNullOrBlank()) {
-            builder.setContentInfo(notification.subtitle)
-        }
-        if (!notification.openURL.isNullOrBlank()) {
-            builder.setContentIntent(
-                PendingIntent.getActivity(
-                    service,
-                    0,
-                    Intent(
-                        service,
-                        MainActivity::class.java,
-                    ).apply {
-                        setAction(Action.SERVICE).setData(Uri.parse(notification.openURL))
-                        setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                    },
-                    ServiceNotification.flags,
-                ),
-            )
-        }
-        GlobalScope.launch(Dispatchers.Main) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Application.notification.createNotificationChannel(
-                    NotificationChannel(
-                        notification.identifier,
-                        notification.typeName,
-                        NotificationManager.IMPORTANCE_HIGH,
-                    ),
-                )
-            }
-            Application.notification.notify(notification.typeID, builder.build())
-        }
     }
 
      fun writeDebugMessage(message: String?) {
-        Log.d("BoxService", message!!)
+        debugLog(message ?: "")
         binder.broadcast {
             it.onServiceWriteLog(message)
+        }
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG || Settings.debugMode) {
+            Log.d(TAG, message)
         }
     }
 

@@ -21,6 +21,7 @@ import com.hiddify.core.api.v2.hcore.SystemInfo
 import com.hiddify.core.api.v2.hello.HelloClient
 import com.hiddify.core.api.v2.hello.HelloRequest
 import com.hiddify.hiddify.Application
+import com.hiddify.hiddify.BuildConfig
 import com.hiddify.hiddify.MainActivity
 import com.hiddify.hiddify.R
 import com.hiddify.hiddify.Settings
@@ -74,7 +75,7 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
         NotificationCompat.Builder(service, notificationChannel)
                 .setShowWhen(false)
                 .setOngoing(true)
-                .setContentTitle("Hiddify")
+                .setContentTitle("4376加速")
                 .setOnlyAlertOnce(true)
                 .setSmallIcon(R.drawable.ic_stat_logo)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -109,13 +110,13 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Application.notification.createNotificationChannel(
                 NotificationChannel(
-                    notificationChannel, "hiddify service", NotificationManager.IMPORTANCE_LOW
+                    notificationChannel, "4376加速服务", NotificationManager.IMPORTANCE_LOW
                 )
             )
         }
         service.startForeground(
             notificationId, notificationBuilder
-                .setContentTitle(profileName.takeIf { it.isNotBlank() } ?: "Hiddify")
+                .setContentTitle(profileName.takeIf { it.isNotBlank() } ?: "4376加速")
                 .setContentText(service.getString(contentTextId)).build()
         )
     }
@@ -175,11 +176,11 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
 
     fun startListenSystemInfo() {
         // Cancel any previous stream if still running
-        Log.d("notification","startListenSystemInfo")
+        debugLog("startListenSystemInfo")
         streamingJob?.cancel()
 
         streamingJob = streamingCoroutineScope.launch(Dispatchers.IO) {
-            Log.d("notification", "startListenSystemInfo-launch")
+            debugLog("startListenSystemInfo-launch")
 
             val coreClient = GrpcClientProvider.grpcClient.create(CoreClient::class)
 
@@ -194,7 +195,7 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
                 }
             } catch (e: CancellationException) {
                 // coroutine cancelled normally
-                Log.d("notification", "SystemInfo polling cancelled")
+                debugLog("SystemInfo polling cancelled")
                 notification.cancel(notificationId)
             } catch (e: Exception) {
                 Log.e("notification", "SystemInfo polling failed", e)
@@ -206,7 +207,13 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
         try {
             streamingJob?.cancel()
         }catch (e: Exception){
-            Log.d("notification", "Exception ${e}")
+            debugLog("Exception while stopping SystemInfo polling")
+        }
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG || Settings.debugMode) {
+            Log.d("notification", message)
         }
     }
 }

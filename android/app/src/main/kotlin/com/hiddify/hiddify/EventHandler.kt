@@ -2,6 +2,8 @@ package com.hiddify.hiddify
 
 import android.util.Log
 import androidx.lifecycle.Observer
+import com.hiddify.hiddify.BuildConfig
+import com.hiddify.hiddify.Settings
 import com.hiddify.hiddify.constant.Alert
 import com.hiddify.hiddify.constant.Status
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -29,7 +31,7 @@ class EventHandler : FlutterPlugin {
         statusChannel!!.setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 statusObserver = Observer {
-                    Log.d(TAG, "new status: $it")
+                    debugLog("new status: $it")
                     val map = listOf(
                         Pair("status", it.name)
                     )
@@ -49,7 +51,7 @@ class EventHandler : FlutterPlugin {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 alertsObserver = Observer {
                     if (it == null) return@Observer
-                    Log.d(TAG, "new alert: $it")
+                    debugLog("new alert: $it")
                     val map = listOf(
                         Pair("status", it.status.name),
                         Pair("alert", it.alert?.name),
@@ -76,6 +78,12 @@ class EventHandler : FlutterPlugin {
         if (alertsObserver != null)
             MainActivity.instance.serviceAlerts.removeObserver(alertsObserver!!)
         alertsChannel?.setStreamHandler(null)
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG || Settings.debugMode) {
+            Log.d(TAG, message)
+        }
     }
 }
 

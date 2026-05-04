@@ -121,10 +121,11 @@ class DebugModeNotifier extends _$DebugModeNotifier {
   );
 
   @override
-  bool build() => _pref.read();
+  bool build() => !kReleaseMode && _pref.read();
 
   Future<void> update(bool value) {
-    state = value;
-    return _pref.write(value);
+    final next = !kReleaseMode && value;
+    state = next;
+    return _pref.write(next);
   }
 }

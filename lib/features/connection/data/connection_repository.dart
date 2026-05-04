@@ -1,4 +1,5 @@
 import 'package:fpdart/fpdart.dart';
+import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/core/model/directories.dart';
 import 'package:hiddify/core/utils/exception_handler.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
@@ -130,11 +131,12 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
     final nodeName = profile.name.replaceAll(RegExp(r'https?://[^\s]+'), 'https://***');
     loggy.debug(
       'final generated core config summary: '
-      'fakeIp=false, '
-      'ipv6=false, '
-      'dnsStrategy=ipv4_only, '
-      'routeFinal=proxy, '
-      'selectedNodeName=$nodeName',
+      'fakeIp=${LockedCoreConfig.fakeIp}, '
+      'ipv6=${LockedCoreConfig.ipv6}, '
+      'dnsStrategy=${LockedCoreConfig.dnsStrategy}, '
+      'routeFinal=${LockedCoreConfig.routeFinal}, '
+      'selectedNodeName=$nodeName, '
+      'coreConfigVersion=${LockedCoreConfig.schemaVersion}',
     );
   }
 }

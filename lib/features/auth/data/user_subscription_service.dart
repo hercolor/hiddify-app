@@ -33,7 +33,9 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         }
 
         loggy.debug('xboard subscription response keys: ${_sanitizedKeys(response.data).join(',')}');
-        return XBoardResponseParser.parseSubscription(response.data);
+        final subscription = XBoardResponseParser.parseSubscription(response.data);
+        final customerService = subscription.customerService ?? await _fetchCustomerService(authData);
+        return customerService == null ? subscription : subscription.copyWith(customerService: customerService);
       },
       (error, stackTrace) {
         if (error is AuthFailure) return error;
@@ -46,6 +48,24 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         return AuthFailure.unexpected(error, stackTrace);
       },
     );
+  }
+
+  Future<String?> _fetchCustomerService(String authData) async {
+    for (final path in const ['/api/v1/guest/comm/config', '/api/v1/passport/comm/config']) {
+      try {
+        final response = await _httpClient.get<Map<String, dynamic>>(
+          '$_apiBaseUrl$path',
+          headers: {'Accept': 'application/json', 'Authorization': authData},
+        );
+        if ((response.statusCode ?? 0) >= 400 || response.data == null) continue;
+        loggy.debug('xboard customer service response keys: ${_sanitizedKeys(response.data).join(',')}');
+        final value = XBoardResponseParser.parseCustomerService(response.data);
+        if (value != null && value.trim().isNotEmpty) return value.trim();
+      } catch (error, stackTrace) {
+        loggy.debug('xboard customer service config request skipped', error, stackTrace);
+      }
+    }
+    return null;
   }
 
   void _logAuthDataForFirstUserRequest(String authData) {

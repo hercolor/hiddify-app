@@ -3,16 +3,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/theme_extensions.dart';
 import 'package:hiddify/core/widget/animated_text.dart';
-import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
-import 'package:hiddify/features/connection/model/connection_status.dart';
+import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
-import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
-import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -22,12 +16,8 @@ class ConnectionButton extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final t = ref.watch(translationsProvider).requireValue;
-    final connectionStatus = ref.watch(connectionNotifierProvider);
-    final activeProxy = ref.watch(activeProxyNotifierProvider);
-    final delay = activeProxy.valueOrNull?.urlTestDelay ?? 0;
-
-    final requiresReconnect = ref.watch(configOptionNotifierProvider).valueOrNull;
+    ref.watch(connectionNotifierProvider);
+    final clientState = ref.watch(clientConnectionStateProvider);
     final today = DateTime.now();
     // final animationController = useAnimationController(
     //   duration: const Duration(seconds: 1),
@@ -60,133 +50,38 @@ class ConnectionButton extends HookConsumerWidget {
     //   // );
 
     const buttonTheme = ConnectionButtonTheme.light;
-
-    //   // return CircleDesignWidget(
-    //   //   onTap: switch (connectionStatus) {
-    //   //     // AsyncData(value: Disconnected()) || AsyncError() => () async {
-    //   //     //     if (await showExperimentalNotice()) {
-    //   //     //       return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-    //   //     //     }
-    //   //     //   },
-    //   //     // AsyncData(value: Connected()) => () async {
-    //   //     //     if (requiresReconnect == true && await showExperimentalNotice()) {
-    //   //     //       return await ref.read(connectionNotifierProvider.notifier).reconnect(await ref.read(activeProfileProvider.future));
-    //   //     //     }
-    //   //     //     return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-    //   //     //   },
-    //   //     _ => () {},
-    //   //   },
-    //   //   // enabled: switch (connectionStatus) {
-    //   //   //   AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
-    //   //   //   _ => false,
-    //   //   // },
-    //   //   // label: switch (connectionStatus) {
-    //   //   //   AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-    //   //   //   AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
-    //   //   //   AsyncData(value: final status) => status.present(t),
-    //   //   //   _ => "",
-    //   //   // },
-    //   //   color: switch (connectionStatus) {
-    //   //     AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-    //   //     AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => Color.fromARGB(255, 157, 139, 1),
-    //   //     AsyncData(value: Connected()) => Colors.green.shade900,
-    //   //     AsyncData(value: _) => Colors.indigo.shade700, // Color(0xFF3446A5), //buttonTheme.idleColor!,
-    //   //     _ => Colors.red,
-    //   //   },
-
-    //   //   animated: true ||
-    //   //       switch (connectionStatus) {
-    //   //         AsyncData(value: Connected()) when requiresReconnect == true => false,
-    //   //         AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => false,
-    //   //         AsyncData(value: Connected()) => true,
-    //   //         AsyncData(value: _) => true,
-    //   //         _ => false,
-    //   //       },
-    //   //   animationValue: animationValue,
-    //   // );
-    // }
     const secureLabel = "";
-    Future<bool> ensureReadyToConnect() async {
-      final notification = ref.read(inAppNotificationControllerProvider);
-      final authState = ref.read(authNotifierProvider);
-      if (authState.valueOrNull?.isLoggedIn != true) {
-        notification.showInfoToast('请先登录账号');
-        if (context.mounted) context.goNamed('settings');
-        return false;
-      }
-
-      if (ref.read(activeProfileProvider).valueOrNull == null) {
-        final synced = await ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
-        if (!synced) return false;
-        ref.invalidate(activeProfileProvider);
-        final activeProfile = await ref
-            .read(activeProfileProvider.future)
-            .timeout(const Duration(seconds: 3), onTimeout: () => null);
-        if (activeProfile == null) {
-          notification.showErrorToast('获取节点失败，请稍后重试');
-          return false;
-        }
-      }
-      return true;
-    }
+    final enabled = clientState.canTap;
+    final connected = clientState.phase == ClientConnectionPhase.connected;
+    final busy = clientState.isBusy;
+    final failed = clientState.phase == ClientConnectionPhase.failed;
+    final loggedOut = clientState.phase == ClientConnectionPhase.loggedOut;
 
     return _ConnectionButton(
-      onTap: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => () async {
-          final activeProfile = await ref.read(activeProfileProvider.future);
-          return await ref.read(connectionNotifierProvider.notifier).reconnect(activeProfile);
-        },
-        AsyncData(value: Disconnected()) || AsyncError() => () async {
-          if (!await ensureReadyToConnect()) return;
-          return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-        },
-        AsyncData(value: Connected()) => () async {
-          if (requiresReconnect == true) {
-            return await ref
-                .read(connectionNotifierProvider.notifier)
-                .reconnect(await ref.read(activeProfileProvider.future));
+      onTap: () async {
+        if (clientState.phase == ClientConnectionPhase.loggedOut) {
+          ref.read(connectionNotifierProvider.notifier).connectRequested();
+          if (context.mounted) {
+            context.goNamed('settings');
           }
-          return await ref.read(connectionNotifierProvider.notifier).toggleConnection();
-        },
-        _ => () {},
+          return;
+        }
+        await ref.read(connectionNotifierProvider.notifier).connectRequested();
       },
-      enabled: switch (connectionStatus) {
-        AsyncData(value: Connected()) || AsyncData(value: Disconnected()) || AsyncError() => true,
-        _ => false,
-      },
-      label: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => t.connection.reconnect,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => t.connection.connecting,
-        AsyncData(value: final status) => status.present(t),
-        _ => "",
-      },
-      buttonColor: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => const Color.fromARGB(255, 185, 176, 103),
-        AsyncData(value: Connected()) => buttonTheme.connectedColor!,
-        AsyncData(value: _) => buttonTheme.idleColor!,
-        _ => Colors.red,
-      },
-      image: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Assets.images.disconnectNorouz,
-        AsyncData(value: Connected()) => Assets.images.connectNorouz,
-        AsyncData(value: _) => Assets.images.disconnectNorouz,
-        _ => Assets.images.disconnectNorouz,
-      },
-      newButtonColor: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => const Color.fromARGB(255, 185, 176, 103),
-        AsyncData(value: Connected()) => buttonTheme.connectedColor!,
-        AsyncData(value: _) => buttonTheme.idleColor!,
-        _ => Colors.red,
-      },
-      animated: switch (connectionStatus) {
-        AsyncData(value: Connected()) when requiresReconnect == true => false,
-        AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => false,
-        AsyncData(value: Connected()) => true,
-        AsyncData(value: _) => true,
-        _ => false,
-      },
+      enabled: enabled,
+      label: clientState.buttonLabel,
+      buttonColor: connected
+          ? buttonTheme.connectedColor!
+          : failed
+          ? Colors.red.shade700
+          : busy
+          ? const Color.fromARGB(255, 185, 176, 103)
+          : loggedOut
+          ? Colors.grey.shade600
+          : buttonTheme.idleColor!,
+      image: connected ? Assets.images.connectNorouz : Assets.images.disconnectNorouz,
+      newButtonColor: connected ? buttonTheme.connectedColor! : buttonTheme.idleColor!,
+      animated: connected || busy,
       useImage: today.day >= 19 && today.day <= 23 && today.month == 3,
       secureLabel: secureLabel,
     );
@@ -206,7 +101,7 @@ class _ConnectionButton extends StatelessWidget {
     required this.secureLabel,
   });
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool enabled;
   final String label;
   final Color buttonColor;
@@ -242,7 +137,7 @@ class _ConnectionButton extends StatelessWidget {
               color: Colors.white,
               child: InkWell(
                 focusColor: Colors.grey,
-                onTap: onTap,
+                onTap: enabled ? onTap : null,
                 child: Padding(
                   padding: const EdgeInsets.all(36),
                   child: useImage ? image.image() : Image.asset('assets/logo.png'),

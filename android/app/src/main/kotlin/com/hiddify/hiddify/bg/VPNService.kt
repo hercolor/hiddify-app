@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import com.hiddify.core.libbox.Notification
+import com.hiddify.hiddify.BuildConfig
 import com.hiddify.hiddify.constant.PerAppProxyMode
 import com.hiddify.hiddify.ktx.toIpPrefix
 import com.hiddify.core.libbox.TunOptions
@@ -50,18 +51,18 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
 
     override fun autoDetectInterfaceControl(fd: Int) {
         val protected = protect(fd)
-        Log.d(TAG, "protect outbound socket fd=$fd result=$protected")
+        debugLog("protect outbound socket fd=$fd result=$protected")
     }
 
     var systemProxyAvailable = false
     var systemProxyEnabled = false
     fun addIncludePackage(builder: Builder, packageName: String) {
         if (packageName == this.packageName) { 
-            Log.d("VpnService","Cannot include myself: $packageName")
+            debugLog("Cannot include current app")
             return
         }
         try {     
-            Log.d("VpnService","Including $packageName")
+            debugLog("Including app package")
             builder.addAllowedApplication(packageName)
         } catch (e: NameNotFoundException) {
         }
@@ -69,14 +70,14 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
 
     fun addExcludePackage(builder: Builder, packageName: String) {
         try {     
-            Log.d("VpnService","Excluding $packageName")
+            debugLog("Excluding app package")
             builder.addDisallowedApplication(packageName)
         } catch (e: NameNotFoundException) {
         }
     }
 
     override fun openTun(options: TunOptions): Int {
-        Log.d(TAG, "openTun: starting VPN, mtu=${options.mtu}, autoRoute=${options.autoRoute}")
+        debugLog("openTun: starting VPN, mtu=${options.mtu}, autoRoute=${options.autoRoute}")
         var hasPermission = false
         for (i in 0 until 20) {
             if (prepare(this) != null) {
@@ -115,11 +116,11 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
             inet6Address.next()
             ignoredInet6AddressCount++
         }
-        Log.d(TAG, "openTun: added IPv4 addresses=$inet4AddressCount, ignored IPv6 addresses=$ignoredInet6AddressCount")
+        debugLog("openTun: added IPv4 addresses=$inet4AddressCount, ignored IPv6 addresses=$ignoredInet6AddressCount")
 
         if (options.autoRoute) {
             builder.addDnsServer(options.dnsServerAddress.value)
-            Log.d(TAG, "openTun: DNS server=${options.dnsServerAddress.value}")
+            debugLog("openTun: DNS server configured")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val inet4RouteAddress = options.inet4RouteAddress
@@ -133,7 +134,7 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
                     builder.addRoute("0.0.0.0", 0)
                     inet4RouteCount++
                 }
-                Log.d(TAG, "openTun: IPv4 routes=$inet4RouteCount, defaultRoute=true")
+                debugLog("openTun: IPv4 routes=$inet4RouteCount, defaultRoute=true")
 
                 val inet6RouteAddress = options.inet6RouteAddress
                 var ignoredInet6RouteCount = 0
@@ -143,7 +144,7 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
                         ignoredInet6RouteCount++
                     }
                 }
-                Log.d(TAG, "openTun: IPv6 disabled, ignored IPv6 routes=$ignoredInet6RouteCount, addDefaultIPv6=false")
+                debugLog("openTun: IPv6 disabled, ignored IPv6 routes=$ignoredInet6RouteCount, addDefaultIPv6=false")
 
                 val inet4RouteExcludeAddress = options.inet4RouteExcludeAddress
                 while (inet4RouteExcludeAddress.hasNext()) {
@@ -167,7 +168,7 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
                     builder.addRoute("0.0.0.0", 0)
                     inet4RouteCount++
                 }
-                Log.d(TAG, "openTun: IPv4 routes=$inet4RouteCount, defaultRoute=true")
+                debugLog("openTun: IPv4 routes=$inet4RouteCount, defaultRoute=true")
 
                 val inet6RouteAddress = options.inet6RouteRange
                 var ignoredInet6RouteCount = 0
@@ -177,7 +178,7 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
                         ignoredInet6RouteCount++
                     }
                 }
-                Log.d(TAG, "openTun: IPv6 disabled, ignored IPv6 routes=$ignoredInet6RouteCount, addDefaultIPv6=false")
+                debugLog("openTun: IPv6 disabled, ignored IPv6 routes=$ignoredInet6RouteCount, addDefaultIPv6=false")
             }
 
             if (Settings.perAppProxyEnabled) {
@@ -229,7 +230,7 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
 
         val pfd = builder.establish() ?: error("android: the application is not prepared or is revoked")
         service.fileDescriptor = pfd
-        Log.d(TAG, "openTun: established tun fd=${pfd.fd}")
+        debugLog("openTun: established tun fd=${pfd.fd}")
         return pfd.fd
     }
 
@@ -237,5 +238,11 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
 
     override fun sendNotification(notification: Notification) {
 //        service.sendNotification(notification)
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG || Settings.debugMode) {
+            Log.d(TAG, message)
+        }
     }
 }

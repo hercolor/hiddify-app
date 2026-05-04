@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="stop">Stop</string>
-    <string name="quick_toggle">Toggle</string>
-    <string name="status_starting">Service starting…</string>
-    <string name="status_started">Service started</string>
+    <string name="stop">停止加速</string>
+    <string name="quick_toggle">一键加速</string>
+    <string name="status_starting">加速服务启动中…</string>
+    <string name="status_started">加速服务已启动</string>
 </resources>

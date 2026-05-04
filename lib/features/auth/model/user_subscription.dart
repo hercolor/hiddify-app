@@ -8,6 +8,7 @@ class UserSubscription {
     this.planName,
     this.onlineDevices,
     this.maxDevices,
+    this.customerService,
   });
 
   final String subscribeUrl;
@@ -18,6 +19,7 @@ class UserSubscription {
   final String? planName;
   final int? onlineDevices;
   final int? maxDevices;
+  final String? customerService;
 
   int get usedTraffic => upload + download;
 
@@ -34,6 +36,7 @@ class UserSubscription {
     String? planName,
     int? onlineDevices,
     int? maxDevices,
+    String? customerService,
   }) {
     return UserSubscription(
       subscribeUrl: subscribeUrl ?? this.subscribeUrl,
@@ -44,6 +47,7 @@ class UserSubscription {
       planName: planName ?? this.planName,
       onlineDevices: onlineDevices ?? this.onlineDevices,
       maxDevices: maxDevices ?? this.maxDevices,
+      customerService: customerService ?? this.customerService,
     );
   }
 }

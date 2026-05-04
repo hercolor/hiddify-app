@@ -24,6 +24,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
   static const _planNameKey = 'xboard.auth.plan_name';
   static const _onlineDevicesKey = 'xboard.auth.online_devices';
   static const _maxDevicesKey = 'xboard.auth.max_devices';
+  static const _customerServiceKey = 'xboard.auth.customer_service';
 
   final FlutterSecureStorage _storage;
 
@@ -43,6 +44,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
     await _storage.write(key: _planNameKey, value: subscription?.planName);
     await _storage.write(key: _onlineDevicesKey, value: subscription?.onlineDevices?.toString());
     await _storage.write(key: _maxDevicesKey, value: subscription?.maxDevices?.toString());
+    await _storage.write(key: _customerServiceKey, value: subscription?.customerService);
   }
 
   @override
@@ -74,6 +76,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
               planName: await _storage.read(key: _planNameKey),
               onlineDevices: int.tryParse(await _storage.read(key: _onlineDevicesKey) ?? ''),
               maxDevices: int.tryParse(await _storage.read(key: _maxDevicesKey) ?? ''),
+              customerService: await _storage.read(key: _customerServiceKey),
             ),
     );
   }
@@ -94,6 +97,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
       _planNameKey,
       _onlineDevicesKey,
       _maxDevicesKey,
+      _customerServiceKey,
     ]) {
       await _storage.delete(key: key);
     }
