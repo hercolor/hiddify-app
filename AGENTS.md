@@ -45,3 +45,62 @@ Phase 2:
 - Flutter: flutter pub get && flutter analyze
 - Android: ./gradlew assembleDebug
 - Node: npm install && npm run build
+
+# 4376 Windows Client Rules
+
+## Product
+This is the Windows desktop client for 4376, a commercial VPN-style proxy client connected to XBoard and Xboard-Node.
+
+## Branding
+- User-visible product name must be 4376.
+- Do not show XBoard, Hiddify, proxy core names, protocol names, server addresses, ports, ciphers, DNS, fake-ip, IPv6, route mode, or subscription URL in normal UI.
+- XBoard may only remain in internal API class names if needed.
+
+## Pages
+Normal user pages:
+- Home
+- Nodes
+- Membership
+
+No normal Settings page.
+Technical details are only allowed in hidden diagnostics.
+
+## Auth
+- Login API returns authData and subscribe_url.
+- Use authData for Authorization.
+- Save subscribe_url securely or in local app storage.
+- On login success, automatically sync nodes from subscribe_url.
+- On app startup, restore auth state before enabling connect button.
+
+## Subscription
+- Do not show subscription URL.
+- Do not show import subscription, copy subscription, refresh subscription, or sync nodes in normal UI.
+- Login automatically syncs nodes.
+- If node cache exists, use cache while background sync runs.
+
+## Core Config
+- fake-ip disabled.
+- IPv6 disabled.
+- DNS real-ip.
+- route.final = proxy.
+- Unknown traffic must not default to block or direct.
+- Users cannot edit DNS, TUN, route, fake-ip, IPv6, inbound ports, or custom core config.
+
+## Windows Behavior
+- Support system tray.
+- Minimize to tray if enabled.
+- Tray menu should show 4376, Connect/Disconnect, Current node, Open app, Quit.
+- Windows notifications must show 4376, not XBoard.
+- Detect admin permission or Wintun requirement before starting TUN mode.
+- Start/stop core must be idempotent.
+
+## Safety
+- Never log full authData, token, subscribe_url, node password, or full server address.
+- Logs must be sanitized.
+- Diagnostic page must not expose secrets.
+
+## Workflow
+- Before modifying code, list files to change.
+- Make small changes.
+- Run formatter and build check.
+- Output changed files and manual test steps.
