@@ -37,7 +37,9 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         final subscription = XBoardResponseParser.parseSubscription(
           response.data,
           fallbackSubscribeUrl: fallbackSubscribeUrl,
+          baseUrl: _apiBaseUrl,
         );
+        _logSubscribeUrlSummary(subscription.subscribeUrl);
         final customerService = subscription.customerService ?? await _fetchCustomerService(authData);
         return customerService == null ? subscription : subscription.copyWith(customerService: customerService);
       },
@@ -57,7 +59,29 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
   String? _subscribeUrlFromToken(String? subscribeToken) {
     final token = subscribeToken?.trim();
     if (token == null || token.isEmpty) return null;
-    return '$_apiBaseUrl/api/v1/client/subscribe?token=${Uri.encodeQueryComponent(token)}';
+    return Uri.parse(
+      _apiBaseUrl,
+    ).resolve('/api/v1/client/subscribe?token=${Uri.encodeQueryComponent(token)}').toString();
+  }
+
+  void _logSubscribeUrlSummary(String subscribeUrl) {
+    final uri = Uri.tryParse(subscribeUrl);
+    loggy.debug(
+      'xboard subscribe_url summary: '
+      'exists=${subscribeUrl.trim().isNotEmpty}, '
+      'absolute=${uri?.hasScheme == true}, '
+      'path=${_safePath(uri?.path)}, '
+      'hasToken=${uri?.queryParameters.keys.any((key) => key.toLowerCase() == 'token') == true}, '
+      'hasFlag=${uri?.queryParameters.keys.any((key) => key.toLowerCase() == 'flag') == true}, '
+      'length=${subscribeUrl.length}',
+    );
+  }
+
+  String _safePath(String? path) {
+    final trimmed = path?.trim();
+    if (trimmed == null || trimmed.isEmpty) return '--';
+    if (trimmed.length > 80) return '${trimmed.substring(0, 80)}…';
+    return trimmed;
   }
 
   Future<String?> _fetchCustomerService(String authData) async {

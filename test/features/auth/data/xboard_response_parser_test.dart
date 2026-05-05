@@ -67,6 +67,14 @@ void main() {
       expect(subscription.expiredAt, DateTime.fromMillisecondsSinceEpoch(1893456000 * 1000));
     });
 
+    test('resolves relative XBoard subscribe_url against configured api base url', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {'subscribe_url': '/api/v1/client/subscribe?token=sub-token', 'expired_at': 1893456000},
+      }, baseUrl: 'https://api.example.com');
+
+      expect(subscription.subscribeUrl, 'https://api.example.com/api/v1/client/subscribe?token=sub-token');
+    });
+
     test('uses fallback subscription url from login subscribe token while preserving user fields', () {
       final subscription = XBoardResponseParser.parseSubscription({
         'data': {

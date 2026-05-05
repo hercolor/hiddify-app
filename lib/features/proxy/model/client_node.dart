@@ -146,6 +146,18 @@ abstract final class ClientNodeParser {
     try {
       final decoded = jsonDecode(content);
       final root = decoded is Map ? decoded : <String, Object?>{};
+      final proxies = root['proxies'];
+      if (proxies is List) {
+        final nodes = proxies
+            .whereType<Map>()
+            .map((item) => item['name']?.toString().trim())
+            .whereType<String>()
+            .where((name) => name.isNotEmpty)
+            .map((name) => ClientNode(id: name, name: _cleanName(name)));
+        final parsed = _dedupe(nodes);
+        if (parsed.isNotEmpty) return parsed;
+      }
+
       final outbounds = root['outbounds'];
       if (outbounds is! List) return const [];
 
@@ -184,15 +196,18 @@ abstract final class ClientNodeParser {
     final block = blockMatch?.group(1) ?? '';
     if (block.isEmpty) return const [];
 
-    for (final match in RegExp(r"""^\s*-\s*name:\s*['"]?([^'"\n#]+)['"]?""", multiLine: true).allMatches(block)) {
-      final name = _cleanName(match.group(1) ?? '');
+    for (final match in RegExp(
+      r'''^\s*-\s*name\s*:\s*(?:"([^"]+)"|'([^']+)'|([^#\n]+))''',
+      multiLine: true,
+    ).allMatches(block)) {
+      final name = _cleanName(match.group(1) ?? match.group(2) ?? match.group(3) ?? '');
       if (name.isNotEmpty) nodes.add(ClientNode(id: name, name: name));
     }
     for (final match in RegExp(
-      r"""^\s*-\s*\{[^}\n]*name:\s*['"]?([^,'"}\n#]+)['"]?""",
+      r'''^\s*-\s*\{[^}\n]*(?:"name"|'name'|name)\s*:\s*(?:"([^"]+)"|'([^']+)'|([^,}\n#]+))''',
       multiLine: true,
     ).allMatches(block)) {
-      final name = _cleanName(match.group(1) ?? '');
+      final name = _cleanName(match.group(1) ?? match.group(2) ?? match.group(3) ?? '');
       if (name.isNotEmpty) nodes.add(ClientNode(id: name, name: name));
     }
     return _dedupe(nodes);

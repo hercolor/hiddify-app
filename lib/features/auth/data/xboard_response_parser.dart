@@ -22,9 +22,9 @@ class XBoardResponseParser {
     return trimmed == null || trimmed.isEmpty ? null : _stripBearer(trimmed);
   }
 
-  static UserSubscription parseSubscription(Object? responseData, {String? fallbackSubscribeUrl}) {
+  static UserSubscription parseSubscription(Object? responseData, {String? fallbackSubscribeUrl, String? baseUrl}) {
     final data = _decodeIfString(responseData);
-    final subscribeUrl = _findSubscriptionUrl(data) ?? fallbackSubscribeUrl;
+    final subscribeUrl = _resolveSubscribeUrl(_findSubscriptionUrl(data) ?? fallbackSubscribeUrl, baseUrl);
     if (subscribeUrl == null || subscribeUrl.trim().isEmpty) {
       throw const AuthFailure.badResponse('未获取到节点信息');
     }
@@ -96,6 +96,22 @@ class XBoardResponseParser {
     final trimmed = value?.trim();
     if (trimmed != null && trimmed.isNotEmpty) return trimmed;
     return _findUrlString(data);
+  }
+
+  static String? _resolveSubscribeUrl(String? value, String? baseUrl) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme) return trimmed;
+
+    final base = Uri.tryParse(baseUrl?.trim() ?? '');
+    if (base == null || !base.hasScheme) return trimmed;
+
+    if (trimmed.startsWith('//')) {
+      return '${base.scheme}:$trimmed';
+    }
+    return base.resolve(trimmed).toString();
   }
 
   static String? _findPlanName(Object? data) {

@@ -157,6 +157,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       }
       final repo = await ref.read(profileRepositoryProvider.future);
       await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
+      loggy.debug('xboard remote profile import succeeded');
       ref.invalidate(activeProfileProvider);
       nodeSummary = await _cacheNodesFromActiveProfile(repo);
       nodesSynced = nodeSummary.nodeCount > 0;
@@ -164,7 +165,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         throw StateError('subscription imported but no client nodes parsed');
       }
     } catch (error, stackTrace) {
-      loggy.warning('failed to import xboard nodes, preserving user subscription', error, stackTrace);
+      loggy.warning(
+        'failed to import xboard nodes, preserving user subscription: ${_safeError(error)}',
+        null,
+        stackTrace,
+      );
       if (showNodeFailureToast) {
         ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
       }
@@ -280,6 +285,23 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       'https://***',
     );
     if (sanitized.length > 64) return '${sanitized.substring(0, 64)}…';
+    return sanitized;
+  }
+
+  String _safeError(Object? error) {
+    final sanitized = error
+        .toString()
+        .replaceAll(RegExp(r'https?://[^\s,)\]]+'), 'https://***')
+        .replaceAllMapped(RegExp(r'(token=)[^&\s,)\]]+', caseSensitive: false), (match) => '${match.group(1)}***')
+        .replaceAllMapped(
+          RegExp(r'(password|passwd|pwd)=([^&\s,)\]]+)', caseSensitive: false),
+          (match) => '${match.group(1)}=***',
+        )
+        .replaceAllMapped(
+          RegExp(r'(authorization|auth_data|authData)\s*[:=]\s*[^\s,)\]]+', caseSensitive: false),
+          (match) => '${match.group(1)}=***',
+        );
+    if (sanitized.length > 160) return '${sanitized.substring(0, 160)}…';
     return sanitized;
   }
 }
