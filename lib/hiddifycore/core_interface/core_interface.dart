@@ -45,7 +45,8 @@ class CoreInterface {
 
   bool isInitialized() {
     try {
-      final CoreClient _ = bgClient;
+      fgClient.hashCode;
+      bgClient.hashCode;
       return true;
     } catch (_) {
       return false;

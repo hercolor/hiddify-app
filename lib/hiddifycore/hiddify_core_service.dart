@@ -61,11 +61,14 @@ class HiddifyCoreService with InfraLogger {
 
   TaskEither<String, Unit> validateConfigByPath(String path, String tempPath, bool debug) {
     return TaskEither(() async {
+      final setupError = await _ensureCoreReady();
+      if (setupError != null) return left(setupError);
       try {
         final response = await core.fgClient.parse(ParseRequest(tempPath: tempPath, configPath: path, debug: false));
         if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
       } catch (e) {
-        await setup().run();
+        final setupResult = await setup().run();
+        if (setupResult.isLeft()) return left(setupResult.getLeft().toNullable() ?? e.toString());
         final response = await core.fgClient.parse(ParseRequest(tempPath: tempPath, configPath: path, debug: false));
         if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
       }
@@ -75,6 +78,8 @@ class HiddifyCoreService with InfraLogger {
 
   TaskEither<String, String> generateFullConfigByPath(String path) {
     return TaskEither(() async {
+      final setupError = await _ensureCoreReady();
+      if (setupError != null) return left(setupError);
       final response = await core.fgClient.parse(ParseRequest(configPath: path, debug: false));
       if (response.responseCode != ResponseCode.OK) return left("${response.responseCode} ${response.message}");
       return right(response.content);
@@ -111,6 +116,8 @@ class HiddifyCoreService with InfraLogger {
     return TaskEither(() async {
       loggy.debug("changing options");
       // latestOptions = options;
+      final setupError = await _ensureCoreReady();
+      if (setupError != null) return left(setupError);
       try {
         final res = await core.fgClient.changeHiddifySettings(
           ChangeHiddifySettingsRequest(hiddifySettingsJson: jsonEncode(options.toJson())),
@@ -129,6 +136,12 @@ class HiddifyCoreService with InfraLogger {
 
       return right(unit);
     });
+  }
+
+  Future<String?> _ensureCoreReady() async {
+    if (core.isInitialized()) return null;
+    final result = await setup().run();
+    return result.match((error) => error, (_) => null);
   }
 
   TaskEither<ConnectionFailure, Unit> start(String path, String name, bool disableMemoryLimit) {

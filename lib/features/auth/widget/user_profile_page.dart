@@ -85,10 +85,11 @@ class _LoginForm extends ConsumerStatefulWidget {
 class _LoginFormState extends ConsumerState<_LoginForm> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   int _buildCount = 0;
   int _emailInputCount = 0;
   int _passwordInputCount = 0;
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -99,7 +100,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
 
   Future<void> _submit(bool isLoading) async {
     if (isLoading) return;
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!_validateInputs()) return;
     final stopwatch = Stopwatch()..start();
     DiagnosticEventBuffer.addSafe('loginRequestStart');
     await ref.read(authNotifierProvider.notifier).login(_emailController.text, _passwordController.text);
@@ -112,14 +113,38 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
     }
   }
 
+  bool _validateInputs() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final nextEmailError = email.isEmpty
+        ? '请输入邮箱'
+        : !email.contains('@')
+        ? '邮箱格式不正确'
+        : null;
+    final nextPasswordError = password.isEmpty ? '请输入密码' : null;
+    if (_emailError != nextEmailError || _passwordError != nextPasswordError) {
+      setState(() {
+        _emailError = nextEmailError;
+        _passwordError = nextPasswordError;
+      });
+    }
+    return nextEmailError == null && nextPasswordError == null;
+  }
+
   void _onEmailChanged(String _) {
     _emailInputCount += 1;
     DiagnosticEventBuffer.addSafe('emailInputChanged count=$_emailInputCount');
+    if (_emailError != null) {
+      setState(() => _emailError = null);
+    }
   }
 
   void _onPasswordChanged(String _) {
     _passwordInputCount += 1;
     DiagnosticEventBuffer.addSafe('passwordInputChanged count=$_passwordInputCount');
+    if (_passwordError != null) {
+      setState(() => _passwordError = null);
+    }
   }
 
   @override
@@ -144,66 +169,58 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
-                    const Gap(8),
-                    Text('稳定、安全、快速的网络加速体验', style: theme.textTheme.bodyMedium),
-                    if (widget.errorText != null) ...[
-                      const Gap(14),
-                      Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
-                    ],
-                    const Gap(24),
-                    TextFormField(
-                      controller: _emailController,
-                      onChanged: _onEmailChanged,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      enableSuggestions: false,
-                      decoration: const InputDecoration(
-                        labelText: '邮箱账号',
-                        hintText: '请输入邮箱',
-                        prefixIcon: Icon(Icons.mail_outline_rounded),
-                      ),
-                      validator: (value) {
-                        final input = value?.trim() ?? '';
-                        if (input.isEmpty) return '请输入邮箱';
-                        if (!input.contains('@')) return '邮箱格式不正确';
-                        return null;
-                      },
-                      textInputAction: TextInputAction.next,
-                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
+                  const Gap(8),
+                  Text('稳定、安全、快速的网络加速体验', style: theme.textTheme.bodyMedium),
+                  if (widget.errorText != null) ...[
                     const Gap(14),
-                    TextFormField(
-                      controller: _passwordController,
-                      onChanged: _onPasswordChanged,
-                      obscureText: true,
-                      autofillHints: const [AutofillHints.password],
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      decoration: const InputDecoration(
-                        labelText: '登录密码',
-                        hintText: '请输入密码',
-                        prefixIcon: Icon(Icons.key_rounded),
-                      ),
-                      validator: (value) => (value == null || value.isEmpty) ? '请输入密码' : null,
-                      onFieldSubmitted: (_) => _submit(isLoading),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
-                    ),
-                    const Gap(4),
-                    _GradientButton(
-                      onPressed: isLoading ? null : () => _submit(isLoading),
-                      label: '登录',
-                      isLoading: isLoading,
-                    ),
+                    Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
                   ],
-                ),
+                  const Gap(24),
+                  TextField(
+                    controller: _emailController,
+                    onChanged: _onEmailChanged,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    enableSuggestions: false,
+                    decoration: InputDecoration(
+                      labelText: '邮箱账号',
+                      hintText: '请输入邮箱',
+                      errorText: _emailError,
+                      prefixIcon: const Icon(Icons.mail_outline_rounded),
+                    ),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const Gap(14),
+                  TextField(
+                    controller: _passwordController,
+                    onChanged: _onPasswordChanged,
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.password],
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      labelText: '登录密码',
+                      hintText: '请输入密码',
+                      errorText: _passwordError,
+                      prefixIcon: const Icon(Icons.key_rounded),
+                    ),
+                    onSubmitted: (_) => _submit(isLoading),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
+                  ),
+                  const Gap(4),
+                  _GradientButton(
+                    onPressed: isLoading ? null : () => _submit(isLoading),
+                    label: '登录',
+                    isLoading: isLoading,
+                  ),
+                ],
               ),
             ),
           ),
