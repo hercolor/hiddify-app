@@ -8,6 +8,7 @@ import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
 import 'package:hiddify/features/log/model/log_entity.dart';
 import 'package:hiddify/features/log/overview/logs_overview_notifier.dart';
@@ -30,6 +31,7 @@ class DiagnosticsPage extends HookConsumerWidget {
     final activeOptions = ref.watch(connectionRepositoryProvider).configOptionsSnapshot ?? options;
     final logsState = ref.watch(logsOverviewNotifierProvider);
     final logs = logsState.logs;
+    final diagnosticEvents = DiagnosticEventBuffer.recent();
     final diagnosticText = _buildDiagnosticText(
       authState: authState,
       nodeSelection: nodeSelection,
@@ -38,6 +40,7 @@ class DiagnosticsPage extends HookConsumerWidget {
       clientState: clientState,
       options: activeOptions,
       logs: logs,
+      diagnosticEvents: diagnosticEvents,
     );
 
     return Scaffold(
@@ -107,7 +110,7 @@ class DiagnosticsPage extends HookConsumerWidget {
           const SizedBox(height: 12),
           _ConfigSummaryCard(options: activeOptions),
           const SizedBox(height: 12),
-          _LogsCard(logs: logs),
+          _LogsCard(logs: logs, diagnosticEvents: diagnosticEvents),
         ],
       ),
     );
@@ -162,9 +165,10 @@ class _SummaryTile extends StatelessWidget {
 }
 
 class _LogsCard extends StatelessWidget {
-  const _LogsCard({required this.logs});
+  const _LogsCard({required this.logs, required this.diagnosticEvents});
 
   final AsyncValue<List<LogEntity>> logs;
+  final List<String> diagnosticEvents;
 
   @override
   Widget build(BuildContext context) {
@@ -182,8 +186,12 @@ class _LogsCard extends StatelessWidget {
             height: 360,
             child: logs.when(
               data: (items) {
-                if (items.isEmpty) return const Center(child: Text('暂无日志'));
-                final latest = items.take(100).toList();
+                final coreLogLimit = (100 - diagnosticEvents.length).clamp(0, 100);
+                final latest = [
+                  ...diagnosticEvents,
+                  ...items.take(coreLogLimit).map((log) => log.message),
+                ].take(100).toList(growable: false);
+                if (latest.isEmpty) return const Center(child: Text('暂无日志'));
                 return ListView.separated(
                   reverse: true,
                   padding: const EdgeInsets.all(12),
@@ -191,10 +199,7 @@ class _LogsCard extends StatelessWidget {
                   separatorBuilder: (_, _) => const Divider(height: 12),
                   itemBuilder: (context, index) {
                     final log = latest[index];
-                    return Text(
-                      DiagnosticSanitizer.sanitize(log.message),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    );
+                    return Text(DiagnosticSanitizer.sanitize(log), style: Theme.of(context).textTheme.bodySmall);
                   },
                 );
               },
@@ -226,6 +231,7 @@ String _buildDiagnosticText({
   required ClientConnectionState clientState,
   required SingboxConfigOption options,
   required AsyncValue<List<LogEntity>> logs,
+  required List<String> diagnosticEvents,
 }) {
   final buffer = StringBuffer()
     ..writeln('4376加速内部诊断')
@@ -247,6 +253,9 @@ String _buildDiagnosticText({
     ..writeln('dnsMode=${LockedCoreConfig.dnsMode}')
     ..writeln('tunDnsServer=${DiagnosticSanitizer.sanitize(options.remoteDnsAddress)}')
     ..writeln('logs:');
+  for (final event in diagnosticEvents.take(100)) {
+    buffer.writeln(DiagnosticSanitizer.sanitize(event));
+  }
   for (final log in logs.valueOrNull?.take(100) ?? const <LogEntity>[]) {
     buffer.writeln(DiagnosticSanitizer.sanitize(log.message));
   }

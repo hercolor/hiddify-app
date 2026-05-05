@@ -9,6 +9,7 @@ import 'package:hiddify/features/auth/data/auth_data_providers.dart';
 import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
+import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/data/profile_repository.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
@@ -71,6 +72,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         userInfoSynced = true;
       } catch (error, stackTrace) {
         loggy.warning('failed to sync xboard user info after login', error, stackTrace);
+        DiagnosticEventBuffer.add('xboard user info sync after login failed: ${_safeError(error)}');
         ref.read(inAppNotificationControllerProvider).showErrorToast('登录成功，用户信息同步失败，请稍后重试');
       }
       await ref.read(authTokenStorageProvider).save(syncedSession);
@@ -93,20 +95,21 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     }
 
     try {
-      final result = await _fetchSubscriptionAndImport(current);
+      final result = await _fetchSubscriptionAndImport(current, showNodeFailureToast: showSuccessToast);
       final session = result.session;
       await ref.read(authTokenStorageProvider).save(session);
       final nextState = AuthState.loggedIn(session);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: true);
       if (showSuccessToast) {
-        ref
-            .read(inAppNotificationControllerProvider)
-            .showSuccessToast(result.nodesSynced ? '节点已同步' : '账号信息已更新，正在使用本地节点缓存');
+        if (result.nodesSynced) {
+          ref.read(inAppNotificationControllerProvider).showSuccessToast('节点已同步');
+        }
       }
-      return true;
+      return result.nodesSynced;
     } catch (error, stackTrace) {
       loggy.warning('failed to sync xboard nodes', error, stackTrace);
+      DiagnosticEventBuffer.add('xboard syncNodes failed: ${_safeError(error)}');
       final nextState = AuthState.loggedIn(current);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: current.subscription != null);
@@ -147,6 +150,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       'planExists=${subscription.planName?.trim().isNotEmpty == true}, '
       'hasTraffic=${subscription.hasTrafficInfo}',
     );
+    DiagnosticEventBuffer.add(
+      'xboard subscription ready: urlExists=${subscriptionUrl.isNotEmpty}, '
+      'urlLength=${subscriptionUrl.length}, planExists=${subscription.planName?.trim().isNotEmpty == true}, '
+      'hasTraffic=${subscription.hasTrafficInfo}',
+    );
 
     final syncNodesWatch = Stopwatch()..start();
     var nodesSynced = false;
@@ -158,11 +166,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       final repo = await ref.read(profileRepositoryProvider.future);
       await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
       loggy.debug('xboard remote profile import succeeded');
+      DiagnosticEventBuffer.add('xboard remote profile import succeeded');
       ref.invalidate(activeProfileProvider);
       nodeSummary = await _cacheNodesFromActiveProfile(repo);
-      nodesSynced = nodeSummary.nodeCount > 0;
-      if (!nodesSynced) {
-        throw StateError('subscription imported but no client nodes parsed');
+      nodesSynced = true;
+      if (nodeSummary.nodeCount == 0) {
+        loggy.info('xboard node cache is empty after import; core will refresh visible nodes on connect');
+        DiagnosticEventBuffer.add('xboard node cache empty after import; visible nodes will refresh when core starts');
       }
     } catch (error, stackTrace) {
       loggy.warning(
@@ -170,6 +180,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         null,
         stackTrace,
       );
+      DiagnosticEventBuffer.add('xboard remote profile import failed: ${_safeError(error)}');
       if (showNodeFailureToast) {
         ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
       }
@@ -184,6 +195,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       'nodesSynced=$nodesSynced, '
       'syncUserMs=${syncUserWatch.elapsedMilliseconds}, '
       'syncNodesMs=${syncNodesWatch.elapsedMilliseconds}',
+    );
+    DiagnosticEventBuffer.add(
+      'xboard sync completed: nodeCount=${nodeSummary.nodeCount}, '
+      'selectedNodeName=${nodeSummary.selectedNodeName}, profileImported=$nodesSynced, '
+      'syncUserMs=${syncUserWatch.elapsedMilliseconds}, syncNodesMs=${syncNodesWatch.elapsedMilliseconds}',
     );
     return (session: syncedSession, nodesSynced: nodesSynced);
   }
@@ -237,16 +253,28 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       if (profile == null) return _nodeDebugFallback();
 
       final rawConfig = await repo.getRawConfig(profile.id).match((err) => '', (content) => content).run();
-      final nodes = ClientNodeParser.parse(rawConfig);
+      var nodes = ClientNodeParser.parse(rawConfig);
+      var source = 'rawProfile';
+      if (nodes.isEmpty) {
+        final generatedConfig = await repo.generateConfig(profile.id).match((err) => '', (content) => content).run();
+        nodes = ClientNodeParser.parse(generatedConfig);
+        source = 'generatedConfig';
+      }
       if (nodes.isNotEmpty) {
         await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: profile.name);
       }
       final selection =
           ref.read(clientNodeSelectionProvider).valueOrNull ??
           await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
-      return _nodeDebugFromSelection(selection.copyWith(profileName: profile.name));
+      final summary = _nodeDebugFromSelection(selection.copyWith(profileName: profile.name));
+      DiagnosticEventBuffer.add(
+        'xboard node cache parsed: source=$source, profileName=${summary.profileName}, '
+        'nodeCount=${summary.nodeCount}, selectedNodeName=${summary.selectedNodeName}',
+      );
+      return summary;
     } catch (error, stackTrace) {
       loggy.debug('failed to cache sanitized node summary', error, stackTrace);
+      DiagnosticEventBuffer.add('xboard node cache failed: ${_safeError(error)}');
       return _nodeDebugFallback();
     }
   }
