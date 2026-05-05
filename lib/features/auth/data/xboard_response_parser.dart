@@ -22,9 +22,9 @@ class XBoardResponseParser {
     return trimmed == null || trimmed.isEmpty ? null : _stripBearer(trimmed);
   }
 
-  static UserSubscription parseSubscription(Object? responseData) {
+  static UserSubscription parseSubscription(Object? responseData, {String? fallbackSubscribeUrl}) {
     final data = _decodeIfString(responseData);
-    final subscribeUrl = _findSubscriptionUrl(data);
+    final subscribeUrl = _findSubscriptionUrl(data) ?? fallbackSubscribeUrl;
     if (subscribeUrl == null || subscribeUrl.trim().isEmpty) {
       throw const AuthFailure.badResponse('未获取到节点信息');
     }

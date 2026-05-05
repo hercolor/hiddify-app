@@ -56,7 +56,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
     }
 
     final createdAtText = await _storage.read(key: _createdAtKey);
-    final subscribeToken = await _storage.read(key: _subscribeTokenKey);
+    final subscribeToken = await _storage.read(key: _subscribeTokenKey) ?? await _storage.read(key: _legacyTokenKey);
     final subscribeUrl = await _storage.read(key: _subscribeUrlKey);
     final expiredAtText = await _storage.read(key: _expiredAtKey);
 

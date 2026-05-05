@@ -6,6 +6,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/auth/data/auth_data_providers.dart';
+import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
@@ -63,18 +64,17 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
       await ref.read(authTokenStorageProvider).save(session);
       var syncedSession = session;
-      var syncSucceeded = false;
+      var userInfoSynced = false;
       try {
-        syncedSession = await _fetchSubscriptionAndImport(session);
-        syncSucceeded = true;
+        final result = await _fetchSubscriptionAndImport(session);
+        syncedSession = result.session;
+        userInfoSynced = true;
       } catch (error, stackTrace) {
-        loggy.warning('failed to sync xboard nodes after login', error, stackTrace);
-        ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
+        loggy.warning('failed to sync xboard user info after login', error, stackTrace);
+        ref.read(inAppNotificationControllerProvider).showErrorToast('登录成功，用户信息同步失败，请稍后重试');
       }
       await ref.read(authTokenStorageProvider).save(syncedSession);
-      if (syncSucceeded) {
-        ref.read(inAppNotificationControllerProvider).showSuccessToast('登录成功');
-      }
+      ref.read(inAppNotificationControllerProvider).showSuccessToast(userInfoSynced ? '登录成功' : '已登录');
       final nextState = AuthState.loggedIn(syncedSession);
       await _logAuthDebug(nextState, userInfoLoaded: syncedSession.subscription != null);
       return nextState;
@@ -93,13 +93,16 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     }
 
     try {
-      final session = await _fetchSubscriptionAndImport(current);
+      final result = await _fetchSubscriptionAndImport(current);
+      final session = result.session;
       await ref.read(authTokenStorageProvider).save(session);
       final nextState = AuthState.loggedIn(session);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: true);
       if (showSuccessToast) {
-        ref.read(inAppNotificationControllerProvider).showSuccessToast('节点已同步');
+        ref
+            .read(inAppNotificationControllerProvider)
+            .showSuccessToast(result.nodesSynced ? '节点已同步' : '账号信息已更新，正在使用本地节点缓存');
       }
       return true;
     } catch (error, stackTrace) {
@@ -123,16 +126,20 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     ref.read(inAppNotificationControllerProvider).showSuccessToast('已退出登录');
   }
 
-  Future<AuthSession> _fetchSubscriptionAndImport(AuthSession session) async {
+  Future<({AuthSession session, bool nodesSynced})> _fetchSubscriptionAndImport(
+    AuthSession session, {
+    bool showNodeFailureToast = true,
+  }) async {
     final subscriptionService = await ref.read(userSubscriptionServiceProvider.future);
     final syncUserWatch = Stopwatch()..start();
     final subscription = await subscriptionService
-        .fetchSubscription(session.authData)
+        .fetchSubscription(session.authData, subscribeToken: session.subscribeToken)
         .match((err) => throw err, (subscription) => subscription)
         .run();
     syncUserWatch.stop();
-    final syncNodesWatch = Stopwatch()..start();
     final subscriptionUrl = subscription.subscribeUrl.trim();
+    final syncedSession = session.copyWith(subscription: subscription);
+    await ref.read(authTokenStorageProvider).save(syncedSession);
     loggy.info(
       'xboard subscription ready: '
       'urlExists=${subscriptionUrl.isNotEmpty}, '
@@ -141,26 +148,45 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       'hasTraffic=${subscription.hasTrafficInfo}',
     );
 
-    final repo = await ref.read(profileRepositoryProvider.future);
-    await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
-    ref.invalidate(activeProfileProvider);
-    final nodeSummary = await _cacheNodesFromActiveProfile(repo);
+    final syncNodesWatch = Stopwatch()..start();
+    var nodesSynced = false;
+    var nodeSummary = _nodeDebugFallback();
+    try {
+      if (subscriptionUrl.isEmpty) {
+        throw const AuthFailure.badResponse('未获取到节点信息');
+      }
+      final repo = await ref.read(profileRepositoryProvider.future);
+      await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
+      ref.invalidate(activeProfileProvider);
+      nodeSummary = await _cacheNodesFromActiveProfile(repo);
+      nodesSynced = nodeSummary.nodeCount > 0;
+      if (!nodesSynced) {
+        throw StateError('subscription imported but no client nodes parsed');
+      }
+    } catch (error, stackTrace) {
+      loggy.warning('failed to import xboard nodes, preserving user subscription', error, stackTrace);
+      if (showNodeFailureToast) {
+        ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
+      }
+    }
     syncNodesWatch.stop();
     loggy.info(
-      'xboard nodes imported from subscription url, '
+      'xboard sync completed, '
       'urlLength=${subscriptionUrl.length}, '
       'nodeCount=${nodeSummary.nodeCount}, '
       'selectedNodeId=${nodeSummary.selectedNodeId}, '
       'selectedNodeName=${nodeSummary.selectedNodeName}, '
+      'nodesSynced=$nodesSynced, '
       'syncUserMs=${syncUserWatch.elapsedMilliseconds}, '
       'syncNodesMs=${syncNodesWatch.elapsedMilliseconds}',
     );
-    return session.copyWith(subscription: subscription);
+    return (session: syncedSession, nodesSynced: nodesSynced);
   }
 
   Future<void> _syncNodesInBackground(AuthSession session) async {
     try {
-      final syncedSession = await _fetchSubscriptionAndImport(session);
+      final result = await _fetchSubscriptionAndImport(session, showNodeFailureToast: false);
+      final syncedSession = result.session;
       if (!_isCurrentSession(session)) return;
       await ref.read(authTokenStorageProvider).save(syncedSession);
       final nextState = AuthState.loggedIn(syncedSession);

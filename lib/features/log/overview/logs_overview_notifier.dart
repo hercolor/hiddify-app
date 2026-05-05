@@ -17,7 +17,7 @@ class LogsOverviewNotifier extends _$LogsOverviewNotifier with AppLogger {
   @override
   LogsOverviewState build() {
     ref.disposeDelay(const Duration(seconds: 20));
-    state = const LogsOverviewState();
+    state = const LogsOverviewState(logs: AsyncData([]));
     ref.onDispose(() {
       loggy.debug("disposing");
       _listener?.cancel();
@@ -37,7 +37,7 @@ class LogsOverviewNotifier extends _$LogsOverviewNotifier with AppLogger {
     });
 
     _addListeners();
-    return const LogsOverviewState();
+    return const LogsOverviewState(logs: AsyncData([]));
   }
 
   StreamSubscription? _listener;
@@ -46,25 +46,39 @@ class LogsOverviewNotifier extends _$LogsOverviewNotifier with AppLogger {
     loggy.debug("adding listeners");
     ref.watch(coreRestartSignalProvider);
     await _listener?.cancel();
-    _listener = ref
-        .read(logRepositoryProvider)
-        .requireValue
-        .watchLogs()
-        .where((_) => _listener?.isPaused != true)
-        .throttleTime(const Duration(milliseconds: 250), leading: false, trailing: true)
-        .asyncMap((event) async {
-          await event.fold<Future<void>>(
-            (f) async {
-              _logs = [];
-              state = state.copyWith(logs: AsyncError(f, StackTrace.current));
-            },
-            (a) async {
-              _logs = a.reversed;
-              state = state.copyWith(logs: AsyncData(await _computeLogs()));
+    state = state.copyWith(logs: const AsyncData([]));
+    try {
+      final repository = await ref
+          .read(logRepositoryProvider.future)
+          .timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              loggy.warning('log repository init timeout, showing empty diagnostics logs');
+              throw TimeoutException('log repository init timeout');
             },
           );
-        })
-        .listen((event) {});
+      _listener = repository
+          .watchLogs()
+          .where((_) => _listener?.isPaused != true)
+          .throttleTime(const Duration(milliseconds: 250), leading: false, trailing: true)
+          .asyncMap((event) async {
+            await event.fold<Future<void>>(
+              (f) async {
+                _logs = [];
+                state = state.copyWith(logs: AsyncError(f, StackTrace.current));
+              },
+              (a) async {
+                _logs = a.reversed;
+                state = state.copyWith(logs: AsyncData(await _computeLogs()));
+              },
+            );
+          })
+          .listen((event) {});
+    } catch (error, stackTrace) {
+      loggy.warning('failed to attach log listener, showing empty diagnostics logs', error, stackTrace);
+      _logs = [];
+      state = state.copyWith(logs: const AsyncData([]));
+    }
   }
 
   Iterable<LogEntity> _logs = [];

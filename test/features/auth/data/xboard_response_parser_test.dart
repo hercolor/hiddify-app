@@ -67,6 +67,23 @@ void main() {
       expect(subscription.expiredAt, DateTime.fromMillisecondsSinceEpoch(1893456000 * 1000));
     });
 
+    test('uses fallback subscription url from login subscribe token while preserving user fields', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {
+          'expired_at': 1893456000,
+          'u': 1024,
+          'd': 2048,
+          'transfer_enable': 4096,
+          'plan': {'name': '商业套餐'},
+        },
+      }, fallbackSubscribeUrl: 'https://example.com/api/v1/client/subscribe?token=sub-token');
+
+      expect(subscription.subscribeUrl, 'https://example.com/api/v1/client/subscribe?token=sub-token');
+      expect(subscription.planName, '商业套餐');
+      expect(subscription.usedTraffic, 3072);
+      expect(subscription.remainingTraffic, 1024);
+    });
+
     test('parses camelCase subscription response fields', () {
       final subscription = XBoardResponseParser.parseSubscription({
         'data': {

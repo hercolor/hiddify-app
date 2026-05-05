@@ -7,7 +7,7 @@ import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 
 abstract interface class UserSubscriptionService {
-  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData);
+  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData, {String? subscribeToken});
 }
 
 class XBoardUserSubscriptionService with InfraLogger implements UserSubscriptionService {
@@ -19,10 +19,11 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
   final String _apiBaseUrl;
 
   @override
-  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData) {
+  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData, {String? subscribeToken}) {
     return TaskEither.tryCatch(
       () async {
         _logAuthDataForFirstUserRequest(authData);
+        final fallbackSubscribeUrl = _subscribeUrlFromToken(subscribeToken);
         final response = await _httpClient.get<Map<String, dynamic>>(
           '$_apiBaseUrl/api/v1/user/getSubscribe',
           headers: {'Accept': 'application/json', 'Authorization': authData},
@@ -33,7 +34,10 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         }
 
         loggy.debug('xboard subscription response keys: ${_sanitizedKeys(response.data).join(',')}');
-        final subscription = XBoardResponseParser.parseSubscription(response.data);
+        final subscription = XBoardResponseParser.parseSubscription(
+          response.data,
+          fallbackSubscribeUrl: fallbackSubscribeUrl,
+        );
         final customerService = subscription.customerService ?? await _fetchCustomerService(authData);
         return customerService == null ? subscription : subscription.copyWith(customerService: customerService);
       },
@@ -48,6 +52,12 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         return AuthFailure.unexpected(error, stackTrace);
       },
     );
+  }
+
+  String? _subscribeUrlFromToken(String? subscribeToken) {
+    final token = subscribeToken?.trim();
+    if (token == null || token.isEmpty) return null;
+    return '$_apiBaseUrl/api/v1/client/subscribe?token=${Uri.encodeQueryComponent(token)}';
   }
 
   Future<String?> _fetchCustomerService(String authData) async {
