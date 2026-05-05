@@ -85,17 +85,25 @@ class _LoginForm extends ConsumerStatefulWidget {
 class _LoginFormState extends ConsumerState<_LoginForm> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  int _buildCount = 0;
-  int _emailInputCount = 0;
-  int _passwordInputCount = 0;
+  final ValueNotifier<String?> _emailError = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> _passwordError = ValueNotifier<String?>(null);
   bool _isSubmitting = false;
-  String? _emailError;
-  String? _passwordError;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_clearEmailError);
+    _passwordController.addListener(_clearPasswordError);
+  }
 
   @override
   void dispose() {
+    _emailController.removeListener(_clearEmailError);
+    _passwordController.removeListener(_clearPasswordError);
     _emailController.dispose();
     _passwordController.dispose();
+    _emailError.dispose();
+    _passwordError.dispose();
     super.dispose();
   }
 
@@ -130,49 +138,27 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
         ? '邮箱格式不正确'
         : null;
     final nextPasswordError = password.isEmpty ? '请输入密码' : null;
-    if (_emailError != nextEmailError || _passwordError != nextPasswordError) {
-      setState(() {
-        _emailError = nextEmailError;
-        _passwordError = nextPasswordError;
-      });
-    }
+    _emailError.value = nextEmailError;
+    _passwordError.value = nextPasswordError;
     return nextEmailError == null && nextPasswordError == null;
   }
 
-  void _onEmailChanged(String _) {
-    _emailInputCount += 1;
-    _recordInputChanged('emailInputChanged', _emailInputCount);
-    if (_emailError != null) {
-      setState(() => _emailError = null);
+  void _clearEmailError() {
+    if (_emailError.value != null) {
+      _emailError.value = null;
     }
   }
 
-  void _onPasswordChanged(String _) {
-    _passwordInputCount += 1;
-    _recordInputChanged('passwordInputChanged', _passwordInputCount);
-    if (_passwordError != null) {
-      setState(() => _passwordError = null);
-    }
-  }
-
-  void _recordInputChanged(String event, int count) {
-    if (count == 1 || count % 20 == 0) {
-      DiagnosticEventBuffer.addSafe('$event count=$count');
-    }
-  }
-
-  void _recordBuild(bool isLoading) {
-    if (_buildCount == 1 || _buildCount % 10 == 0 || isLoading) {
-      DiagnosticEventBuffer.addSafe('loginPageBuildCount=$_buildCount isLoading=$isLoading');
+  void _clearPasswordError() {
+    if (_passwordError.value != null) {
+      _passwordError.value = null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    _buildCount += 1;
     final isLoading = _isSubmitting;
     final theme = Theme.of(context);
-    _recordBuild(isLoading);
 
     return SafeArea(
       child: ListView(
@@ -201,38 +187,46 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                       Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
                     ],
                     const Gap(24),
-                    TextField(
-                      controller: _emailController,
-                      onChanged: _onEmailChanged,
-                      keyboardType: TextInputType.emailAddress,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      smartDashesType: SmartDashesType.disabled,
-                      smartQuotesType: SmartQuotesType.disabled,
-                      decoration: InputDecoration(
-                        labelText: '邮箱账号',
-                        hintText: '请输入邮箱',
-                        errorText: _emailError,
-                        prefixIcon: const Icon(Icons.mail_outline_rounded),
-                      ),
-                      textInputAction: TextInputAction.next,
+                    ValueListenableBuilder<String?>(
+                      valueListenable: _emailError,
+                      builder: (context, errorText, _) {
+                        return TextField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          smartDashesType: SmartDashesType.disabled,
+                          smartQuotesType: SmartQuotesType.disabled,
+                          decoration: InputDecoration(
+                            labelText: '邮箱账号',
+                            hintText: '请输入邮箱',
+                            errorText: errorText,
+                            prefixIcon: const Icon(Icons.mail_outline_rounded),
+                          ),
+                          textInputAction: TextInputAction.next,
+                        );
+                      },
                     ),
                     const Gap(14),
-                    TextField(
-                      controller: _passwordController,
-                      onChanged: _onPasswordChanged,
-                      obscureText: true,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      smartDashesType: SmartDashesType.disabled,
-                      smartQuotesType: SmartQuotesType.disabled,
-                      decoration: InputDecoration(
-                        labelText: '登录密码',
-                        hintText: '请输入密码',
-                        errorText: _passwordError,
-                        prefixIcon: const Icon(Icons.key_rounded),
-                      ),
-                      onSubmitted: (_) => _submit(),
+                    ValueListenableBuilder<String?>(
+                      valueListenable: _passwordError,
+                      builder: (context, errorText, _) {
+                        return TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          smartDashesType: SmartDashesType.disabled,
+                          smartQuotesType: SmartQuotesType.disabled,
+                          decoration: InputDecoration(
+                            labelText: '登录密码',
+                            hintText: '请输入密码',
+                            errorText: errorText,
+                            prefixIcon: const Icon(Icons.key_rounded),
+                          ),
+                          onSubmitted: (_) => _submit(),
+                        );
+                      },
                     ),
                     Align(
                       alignment: Alignment.centerRight,

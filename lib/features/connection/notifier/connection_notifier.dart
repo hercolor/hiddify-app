@@ -278,6 +278,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   void _handleCoreStatus(ConnectionStatus event) {
     final previousStatus = _lastCoreStatus;
     final wasRunning = previousStatus is Connected || previousStatus is Connecting;
+    final wasDisconnecting = previousStatus is Disconnecting;
     _lastCoreStatus = event;
 
     if (event case Disconnected(connectionFailure: final _?) when PlatformUtils.isDesktop) {
@@ -301,7 +302,16 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _setClientState(const ClientConnectionState.preparing(), reason: 'core disconnecting');
     } else if (event case Disconnected(connectionFailure: final failure?)) {
       final message = ConnectionErrorMapper.fromFailure(failure);
-      if (failure is MissingVpnPermission) {
+      if (_manualDisconnecting || wasDisconnecting) {
+        _manualDisconnecting = false;
+        _userRequestedConnection = false;
+        _vpnPermissionRequestedForAttempt = false;
+        _vpnPermissionStartFallbackScheduled = false;
+        _autoReconnectRunning = false;
+        _reconnectAttempts = 0;
+        DiagnosticEventBuffer.addSafe('manual/core disconnect failure suppressed');
+        _setClientState(const ClientConnectionState.disconnected(), reason: 'manual/core disconnected');
+      } else if (failure is MissingVpnPermission) {
         _vpnPermissionRequestedForAttempt = false;
         _vpnPermissionStartFallbackScheduled = false;
         loggy.info('vpn permission denied, pendingConnect=false');
@@ -369,10 +379,11 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
 
   ClientConnectionState _computeClientState() {
     final auth = ref.read(authNotifierProvider);
-    if (auth.isLoading || auth.valueOrNull?.status == AuthStatus.initializing) {
+    final authValue = auth.valueOrNull;
+    if ((auth.isLoading && authValue == null) || authValue?.status == AuthStatus.initializing) {
       return const ClientConnectionState.initializing();
     }
-    if (auth.valueOrNull?.status != AuthStatus.loggedIn) {
+    if (authValue?.status != AuthStatus.loggedIn) {
       return const ClientConnectionState.loggedOut();
     }
 
@@ -388,7 +399,14 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   }
 
   void _refreshClientState({required String reason}) {
-    _setClientState(_computeClientState(), reason: reason);
+    final computed = _computeClientState();
+    if (_shouldPreserveActiveConnectionState(computed)) {
+      DiagnosticEventBuffer.addSafe(
+        'connection state refresh preserved ${_clientState.phase.name}, reason=$reason, computed=${computed.phase.name}',
+      );
+      return;
+    }
+    _setClientState(computed, reason: reason);
   }
 
   void _setClientState(ClientConnectionState next, {required String reason}) {
@@ -417,6 +435,14 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       return false;
     }
     return message == ConnectionErrorMapper.coreStartFailed;
+  }
+
+  bool _shouldPreserveActiveConnectionState(ClientConnectionState computed) {
+    if (!_userRequestedConnection) return false;
+    if (!_clientState.isBusy) return false;
+    return computed.phase == ClientConnectionPhase.disconnected ||
+        computed.phase == ClientConnectionPhase.initializing ||
+        computed.phase == ClientConnectionPhase.failed;
   }
 
   void _scheduleVpnPermissionStartFallback() {
