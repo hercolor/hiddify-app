@@ -33,20 +33,20 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       if (session == null || session.authData.trim().isEmpty) {
         const nextState = AuthState.loggedOut();
         await _logAuthDebug(nextState, userInfoLoaded: false);
-        loggy.debug('xboard bootstrapAuthMs=${bootstrapWatch.elapsedMilliseconds}');
+        loggy.debug('auth bootstrapMs=${bootstrapWatch.elapsedMilliseconds}');
         return nextState;
       }
 
       final nextState = AuthState.loggedIn(session);
       await _logAuthDebug(nextState, userInfoLoaded: session.subscription != null);
       unawaited(_syncNodesInBackground(session));
-      loggy.debug('xboard bootstrapAuthMs=${bootstrapWatch.elapsedMilliseconds}');
+      loggy.debug('auth bootstrapMs=${bootstrapWatch.elapsedMilliseconds}');
       return nextState;
     } catch (error, stackTrace) {
-      loggy.warning('xboard auth bootstrap failed', error, stackTrace);
+      loggy.warning('auth bootstrap failed', error, stackTrace);
       const nextState = AuthState.loggedOut();
       await _logAuthDebug(nextState, userInfoLoaded: false);
-      loggy.debug('xboard bootstrapAuthMs=${bootstrapWatch.elapsedMilliseconds}');
+      loggy.debug('auth bootstrapMs=${bootstrapWatch.elapsedMilliseconds}');
       return nextState;
     } finally {
       bootstrapWatch.stop();
@@ -71,8 +71,8 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         syncedSession = result.session;
         userInfoSynced = true;
       } catch (error, stackTrace) {
-        loggy.warning('failed to sync xboard user info after login', error, stackTrace);
-        DiagnosticEventBuffer.add('xboard user info sync after login failed: ${_safeError(error)}');
+        loggy.warning('failed to sync user info after login', error, stackTrace);
+        DiagnosticEventBuffer.add('user info sync after login failed: ${_safeError(error)}');
         ref.read(inAppNotificationControllerProvider).showErrorToast('登录成功，用户信息同步失败，请稍后重试');
       }
       await ref.read(authTokenStorageProvider).save(syncedSession);
@@ -108,8 +108,8 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       }
       return result.nodesSynced;
     } catch (error, stackTrace) {
-      loggy.warning('failed to sync xboard nodes', error, stackTrace);
-      DiagnosticEventBuffer.add('xboard syncNodes failed: ${_safeError(error)}');
+      loggy.warning('failed to sync nodes', error, stackTrace);
+      DiagnosticEventBuffer.add('node sync failed: ${_safeError(error)}');
       final nextState = AuthState.loggedIn(current);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: current.subscription != null);
@@ -144,14 +144,14 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     final syncedSession = session.copyWith(subscription: subscription);
     await ref.read(authTokenStorageProvider).save(syncedSession);
     loggy.info(
-      'xboard subscription ready: '
+      'subscription data ready: '
       'urlExists=${subscriptionUrl.isNotEmpty}, '
       'urlLength=${subscriptionUrl.length}, '
       'planExists=${subscription.planName?.trim().isNotEmpty == true}, '
       'hasTraffic=${subscription.hasTrafficInfo}',
     );
     DiagnosticEventBuffer.add(
-      'xboard subscription ready: urlExists=${subscriptionUrl.isNotEmpty}, '
+      'subscription data ready: urlExists=${subscriptionUrl.isNotEmpty}, '
       'urlLength=${subscriptionUrl.length}, planExists=${subscription.planName?.trim().isNotEmpty == true}, '
       'hasTraffic=${subscription.hasTrafficInfo}',
     );
@@ -165,29 +165,25 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       }
       final repo = await ref.read(profileRepositoryProvider.future);
       await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
-      loggy.debug('xboard remote profile import succeeded');
-      DiagnosticEventBuffer.add('xboard remote profile import succeeded');
+      loggy.debug('remote profile import succeeded');
+      DiagnosticEventBuffer.add('remote profile import succeeded');
       ref.invalidate(activeProfileProvider);
       nodeSummary = await _cacheNodesFromActiveProfile(repo);
       nodesSynced = true;
       if (nodeSummary.nodeCount == 0) {
-        loggy.info('xboard node cache is empty after import; core will refresh visible nodes on connect');
-        DiagnosticEventBuffer.add('xboard node cache empty after import; visible nodes will refresh when core starts');
+        loggy.info('node cache is empty after import; core will refresh visible nodes on connect');
+        DiagnosticEventBuffer.add('node cache empty after import; visible nodes will refresh when core starts');
       }
     } catch (error, stackTrace) {
-      loggy.warning(
-        'failed to import xboard nodes, preserving user subscription: ${_safeError(error)}',
-        null,
-        stackTrace,
-      );
-      DiagnosticEventBuffer.add('xboard remote profile import failed: ${_safeError(error)}');
+      loggy.warning('failed to import nodes, preserving user subscription: ${_safeError(error)}', null, stackTrace);
+      DiagnosticEventBuffer.add('remote profile import failed: ${_safeError(error)}');
       if (showNodeFailureToast) {
         ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
       }
     }
     syncNodesWatch.stop();
     loggy.info(
-      'xboard sync completed, '
+      'node sync completed, '
       'urlLength=${subscriptionUrl.length}, '
       'nodeCount=${nodeSummary.nodeCount}, '
       'selectedNodeId=${nodeSummary.selectedNodeId}, '
@@ -197,7 +193,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       'syncNodesMs=${syncNodesWatch.elapsedMilliseconds}',
     );
     DiagnosticEventBuffer.add(
-      'xboard sync completed: nodeCount=${nodeSummary.nodeCount}, '
+      'node sync completed: nodeCount=${nodeSummary.nodeCount}, '
       'selectedNodeName=${nodeSummary.selectedNodeName}, profileImported=$nodesSynced, '
       'syncUserMs=${syncUserWatch.elapsedMilliseconds}, syncNodesMs=${syncNodesWatch.elapsedMilliseconds}',
     );
@@ -214,7 +210,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: true);
     } catch (error, stackTrace) {
-      loggy.warning('failed to sync xboard nodes during bootstrap', error, stackTrace);
+      loggy.warning('failed to sync nodes during bootstrap', error, stackTrace);
       if (!_isCurrentSession(session)) return;
       final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? session);
       state = AsyncData(nextState);
@@ -232,7 +228,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     final nodeSummary = await _readNodeDebugSummary();
     final authData = authState.session?.authData.trim();
     loggy.debug(
-      'xboard auth debug: '
+      'auth debug: '
       'authState=${authState.status.name}, '
       'hasAuthData=${authData?.isNotEmpty == true}, '
       'profileName=${nodeSummary.profileName}, '
@@ -268,13 +264,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
           await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
       final summary = _nodeDebugFromSelection(selection.copyWith(profileName: profile.name));
       DiagnosticEventBuffer.add(
-        'xboard node cache parsed: source=$source, profileName=${summary.profileName}, '
+        'node cache parsed: source=$source, profileName=${summary.profileName}, '
         'nodeCount=${summary.nodeCount}, selectedNodeName=${summary.selectedNodeName}',
       );
       return summary;
     } catch (error, stackTrace) {
       loggy.debug('failed to cache sanitized node summary', error, stackTrace);
-      DiagnosticEventBuffer.add('xboard node cache failed: ${_safeError(error)}');
+      DiagnosticEventBuffer.add('node cache failed: ${_safeError(error)}');
       return _nodeDebugFallback();
     }
   }

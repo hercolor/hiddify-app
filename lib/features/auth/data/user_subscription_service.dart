@@ -33,7 +33,7 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
           throw const AuthFailure.badResponse('订阅接口返回异常');
         }
 
-        loggy.debug('xboard subscription response keys: ${_sanitizedKeys(response.data).join(',')}');
+        loggy.debug('subscription response keys: ${_sanitizedKeys(response.data).join(',')}');
         final subscription = XBoardResponseParser.parseSubscription(
           response.data,
           fallbackSubscribeUrl: fallbackSubscribeUrl,
@@ -47,10 +47,10 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         if (error is AuthFailure) return error;
         if (error is DioException) {
           final failure = authFailureFromDioException(error);
-          loggy.warning('xboard subscription request failed', failure);
+          loggy.warning('subscription request failed', failure);
           return failure;
         }
-        loggy.warning('xboard subscription fetch failed', error, stackTrace);
+        loggy.warning('subscription fetch failed', error, stackTrace);
         return AuthFailure.unexpected(error, stackTrace);
       },
     );
@@ -67,7 +67,7 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
   void _logSubscribeUrlSummary(String subscribeUrl) {
     final uri = Uri.tryParse(subscribeUrl);
     loggy.debug(
-      'xboard subscribe_url summary: '
+      'subscription url summary: '
       'exists=${subscribeUrl.trim().isNotEmpty}, '
       'absolute=${uri?.hasScheme == true}, '
       'path=${_safePath(uri?.path)}, '
@@ -92,11 +92,11 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
           headers: {'Accept': 'application/json', 'Authorization': authData},
         );
         if ((response.statusCode ?? 0) >= 400 || response.data == null) continue;
-        loggy.debug('xboard customer service response keys: ${_sanitizedKeys(response.data).join(',')}');
+        loggy.debug('customer service response keys: ${_sanitizedKeys(response.data).join(',')}');
         final value = XBoardResponseParser.parseCustomerService(response.data);
         if (value != null && value.trim().isNotEmpty) return value.trim();
       } catch (error, stackTrace) {
-        loggy.debug('xboard customer service config request skipped', error, stackTrace);
+        loggy.debug('customer service config request skipped', error, stackTrace);
       }
     }
     return null;
@@ -105,7 +105,7 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
   void _logAuthDataForFirstUserRequest(String authData) {
     final trimmed = authData.trim();
     loggy.debug(
-      'xboard first user info request authData: '
+      'first user info request authData: '
       'exists=${trimmed.isNotEmpty}, '
       'length=${trimmed.length}, '
       'startsWithBearer=${trimmed.toLowerCase().startsWith('bearer ')}',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -21,7 +22,8 @@ class InAppNotificationController with AppLogger {
   }) {
     toastification.dismissAll();
     return toastification.show(
-      title: Text(message),
+      title: const Text(Constants.appName),
+      description: Text(message),
       type: type._toastificationType,
       alignment: AlignmentDirectional.bottomStart,
       autoCloseDuration: duration,

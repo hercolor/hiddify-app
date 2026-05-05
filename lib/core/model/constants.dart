@@ -5,9 +5,9 @@ abstract class Constants {
   static const appName = "4376";
   static const githubUrl = "https://api.y88.pro";
   static const licenseUrl = "https://api.y88.pro/terms";
-  static const githubReleasesApiUrl = "https://api.github.com/repos/hiddify/hiddify-next/releases";
-  static const githubLatestReleaseUrl = "https://github.com/hiddify/hiddify-app/releases/latest";
-  static const appCastUrl = "https://raw.githubusercontent.com/hiddify/hiddify-next/main/appcast.xml";
+  static const githubReleasesApiUrl = "https://api.y88.pro/app/releases";
+  static const githubLatestReleaseUrl = "https://api.y88.pro/app/latest";
+  static const appCastUrl = "https://api.y88.pro/appcast.xml";
   static const telegramChannelUrl = "https://api.y88.pro";
   static const privacyPolicyUrl = "https://api.y88.pro/privacy";
   static const termsAndConditionsUrl = "https://api.y88.pro/terms";

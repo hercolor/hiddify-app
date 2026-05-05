@@ -6,6 +6,8 @@ import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
+import 'package:hiddify/features/proxy/data/client_node_store.dart';
+import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
@@ -30,6 +32,7 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
   }
 
   Future<void> _initializeTray() async {
+    final nodeSelection = ref.watch(clientNodeSelectionProvider);
     final t = await ref.watch(translationsProvider.future);
     final urlTestDelay = await ref
         .watch(activeProxyNotifierProvider.future)
@@ -46,14 +49,20 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
         })
         .then((connection) => _modifyConnectionStatus(connection, urlTestDelay));
 
+    final selectedNodeName = _currentNodeName(nodeSelection);
+
     await trayManager.setIcon(_trayIconPath(connection), isTemplate: PlatformUtils.isMacOS);
     if (!PlatformUtils.isLinux) await trayManager.setToolTip(_trayTooltip(connection, urlTestDelay, t));
-    await trayManager.setContextMenu(_trayMenu(connection, t));
+    await trayManager.setContextMenu(_trayMenu(connection, t, selectedNodeName));
   }
 
-  Menu _trayMenu(ConnectionStatus connection, Translations t) => Menu(
+  Menu _trayMenu(ConnectionStatus connection, Translations t, String selectedNodeName) => Menu(
     items: [
-      if (PlatformUtils.isLinux) ...[MenuItem(key: 'dashboard', label: t.common.dashboard), MenuItem.separator()],
+      MenuItem(key: 'title', label: Constants.appName, disabled: true),
+      MenuItem(key: 'dashboard', label: '打开应用'),
+      MenuItem.separator(),
+      MenuItem(key: 'current-node', label: '当前节点：${_safeTrayText(selectedNodeName)}', disabled: true),
+      MenuItem.separator(),
       MenuItem(
         key: 'connection',
         label: switch (connection) {
@@ -68,6 +77,9 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
       MenuItem(key: 'quit', label: t.common.quit),
     ],
   );
+
+  String _currentNodeName(AsyncValue<ClientNodeSelection> nodeSelection) =>
+      nodeSelection.valueOrNull?.selectedNode?.name ?? '暂无可用节点';
 
   String _trayIconPath(ConnectionStatus status) {
     final isDarkMode = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
@@ -94,11 +106,18 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     final r = "${Constants.appName} - ${connection.present(t)}";
     if (connection is Connected) {
       if (Platform.isMacOS) windowManager.setBadgeLabel("${urlTestDelay}ms");
-      return '$r : ${urlTestDelay}ms"';
+      return '$r : ${urlTestDelay}ms';
     } else {
       if (Platform.isMacOS) windowManager.setBadgeLabel("-ms");
       return r;
     }
+  }
+
+  String _safeTrayText(String value) {
+    final sanitized = value
+        .replaceAll(RegExp(r'https?://[^\s]+'), '***')
+        .replaceAll(RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '***');
+    return sanitized.length > 48 ? '${sanitized.substring(0, 48)}…' : sanitized;
   }
 
   ConnectionStatus _modifyConnectionStatus(ConnectionStatus connection, int urlTestDelay) {

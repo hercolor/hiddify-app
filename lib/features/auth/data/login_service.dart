@@ -45,10 +45,10 @@ class XBoardLoginService with InfraLogger implements LoginService {
         if (error is AuthFailure) return error;
         if (error is DioException) {
           final failure = authFailureFromDioException(error, treatUnauthorizedAsExpired: false);
-          loggy.warning('xboard login request failed', failure);
+          loggy.warning('login request failed', failure);
           return failure;
         }
-        loggy.warning('xboard login failed', error, stackTrace);
+        loggy.warning('login failed', error, stackTrace);
         return AuthFailure.unexpected(error, stackTrace);
       },
     );
