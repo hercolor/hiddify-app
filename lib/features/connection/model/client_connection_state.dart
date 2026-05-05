@@ -69,3 +69,21 @@ class ClientConnectionState {
   @override
   String toString() => 'ClientConnectionState(${phase.name}${message == null ? '' : ', message: $message'})';
 }
+
+abstract final class ClientConnectionStatePolicy {
+  static bool shouldPreserveActiveState({
+    required bool userRequestedConnection,
+    required ClientConnectionState current,
+    required ClientConnectionState computed,
+  }) {
+    if (!userRequestedConnection) return false;
+    if (!current.isBusy) return false;
+    return computed.phase == ClientConnectionPhase.disconnected ||
+        computed.phase == ClientConnectionPhase.initializing ||
+        computed.phase == ClientConnectionPhase.failed;
+  }
+
+  static bool shouldSuppressDisconnectFailure({required bool manualDisconnecting, required bool wasDisconnecting}) {
+    return manualDisconnecting || wasDisconnecting;
+  }
+}

@@ -302,7 +302,10 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _setClientState(const ClientConnectionState.preparing(), reason: 'core disconnecting');
     } else if (event case Disconnected(connectionFailure: final failure?)) {
       final message = ConnectionErrorMapper.fromFailure(failure);
-      if (_manualDisconnecting || wasDisconnecting) {
+      if (ClientConnectionStatePolicy.shouldSuppressDisconnectFailure(
+        manualDisconnecting: _manualDisconnecting,
+        wasDisconnecting: wasDisconnecting,
+      )) {
         _manualDisconnecting = false;
         _userRequestedConnection = false;
         _vpnPermissionRequestedForAttempt = false;
@@ -438,11 +441,11 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   }
 
   bool _shouldPreserveActiveConnectionState(ClientConnectionState computed) {
-    if (!_userRequestedConnection) return false;
-    if (!_clientState.isBusy) return false;
-    return computed.phase == ClientConnectionPhase.disconnected ||
-        computed.phase == ClientConnectionPhase.initializing ||
-        computed.phase == ClientConnectionPhase.failed;
+    return ClientConnectionStatePolicy.shouldPreserveActiveState(
+      userRequestedConnection: _userRequestedConnection,
+      current: _clientState,
+      computed: computed,
+    );
   }
 
   void _scheduleVpnPermissionStartFallback() {
