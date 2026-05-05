@@ -7,9 +7,16 @@ abstract final class DiagnosticEventBuffer {
   static const int _maxEvents = 100;
 
   static void add(String message) {
+    _addSanitized(DiagnosticSanitizer.sanitize(message));
+  }
+
+  static void addSafe(String message) {
+    _addSanitized(message);
+  }
+
+  static void _addSanitized(String message) {
     final time = DateTime.now().toIso8601String().split('T').last.split('.').first;
-    final sanitized = DiagnosticSanitizer.sanitize(message);
-    _events.addFirst('$time $sanitized');
+    _events.addFirst('$time $message');
     while (_events.length > _maxEvents) {
       _events.removeLast();
     }
