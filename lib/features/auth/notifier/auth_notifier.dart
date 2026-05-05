@@ -55,7 +55,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
   Future<void> login(String email, String password) async {
     if (state.isLoading) return;
-    state = const AsyncLoading();
+    state = const AsyncLoading<AuthState>().copyWithPrevious(state);
     state = await AsyncValue.guard(() async {
       final loginService = await ref.read(loginServiceProvider.future);
       final session = await loginService

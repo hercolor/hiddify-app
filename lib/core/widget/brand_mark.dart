@@ -68,9 +68,10 @@ class BrandIcon extends StatelessWidget {
 }
 
 class BrandScaffoldBackground extends StatelessWidget {
-  const BrandScaffoldBackground({super.key, required this.child});
+  const BrandScaffoldBackground({super.key, required this.child, this.showHalos = true});
 
   final Widget child;
+  final bool showHalos;
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +87,11 @@ class BrandScaffoldBackground extends StatelessWidget {
         decoration: const BoxDecoration(gradient: BrandGradients.softBackground),
         child: Stack(
           children: [
-            const Positioned(top: -96, right: -88, child: _SignalHalo(size: 260, opacity: .32)),
-            const Positioned(top: 148, left: -132, child: _SignalHalo(size: 240, opacity: .20)),
-            const Positioned(bottom: -112, right: -96, child: _SignalHalo(size: 220, opacity: .16)),
+            if (showHalos) ...const [
+              Positioned(top: -96, right: -88, child: RepaintBoundary(child: _SignalHalo(size: 260, opacity: .32))),
+              Positioned(top: 148, left: -132, child: RepaintBoundary(child: _SignalHalo(size: 240, opacity: .20))),
+              Positioned(bottom: -112, right: -96, child: RepaintBoundary(child: _SignalHalo(size: 220, opacity: .16))),
+            ],
             child,
           ],
         ),

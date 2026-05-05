@@ -9,8 +9,10 @@ import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
+import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
+import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -22,6 +24,8 @@ class UserProfilePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
     final authState = ref.watch(authNotifierProvider);
+    final currentState = authState.valueOrNull;
+    final showingLogin = currentState?.session == null;
 
     ref.listen(authNotifierProvider, (_, next) {
       if (next case AsyncError(:final error)) {
@@ -34,21 +38,14 @@ class UserProfilePage extends HookConsumerWidget {
 
     return Scaffold(
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(toolbarHeight: 72, title: const Text('会员中心')),
       body: BrandScaffoldBackground(
+        showHalos: !showingLogin,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 680),
-            child: authState.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => _LoginForm(errorText: t.presentError(error).type),
-              data: (state) {
-                if (state.isInitializing) return const Center(child: CircularProgressIndicator());
-                final session = state.session;
-                if (session == null) return const _LoginForm();
-                return _MemberCenter(session: session);
-              },
-            ),
+            child: _UserProfileContent(authState: authState, errorText: authState.readableError(t)),
           ),
         ),
       ),
@@ -56,28 +53,81 @@ class UserProfilePage extends HookConsumerWidget {
   }
 }
 
-class _LoginForm extends HookConsumerWidget {
+class _UserProfileContent extends StatelessWidget {
+  const _UserProfileContent({required this.authState, required this.errorText});
+
+  final AsyncValue<AuthState> authState;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentState = authState.valueOrNull;
+    if (currentState?.isInitializing == true || (authState.isLoading && currentState == null)) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final session = currentState?.session;
+    if (session != null) return _MemberCenter(session: session);
+
+    return _LoginForm(errorText: errorText);
+  }
+}
+
+class _LoginForm extends ConsumerStatefulWidget {
   const _LoginForm({this.errorText});
 
   final String? errorText;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final emailController = useTextEditingController();
-    final passwordController = useTextEditingController();
-    final formKey = useMemoized(GlobalKey<FormState>.new);
+  ConsumerState<_LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends ConsumerState<_LoginForm> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  int _buildCount = 0;
+  int _emailInputCount = 0;
+  int _passwordInputCount = 0;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit(bool isLoading) async {
+    if (isLoading) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final stopwatch = Stopwatch()..start();
+    DiagnosticEventBuffer.add('loginRequestStart');
+    await ref.read(authNotifierProvider.notifier).login(_emailController.text, _passwordController.text);
+    stopwatch.stop();
+    final loggedIn = ref.read(authNotifierProvider).valueOrNull?.isLoggedIn == true;
+    DiagnosticEventBuffer.add('loginRequestEnd success=$loggedIn elapsedMs=${stopwatch.elapsedMilliseconds}');
+    if (!mounted) return;
+    if (loggedIn) {
+      context.goNamed('home');
+    }
+  }
+
+  void _onEmailChanged(String _) {
+    _emailInputCount += 1;
+    DiagnosticEventBuffer.add('emailInputChanged count=$_emailInputCount');
+  }
+
+  void _onPasswordChanged(String _) {
+    _passwordInputCount += 1;
+    DiagnosticEventBuffer.add('passwordInputChanged count=$_passwordInputCount');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _buildCount += 1;
     final isLoading = ref.watch(authNotifierProvider.select((value) => value.isLoading));
     final theme = Theme.of(context);
-
-    Future<void> submit() async {
-      if (isLoading) return;
-      if (!(formKey.currentState?.validate() ?? false)) return;
-      await ref.read(authNotifierProvider.notifier).login(emailController.text, passwordController.text);
-      if (!context.mounted) return;
-      if (ref.read(authNotifierProvider).valueOrNull?.isLoggedIn == true) {
-        context.goNamed('home');
-      }
-    }
+    DiagnosticEventBuffer.add('loginPageBuildCount=$_buildCount isLoading=$isLoading');
 
     return SafeArea(
       child: RepaintBoundary(
@@ -96,20 +146,21 @@ class _LoginForm extends HookConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Form(
-                  key: formKey,
+                  key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
                       const Gap(8),
                       Text('稳定、安全、快速的网络加速体验', style: theme.textTheme.bodyMedium),
-                      if (errorText != null) ...[
+                      if (widget.errorText != null) ...[
                         const Gap(14),
-                        Text(errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
+                        Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
                       ],
                       const Gap(24),
                       TextFormField(
-                        controller: emailController,
+                        controller: _emailController,
+                        onChanged: _onEmailChanged,
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.email],
                         enableSuggestions: false,
@@ -128,7 +179,8 @@ class _LoginForm extends HookConsumerWidget {
                       ),
                       const Gap(14),
                       TextFormField(
-                        controller: passwordController,
+                        controller: _passwordController,
+                        onChanged: _onPasswordChanged,
                         obscureText: true,
                         autofillHints: const [AutofillHints.password],
                         enableSuggestions: false,
@@ -139,14 +191,18 @@ class _LoginForm extends HookConsumerWidget {
                           prefixIcon: Icon(Icons.key_rounded),
                         ),
                         validator: (value) => (value == null || value.isEmpty) ? '请输入密码' : null,
-                        onFieldSubmitted: (_) => submit(),
+                        onFieldSubmitted: (_) => _submit(isLoading),
                       ),
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
                       ),
                       const Gap(4),
-                      _GradientButton(onPressed: isLoading ? null : submit, label: '登录', isLoading: isLoading),
+                      _GradientButton(
+                        onPressed: isLoading ? null : () => _submit(isLoading),
+                        label: '登录',
+                        isLoading: isLoading,
+                      ),
                     ],
                   ),
                 ),
