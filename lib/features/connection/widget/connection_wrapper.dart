@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
+import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
@@ -17,10 +18,10 @@ class ConnectionWrapper extends StatefulHookConsumerWidget {
 }
 
 class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppLogger {
+  ProviderSubscription<AsyncValue<ConnectionStatus>>? _connectionSubscription;
+
   @override
   Widget build(BuildContext context) {
-    ref.listen(connectionNotifierProvider, (_, _) {});
-
     ref.listen(configOptionNotifierProvider, (previous, next) async {
       if (next case AsyncData(value: true)) {
         final t = ref.read(translationsProvider).requireValue;
@@ -45,6 +46,14 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _connectionSubscription ??= ref.listenManual<AsyncValue<ConnectionStatus>>(
+        connectionNotifierProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+    });
     // remove for now...
     //
     // Future.delayed(const Duration(seconds: 2)).then(
@@ -55,5 +64,11 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
     //     }
     //   },
     // );
+  }
+
+  @override
+  void dispose() {
+    _connectionSubscription?.close();
+    super.dispose();
   }
 }

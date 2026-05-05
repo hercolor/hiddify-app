@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hiddify/core/theme/brand_theme.dart';
+import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/gen/fonts.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/platform_utils.dart';
@@ -14,65 +16,81 @@ class ProxyTile extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final delay = proxy.urlTestDelay;
+    final delayText = delay == 0
+        ? '测速中'
+        : delay > 65000
+        ? '超时'
+        : '$delay ms';
 
-    return ListTile(
-      // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      title: Text(
-        proxy.tagDisplay,
-        overflow: TextOverflow.ellipsis,
-        style: PlatformUtils.isWindows ? const TextStyle(fontFamily: FontFamily.emoji) : null,
-      ),
-      leading: IPCountryFlag(selected: selected),
-      trailing: Column(
-        children: [
-          if (proxy.urlTestDelay != 0)
-            Text(
-              proxy.urlTestDelay > 65000 ? "×" : proxy.urlTestDelay.toString(),
-              style: TextStyle(color: delayColor(context, proxy.urlTestDelay)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(BrandRadii.lg),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: selected ? BrandColors.mistBlue : BrandColors.card,
+              borderRadius: BorderRadius.circular(BrandRadii.lg),
+              border: Border.all(color: selected ? BrandColors.signalBlue.withValues(alpha: .35) : BrandColors.border),
+              boxShadow: selected ? BrandShadows.glow(BrandColors.signalBlue, alpha: .10) : BrandShadows.card,
             ),
-
-          if (proxy.download > 0) Text("⬩", style: Theme.of(context).textTheme.bodySmall),
-        ],
+            child: Row(
+              children: [
+                BrandIcon(selected: selected, icon: Icons.hub_rounded),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    proxy.tagDisplay,
+                    overflow: TextOverflow.ellipsis,
+                    style: (theme.textTheme.titleMedium ?? const TextStyle()).copyWith(
+                      fontFamily: PlatformUtils.isWindows ? FontFamily.emoji : null,
+                      fontWeight: FontWeight.w800,
+                      color: BrandColors.slate,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _DelayPill(delay: delay, label: delayText),
+                const SizedBox(width: 10),
+                Icon(
+                  selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  color: selected ? BrandColors.signalBlue : BrandColors.subtle,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-
-      selected: selected,
-      selectedTileColor: theme.colorScheme.primaryContainer,
-      onTap: onTap,
-      horizontalTitleGap: 4,
     );
-  }
-
-  Color delayColor(BuildContext context, int delay) {
-    if (Theme.of(context).brightness == Brightness.dark) {
-      return switch (delay) {
-        < 800 => Colors.lightGreen,
-        < 1500 => Colors.orange,
-        _ => Colors.redAccent,
-      };
-    }
-    return switch (delay) {
-      < 800 => Colors.green,
-      < 1500 => Colors.deepOrangeAccent,
-      _ => Colors.red,
-    };
   }
 }
 
-class IPCountryFlag extends StatelessWidget {
-  const IPCountryFlag({super.key, required this.selected});
+class _DelayPill extends StatelessWidget {
+  const _DelayPill({required this.delay, required this.label});
 
-  final bool selected;
+  final int delay;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: selected
-          ? Theme.of(context).colorScheme.primary
-          : Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Icon(
-        Icons.bolt_rounded,
-        color: selected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurfaceVariant,
+    final color = delay == 0
+        ? BrandColors.muted
+        : delay < 800
+        ? BrandColors.success
+        : delay < 1500
+        ? BrandColors.warning
+        : BrandColors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(999)),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w800),
       ),
     );
   }

@@ -20,6 +20,7 @@ part 'routing_config_notifier.g.dart';
 final branchesScope = <String, FocusScopeNode>{
   'home': FocusScopeNode(),
   'profiles': FocusScopeNode(),
+  'proxies': FocusScopeNode(),
   'settings': FocusScopeNode(),
 };
 
@@ -28,12 +29,13 @@ final loadingConfig = RoutingConfig(
   routes: <RouteBase>[GoRoute(path: '/home', builder: (context, state) => const Material())],
 );
 
-String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) =>
-    isMobileBreakpoint ? ['home', 'settings'][index] : ['home', if (showProfilesAction) 'profiles', 'settings'][index];
+String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) => isMobileBreakpoint
+    ? ['home', 'proxies', 'settings'][index]
+    : ['home', if (showProfilesAction) 'profiles', 'proxies', 'settings'][index];
 
 int getIndexOfBranch(bool isMobileBreakpoint, bool showProfilesAction, String name) => isMobileBreakpoint
-    ? ['home', 'settings'].indexOf(name)
-    : ['home', if (showProfilesAction) 'profiles', 'settings'].indexOf(name);
+    ? ['home', 'proxies', 'settings'].indexOf(name)
+    : ['home', if (showProfilesAction) 'profiles', 'proxies', 'settings'].indexOf(name);
 
 @Riverpod(keepAlive: true)
 class RoutingConfigNotifier extends _$RoutingConfigNotifier {
@@ -78,15 +80,18 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                   path: '/home',
                   builder: (_, _) => FocusScope(node: branchesScope['home'], child: const HomePage()),
                   routes: <GoRoute>[
-                    GoRoute(
-                      name: 'proxies',
-                      path: '/proxies',
-                      pageBuilder: (_, state) =>
-                          customTransition(TransitionType.fade, state.pageKey, const ProxiesOverviewPage()),
-                    ),
                     if (isMobileBreakpoint)
                       GoRoute(name: 'profileDetails', path: '/profile-details/:id', redirect: (_, _) => '/settings'),
                   ],
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: <GoRoute>[
+                GoRoute(
+                  name: 'proxies',
+                  path: '/proxies',
+                  builder: (_, _) => FocusScope(node: branchesScope['proxies'], child: const ProxiesOverviewPage()),
                 ),
               ],
             ),

@@ -21,7 +21,6 @@ import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/system_tray/notifier/system_tray_notifier.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
-import 'package:hiddify/hiddifycore/hiddify_core_service_provider.dart';
 import 'package:hiddify/riverpod_observer.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -55,10 +54,10 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   final appInfo = await _init("app info", () => container.read(appInfoProvider.future));
   await _init("preferences", () => container.read(sharedPreferencesProvider.future));
 
-  final enableAnalytics = await container.read(analyticsControllerProvider.future);
-  if (enableAnalytics) {
-    await _init("analytics", () => container.read(analyticsControllerProvider.notifier).enableAnalytics());
-  }
+  // Sentry/analytics setup can touch native channels and noticeably delay the
+  // first frame on cold Android installs. Read preferences now, but enable
+  // analytics after the first frame in [_postFirstFrameInit].
+  await _init("analytics preference", () => container.read(analyticsControllerProvider.future));
 
   await _init("preferences migration", () async {
     try {
@@ -85,25 +84,45 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
     }
     await _init("auto start service", () => container.read(autoStartNotifierProvider.future));
   }
-  await _init("logs repository", () => container.read(logRepositoryProvider.future));
   await _init("logger controller", () => LoggerController.postInit(debug));
 
   Logger.bootstrap.info(appInfo.format());
 
-  await _init("profile repository", () => container.read(profileRepositoryProvider.future));
-
   await _init("translations", () => container.read(translationsProvider.future));
 
+  Logger.bootstrap.info("bootstrap took [${stopWatch.elapsedMilliseconds}ms]");
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Logger.bootstrap.info("firstFrameReady=true firstFrameReadyMs=${stopWatch.elapsedMilliseconds}");
+    stopWatch.stop();
+    if (!kIsWeb) {
+      splashFailsafeTimer?.cancel();
+      FlutterNativeSplash.remove();
+    }
+    unawaited(_postFirstFrameInit(container));
+  });
+
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: SentryUserInteractionWidget(child: const App()),
+    ),
+  );
+  // SentryFlutter.s(DateTime.now().toUtc());
+}
+
+Future<void> _postFirstFrameInit(ProviderContainer container) async {
+  await _safeInit("analytics", () async {
+    final enableAnalytics = await container.read(analyticsControllerProvider.future);
+    if (enableAnalytics) {
+      await container.read(analyticsControllerProvider.notifier).enableAnalytics();
+    }
+  }, timeout: 1500);
+  await _safeInit("logs repository", () => container.read(logRepositoryProvider.future), timeout: 1000);
+  await _safeInit("profile repository", () => container.read(profileRepositoryProvider.future), timeout: 1500);
   await _safeInit("active profile", () => container.read(activeProfileProvider.future), timeout: 1000);
-  await _safeInit("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init(), timeout: 8000);
 
   if (!kIsWeb) {
-    // await _safeInit(
-    //   "deep link service",
-    //   () => container.read(deepLinkNotifierProvider.future),
-    //   timeout: 1000,
-    // );
-
     if (PlatformUtils.isDesktop) {
       await _safeInit("system tray", () => container.read(systemTrayNotifierProvider.future), timeout: 1000);
     }
@@ -114,22 +133,6 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
       });
     }
   }
-
-  Logger.bootstrap.info("bootstrap took [${stopWatch.elapsedMilliseconds}ms]");
-  stopWatch.stop();
-
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: SentryUserInteractionWidget(child: const App()),
-    ),
-  );
-
-  if (!kIsWeb) {
-    splashFailsafeTimer?.cancel();
-    FlutterNativeSplash.remove();
-  }
-  // SentryFlutter.s(DateTime.now().toUtc());
 }
 
 Future<T> _init<T>(String name, Future<T> Function() initializer, {int? timeout}) async {

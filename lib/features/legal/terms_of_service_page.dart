@@ -8,7 +8,7 @@ class TermsOfServicePage extends StatelessWidget {
     return const _LocalLegalPage(
       title: '用户协议',
       content: '''
-4376加速用户协议
+4376 用户协议
 
 本页面为本地用户协议占位内容，正式版本将补充账号注册、套餐购买、服务使用、退款规则、可接受使用范围和责任限制等条款。
 

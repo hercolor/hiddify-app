@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dartx/dartx.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
@@ -8,8 +9,11 @@ import 'package:hiddify/features/auth/data/auth_data_providers.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
+import 'package:hiddify/features/profile/data/profile_repository.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/proxy/data/client_node_store.dart';
+import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -19,6 +23,7 @@ part 'auth_notifier.g.dart';
 class AuthNotifier extends _$AuthNotifier with AppLogger {
   @override
   Future<AuthState> build() async {
+    final bootstrapWatch = Stopwatch()..start();
     const initialState = AuthState.initializing();
     unawaited(_logAuthDebug(initialState, userInfoLoaded: false));
     try {
@@ -26,18 +31,23 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       if (session == null || session.authData.trim().isEmpty) {
         const nextState = AuthState.loggedOut();
         await _logAuthDebug(nextState, userInfoLoaded: false);
+        loggy.debug('xboard bootstrapAuthMs=${bootstrapWatch.elapsedMilliseconds}');
         return nextState;
       }
 
       final nextState = AuthState.loggedIn(session);
       await _logAuthDebug(nextState, userInfoLoaded: session.subscription != null);
       unawaited(_syncNodesInBackground(session));
+      loggy.debug('xboard bootstrapAuthMs=${bootstrapWatch.elapsedMilliseconds}');
       return nextState;
     } catch (error, stackTrace) {
       loggy.warning('xboard auth bootstrap failed', error, stackTrace);
       const nextState = AuthState.loggedOut();
       await _logAuthDebug(nextState, userInfoLoaded: false);
+      loggy.debug('xboard bootstrapAuthMs=${bootstrapWatch.elapsedMilliseconds}');
       return nextState;
+    } finally {
+      bootstrapWatch.stop();
     }
   }
 
@@ -115,10 +125,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
   Future<AuthSession> _fetchSubscriptionAndImport(AuthSession session) async {
     final subscriptionService = await ref.read(userSubscriptionServiceProvider.future);
+    final syncUserWatch = Stopwatch()..start();
     final subscription = await subscriptionService
         .fetchSubscription(session.authData)
         .match((err) => throw err, (subscription) => subscription)
         .run();
+    syncUserWatch.stop();
+    final syncNodesWatch = Stopwatch()..start();
     final subscriptionUrl = subscription.subscribeUrl.trim();
     loggy.info(
       'xboard subscription ready: '
@@ -131,12 +144,16 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     final repo = await ref.read(profileRepositoryProvider.future);
     await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
     ref.invalidate(activeProfileProvider);
-    final nodeSummary = await _readNodeDebugSummary();
+    final nodeSummary = await _cacheNodesFromActiveProfile(repo);
+    syncNodesWatch.stop();
     loggy.info(
       'xboard nodes imported from subscription url, '
       'urlLength=${subscriptionUrl.length}, '
       'nodeCount=${nodeSummary.nodeCount}, '
-      'selectedNodeName=${nodeSummary.selectedNodeName}',
+      'selectedNodeId=${nodeSummary.selectedNodeId}, '
+      'selectedNodeName=${nodeSummary.selectedNodeName}, '
+      'syncUserMs=${syncUserWatch.elapsedMilliseconds}, '
+      'syncNodesMs=${syncNodesWatch.elapsedMilliseconds}',
     );
     return session.copyWith(subscription: subscription);
   }
@@ -171,33 +188,73 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       'xboard auth debug: '
       'authState=${authState.status.name}, '
       'hasAuthData=${authData?.isNotEmpty == true}, '
+      'profileName=${nodeSummary.profileName}, '
       'nodeCount=${nodeSummary.nodeCount}, '
+      'selectedNodeId=${nodeSummary.selectedNodeId}, '
       'selectedNodeName=${nodeSummary.selectedNodeName}, '
       'userInfoLoaded=$userInfoLoaded, '
       'customerServiceConfigured=${authState.session?.subscription?.customerService?.trim().isNotEmpty == true}',
     );
   }
 
-  Future<({int nodeCount, String selectedNodeName})> _readNodeDebugSummary() async {
+  Future<({String profileName, int nodeCount, String selectedNodeId, String selectedNodeName})>
+  _cacheNodesFromActiveProfile(ProfileRepository repo) async {
     try {
-      final repo = await ref.read(profileRepositoryProvider.future);
       final profilesEither = await repo.watchAll().first.timeout(const Duration(seconds: 2));
       final profiles = profilesEither.getOrElse((_) => const <ProfileEntity>[]);
-      String? selectedName;
-      for (final profile in profiles) {
-        if (profile.active) {
-          selectedName = profile.name;
-          break;
-        }
+      final profile = profiles.where((profile) => profile.active).firstOrNull ?? profiles.firstOrNull;
+      if (profile == null) return _nodeDebugFallback();
+
+      final rawConfig = await repo.getRawConfig(profile.id).match((err) => '', (content) => content).run();
+      final nodes = ClientNodeParser.parse(rawConfig);
+      if (nodes.isNotEmpty) {
+        await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: profile.name);
       }
-      return (
-        nodeCount: profiles.length,
-        selectedNodeName: selectedName?.trim().isNotEmpty == true ? selectedName! : '--',
-      );
+      final selection =
+          ref.read(clientNodeSelectionProvider).valueOrNull ??
+          await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
+      return _nodeDebugFromSelection(selection.copyWith(profileName: profile.name));
+    } catch (error, stackTrace) {
+      loggy.debug('failed to cache sanitized node summary', error, stackTrace);
+      return _nodeDebugFallback();
+    }
+  }
+
+  Future<({String profileName, int nodeCount, String selectedNodeId, String selectedNodeName})>
+  _readNodeDebugSummary() async {
+    try {
+      final selection =
+          ref.read(clientNodeSelectionProvider).valueOrNull ??
+          await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
+      return _nodeDebugFromSelection(selection);
     } catch (error, stackTrace) {
       loggy.debug('failed to read sanitized node debug summary', error, stackTrace);
-      return (nodeCount: 0, selectedNodeName: '--');
+      return _nodeDebugFallback();
     }
+  }
+
+  ({String profileName, int nodeCount, String selectedNodeId, String selectedNodeName}) _nodeDebugFromSelection(
+    ClientNodeSelection selection,
+  ) {
+    final selectedNode = selection.selectedNode;
+    return (
+      profileName: _safeLogValue(selection.profileName),
+      nodeCount: selection.nodeCount,
+      selectedNodeId: _safeLogValue(selection.effectiveSelectedNodeId),
+      selectedNodeName: _safeLogValue(selectedNode?.name),
+    );
+  }
+
+  ({String profileName, int nodeCount, String selectedNodeId, String selectedNodeName}) _nodeDebugFallback() =>
+      (profileName: '--', nodeCount: 0, selectedNodeId: '--', selectedNodeName: '--');
+
+  String _safeLogValue(String? value) {
+    final sanitized = (value == null || value.trim().isEmpty ? '--' : value.trim()).replaceAll(
+      RegExp(r'https?://[^\s]+'),
+      'https://***',
+    );
+    if (sanitized.length > 64) return '${sanitized.substring(0, 64)}…';
+    return sanitized;
   }
 }
 

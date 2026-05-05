@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract class Constants {
-  static const appName = "4376加速";
+  static const appName = "4376";
   static const githubUrl = "https://api.y88.pro";
   static const licenseUrl = "https://api.y88.pro/terms";
   static const githubReleasesApiUrl = "https://api.github.com/repos/hiddify/hiddify-next/releases";

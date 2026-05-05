@@ -12,6 +12,7 @@ import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/theme/app_theme.dart';
+import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/app_update/notifier/app_update_notifier.dart';
 import 'package:hiddify/features/connection/widget/connection_wrapper.dart';
@@ -87,7 +88,6 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                   darkTheme: theme.darkTheme(darkColorScheme),
                   title: Constants.appName,
                   builder: (context, child) {
-                    final theme = Theme.of(context);
                     final effectiveChild = UpgradeAlert(
                       upgrader: upgrader,
                       navigatorKey: router.routerDelegate.navigatorKey,
@@ -97,12 +97,12 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                       return AccessibilityTools(checkFontOverflows: true, child: effectiveChild);
                     }
                     return AnnotatedRegion<SystemUiOverlayStyle>(
-                      value: SystemUiOverlayStyle(
-                        statusBarColor: theme.scaffoldBackgroundColor,
-                        systemNavigationBarColor: theme.scaffoldBackgroundColor,
-                        systemNavigationBarIconBrightness: theme.brightness == Brightness.dark
-                            ? Brightness.light
-                            : Brightness.dark,
+                      value: const SystemUiOverlayStyle(
+                        statusBarColor: Colors.transparent,
+                        statusBarIconBrightness: Brightness.dark,
+                        statusBarBrightness: Brightness.light,
+                        systemNavigationBarColor: BrandColors.porcelain,
+                        systemNavigationBarIconBrightness: Brightness.dark,
                       ),
                       child: effectiveChild,
                     );
@@ -188,7 +188,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
         onPause(ref);
       } else if (appLifecycleState == AppLifecycleState.inactive) {
         onInactive(ref);
-      } else if (appLifecycleState == AppLifecycleState.resumed) {
+      } else if (appLifecycleState == AppLifecycleState.resumed && isOnPauseCalled) {
         onResume(ref);
       }
       return null;

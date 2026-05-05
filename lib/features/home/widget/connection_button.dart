@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hiddify/core/theme/theme_extensions.dart';
+import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/animated_text.dart';
+import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 // TODO: rewrite
@@ -16,9 +15,7 @@ class ConnectionButton extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(connectionNotifierProvider);
     final clientState = ref.watch(clientConnectionStateProvider);
-    final today = DateTime.now();
     // final animationController = useAnimationController(
     //   duration: const Duration(seconds: 1),
     // )..repeat(reverse: true); // Ensure the animation loops indefinitely
@@ -49,8 +46,6 @@ class ConnectionButton extends HookConsumerWidget {
     //   //   },
     //   // );
 
-    const buttonTheme = ConnectionButtonTheme.light;
-    const secureLabel = "";
     final enabled = clientState.canTap;
     final connected = clientState.phase == ClientConnectionPhase.connected;
     final busy = clientState.isBusy;
@@ -70,20 +65,17 @@ class ConnectionButton extends HookConsumerWidget {
       },
       enabled: enabled,
       label: clientState.buttonLabel,
-      buttonColor: connected
-          ? buttonTheme.connectedColor!
+      phase: clientState.phase,
+      accentColor: connected
+          ? BrandColors.success
           : failed
-          ? Colors.red.shade700
+          ? BrandColors.error
           : busy
-          ? const Color.fromARGB(255, 185, 176, 103)
+          ? BrandColors.warning
           : loggedOut
-          ? Colors.grey.shade600
-          : buttonTheme.idleColor!,
-      image: connected ? Assets.images.connectNorouz : Assets.images.disconnectNorouz,
-      newButtonColor: connected ? buttonTheme.connectedColor! : buttonTheme.idleColor!,
+          ? BrandColors.subtle
+          : BrandColors.signalBlue,
       animated: connected || busy,
-      useImage: today.day >= 19 && today.day <= 23 && today.month == 3,
-      secureLabel: secureLabel,
     );
   }
 }
@@ -93,81 +85,103 @@ class _ConnectionButton extends StatelessWidget {
     required this.onTap,
     required this.enabled,
     required this.label,
-    required this.buttonColor,
-    required this.image,
-    required this.useImage,
-    required this.newButtonColor,
+    required this.phase,
+    required this.accentColor,
     required this.animated,
-    required this.secureLabel,
   });
 
   final VoidCallback? onTap;
   final bool enabled;
   final String label;
-  final Color buttonColor;
-  final AssetGenImage image;
-  final bool useImage;
-  final String secureLabel;
-
-  final Color newButtonColor;
-
+  final ClientConnectionPhase phase;
+  final Color accentColor;
   final bool animated;
 
   @override
   Widget build(BuildContext context) {
+    final connected = phase == ClientConnectionPhase.connected;
+    final busy =
+        phase == ClientConnectionPhase.connecting ||
+        phase == ClientConnectionPhase.preparing ||
+        phase == ClientConnectionPhase.requestingVpnPermission ||
+        phase == ClientConnectionPhase.reconnecting;
+    final theme = Theme.of(context);
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // CircleDesignWidget(newButtonColor: newButtonColor, onTap: onTap, animated: animated),
         Semantics(
           button: true,
           enabled: enabled,
           label: label,
-          child: Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(blurRadius: 16, color: buttonColor.withValues(alpha: .5))],
-            ),
-            width: 148,
-            height: 148,
-            child: Material(
-              key: const ValueKey("home_connection_button"),
-              shape: const CircleBorder(),
-              color: Colors.white,
-              child: InkWell(
-                focusColor: Colors.grey,
-                onTap: enabled ? onTap : null,
-                child: Padding(
-                  padding: const EdgeInsets.all(36),
-                  child: useImage ? image.image() : Image.asset('assets/logo.png'),
-                ),
-              ),
-            ).animate(target: enabled ? 0 : 1).blurXY(end: 1),
-          ).animate(target: enabled ? 0 : 1).scaleXY(end: .88, curve: Curves.easeIn),
+          child:
+              Container(
+                    width: 188,
+                    height: 188,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          accentColor.withValues(alpha: connected ? .24 : .16),
+                          accentColor.withValues(alpha: .07),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
+                        width: 148,
+                        height: 148,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: connected ? BrandGradients.connected : BrandGradients.primary,
+                          boxShadow: BrandShadows.glow(accentColor, alpha: enabled ? .22 : .08),
+                        ),
+                        child: Material(
+                          key: const ValueKey("home_connection_button"),
+                          shape: const CircleBorder(),
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: enabled ? onTap : null,
+                            child: Center(
+                              child: busy
+                                  ? const SizedBox.square(
+                                      dimension: 36,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                                    )
+                                  : const BrandMark(size: 62, showWordmark: false, dark: true),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                  .animate(target: animated ? 1 : 0)
+                  .scaleXY(end: 1.035, duration: const Duration(milliseconds: 900), curve: Curves.easeInOut)
+                  .then()
+                  .scaleXY(end: .966, duration: const Duration(milliseconds: 900), curve: Curves.easeInOut)
+                  .animate(target: enabled ? 0 : 1)
+                  .scaleXY(end: .92, curve: Curves.easeIn),
         ),
-        const Gap(16),
+        const Gap(18),
         ExcludeSemantics(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedText(label, style: Theme.of(context).textTheme.titleMedium),
-              if (secureLabel.isNotEmpty) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // const Gap(8),
-                    Icon(FontAwesomeIcons.shieldHalved, size: 16, color: Theme.of(context).colorScheme.secondary),
-                    const Gap(4),
-                    Text(
-                      secureLabel,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleSmall?.copyWith(color: Theme.of(context).colorScheme.secondary),
-                    ),
-                  ],
-                ),
-              ],
+              AnimatedText(
+                label,
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: BrandColors.slate),
+              ),
+              const Gap(6),
+              Text(
+                connected
+                    ? '连接稳定，正在保护您的网络'
+                    : busy
+                    ? '正在建立安全连接'
+                    : '轻触即可开启安全加速',
+                style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted),
+              ),
             ],
           ),
         ),

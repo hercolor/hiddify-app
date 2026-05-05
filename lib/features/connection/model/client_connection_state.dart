@@ -57,7 +57,7 @@ class ClientConnectionState {
   String get buttonLabel => switch (phase) {
     ClientConnectionPhase.initializing => '初始化中',
     ClientConnectionPhase.loggedOut => '登录后加速',
-    ClientConnectionPhase.disconnected => '一键加速',
+    ClientConnectionPhase.disconnected => '开始加速',
     ClientConnectionPhase.preparing ||
     ClientConnectionPhase.requestingVpnPermission ||
     ClientConnectionPhase.connecting => '连接中',

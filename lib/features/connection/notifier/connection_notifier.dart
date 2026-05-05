@@ -14,6 +14,7 @@ import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -119,7 +120,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         loggy.info('no active profile, disconnecting');
         return userDisconnect();
       }
-      loggy.info('active profile changed, reconnecting selectedNodeName=${_safeNodeName(profile.name)}');
+      loggy.info('active profile changed, reconnecting selectedNodeName=${_selectedNodeNameSync()}');
       await ref.read(Preferences.startedByUser.notifier).update(true);
       _setClientState(const ClientConnectionState.reconnecting(), reason: 'active profile changed');
       await _connectionRepo
@@ -193,9 +194,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       );
     }
 
-    loggy.debug(
-      'starting core connection: reconnecting=$reconnecting, selectedNodeName=${_safeNodeName(activeProfile.name)}',
-    );
+    loggy.debug('starting core connection: reconnecting=$reconnecting, selectedNodeName=${_selectedNodeNameSync()}');
     await _connectionRepo
         .connect(activeProfile, ref.read(Preferences.disableMemoryLimit))
         .mapLeft((err) => _handleConnectFailure(err, reconnecting: reconnecting))
@@ -367,7 +366,10 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     ref.read(inAppNotificationControllerProvider).showInfoToast(message);
   }
 
-  String _selectedNodeNameSync() => _safeNodeName(ref.read(activeProfileProvider).valueOrNull?.name ?? '--');
+  String _selectedNodeNameSync() {
+    final selectedNode = ref.read(clientNodeSelectionProvider).valueOrNull?.selectedNode;
+    return _safeNodeName(selectedNode?.name ?? '--');
+  }
 
   String _safeNodeName(String value) {
     final sanitized = value.replaceAll(RegExp(r'https?://[^\s]+'), 'https://***');

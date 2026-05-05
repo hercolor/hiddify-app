@@ -7,6 +7,7 @@ import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/router/adaptive_layout/shell_route_action.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/router/go_router/routing_config_notifier.dart';
+import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/features/stats/widget/side_bar_stats_overview.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -25,6 +26,10 @@ class MyAdaptiveLayout extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translationsProvider).requireValue;
+    final actions = _actions(t, showProfilesAction, isMobileBreakpoint);
+    final selectedIndex = navigationShell.currentIndex < actions.length
+        ? navigationShell.currentIndex
+        : actions.length - 1;
     // focus switch management
     final primaryFocusHash = useState<int?>(null);
     final navScopeNode = useFocusScopeNode();
@@ -63,8 +68,8 @@ class MyAdaptiveLayout extends HookConsumerWidget {
                     node: navScopeNode,
                     child: NavigationRail(
                       extended: Breakpoint(context).isDesktop(),
-                      destinations: _navRailDests(_actions(t, showProfilesAction, isMobileBreakpoint)),
-                      selectedIndex: navigationShell.currentIndex,
+                      destinations: _navRailDests(actions),
+                      selectedIndex: selectedIndex,
                       onDestinationSelected: (index) => _onTap(context, index),
                       trailing: Breakpoint(context).isDesktop()
                           ? const Expanded(
@@ -82,10 +87,18 @@ class MyAdaptiveLayout extends HookConsumerWidget {
         bottomNavigationBar: isMobileBreakpoint
             ? FocusScope(
                 node: navScopeNode,
-                child: NavigationBar(
-                  selectedIndex: navigationShell.currentIndex <= 1 ? navigationShell.currentIndex : 0,
-                  destinations: _navDests(_actions(t, showProfilesAction, isMobileBreakpoint)),
-                  onDestinationSelected: (index) => _onTap(context, index),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: BrandColors.card.withValues(alpha: .96),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                    border: const Border(top: BorderSide(color: BrandColors.border)),
+                    boxShadow: BrandShadows.card,
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: selectedIndex,
+                    destinations: _navDests(actions),
+                    onDestinationSelected: (index) => _onTap(context, index),
+                  ),
                 ),
               )
             : null,
@@ -99,8 +112,9 @@ class MyAdaptiveLayout extends HookConsumerWidget {
   }
 
   List<ShellRouteAction> _actions(Translations t, bool showProfilesAction, bool isMobileBreakpoint) => [
-    ShellRouteAction(Icons.power_settings_new_rounded, t.pages.home.title),
+    ShellRouteAction(Icons.home_rounded, '首页'),
     if (showProfilesAction && !isMobileBreakpoint) ShellRouteAction(Icons.view_list_rounded, t.pages.profiles.title),
+    ShellRouteAction(Icons.hub_rounded, '节点'),
     ShellRouteAction(Icons.workspace_premium_rounded, '会员'),
   ];
 

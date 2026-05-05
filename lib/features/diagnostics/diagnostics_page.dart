@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
@@ -10,15 +11,11 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
 import 'package:hiddify/features/log/model/log_entity.dart';
 import 'package:hiddify/features/log/overview/logs_overview_notifier.dart';
-import 'package:hiddify/features/profile/data/profile_data_providers.dart';
-import 'package:hiddify/features/profile/model/profile_entity.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/proxy/data/client_node_store.dart';
+import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/singbox/model/singbox_config_option.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'diagnostics_page.g.dart';
 
 class DiagnosticsPage extends HookConsumerWidget {
   const DiagnosticsPage({super.key});
@@ -28,16 +25,15 @@ class DiagnosticsPage extends HookConsumerWidget {
     final connection = ref.watch(connectionNotifierProvider);
     final clientState = ref.watch(clientConnectionStateProvider);
     final authState = ref.watch(authNotifierProvider);
-    final activeProfile = ref.watch(activeProfileProvider);
-    final profiles = ref.watch(_diagnosticProfilesProvider);
+    final nodeSelection = ref.watch(clientNodeSelectionProvider);
     final options = ref.watch(ConfigOptions.singboxConfigOptions);
     final activeOptions = ref.watch(connectionRepositoryProvider).configOptionsSnapshot ?? options;
     final logsState = ref.watch(logsOverviewNotifierProvider);
     final logs = logsState.logs;
     final diagnosticText = _buildDiagnosticText(
       authState: authState,
-      profiles: profiles,
-      activeProfileName: activeProfile.valueOrNull?.name,
+      nodeSelection: nodeSelection,
+      selectedNodeName: nodeSelection.valueOrNull?.selectedNode?.name,
       connection: connection,
       clientState: clientState,
       options: activeOptions,
@@ -46,6 +42,17 @@ class DiagnosticsPage extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: '返回',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed('settings');
+            }
+          },
+        ),
         title: const Text('内部诊断'),
         actions: [
           IconButton(
@@ -78,15 +85,15 @@ class DiagnosticsPage extends HookConsumerWidget {
                 _SummaryTile(label: '用户 ID', value: _diagnosticUserId(authState.valueOrNull?.session?.email)),
                 _SummaryTile(
                   label: '节点数量',
-                  value: profiles.when(
-                    data: (items) => '${items.length}',
+                  value: nodeSelection.when(
+                    data: (selection) => '${selection.nodeCount}',
                     error: (_, _) => '--',
                     loading: () => '读取中...',
                   ),
                 ),
                 _SummaryTile(
                   label: '当前节点名称',
-                  value: DiagnosticSanitizer.sanitize(activeProfile.valueOrNull?.name ?? '--'),
+                  value: DiagnosticSanitizer.sanitize(nodeSelection.valueOrNull?.selectedNode?.name ?? '--'),
                 ),
                 _SummaryTile(label: 'VPN 权限状态', value: _vpnPermissionStatus(clientState)),
                 _SummaryTile(
@@ -201,13 +208,6 @@ class _LogsCard extends StatelessWidget {
   }
 }
 
-@Riverpod(keepAlive: true)
-Future<List<ProfileEntity>> _diagnosticProfiles(Ref ref) async {
-  final repo = await ref.watch(profileRepositoryProvider.future);
-  final result = await repo.watchAll().first.timeout(const Duration(seconds: 2));
-  return result.match((_) => const <ProfileEntity>[], (profiles) => profiles);
-}
-
 String _diagnosticUserId(String? email) => DiagnosticSanitizer.maskIdentifier(email);
 
 String _vpnPermissionStatus(ClientConnectionState state) {
@@ -220,8 +220,8 @@ String _sanitizeCoreStatus(Object status) => DiagnosticSanitizer.sanitize(status
 
 String _buildDiagnosticText({
   required AsyncValue<AuthState> authState,
-  required AsyncValue<List<ProfileEntity>> profiles,
-  required String? activeProfileName,
+  required AsyncValue<ClientNodeSelection> nodeSelection,
+  required String? selectedNodeName,
   required AsyncValue<Object> connection,
   required ClientConnectionState clientState,
   required SingboxConfigOption options,
@@ -232,9 +232,9 @@ String _buildDiagnosticText({
     ..writeln('loginStatus=${authState.valueOrNull?.status.name ?? 'initializing'}')
     ..writeln('userId=${_diagnosticUserId(authState.valueOrNull?.session?.email)}')
     ..writeln(
-      'nodeCount=${profiles.when(data: (items) => items.length, error: (_, _) => '--', loading: () => 'loading')}',
+      'nodeCount=${nodeSelection.when(data: (selection) => selection.nodeCount, error: (_, _) => '--', loading: () => 'loading')}',
     )
-    ..writeln('selectedNodeName=${DiagnosticSanitizer.sanitize(activeProfileName ?? '--')}')
+    ..writeln('selectedNodeName=${DiagnosticSanitizer.sanitize(selectedNodeName ?? '--')}')
     ..writeln('vpnPermission=${_vpnPermissionStatus(clientState)}')
     ..writeln(
       'coreStatus=${connection.when(data: _sanitizeCoreStatus, error: (_, _) => 'error', loading: () => 'loading')}',

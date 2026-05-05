@@ -7,6 +7,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/core/utils/preferences_utils.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/data/proxy_data_providers.dart';
 import 'package:hiddify/features/proxy/model/proxy_failure.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
@@ -174,6 +175,7 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
     }
     proxies.items.clear();
     proxies.items.addAll(items);
+    unawaited(ref.read(clientNodeSelectionProvider.notifier).cacheFromOutboundGroup(proxies));
     return proxies;
   }
 
@@ -215,6 +217,7 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
       newselected.isSelected = true;
       outbounds.selected = newselected.tag;
       state = AsyncValue.data(outbounds);
+      unawaited(ref.read(clientNodeSelectionProvider.notifier).selectNode(newselected.tag));
     }
   }
 

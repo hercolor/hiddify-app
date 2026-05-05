@@ -7,6 +7,7 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/profile/data/final_config_guard.dart';
 import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
+import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/hiddifycore/hiddify_core_service.dart';
 import 'package:hiddify/singbox/model/core_status.dart';
@@ -128,7 +129,8 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
       }, (err, st) => err is ConnectionFailure ? err : ConnectionFailure.unexpected(err, st));
 
   void _logFinalConfigSummary(ProfileEntity profile) {
-    final nodeName = profile.name.replaceAll(RegExp(r'https?://[^\s]+'), 'https://***');
+    final selectedNode = ref.read(clientNodeSelectionProvider).valueOrNull?.selectedNode;
+    final nodeName = (selectedNode?.name ?? '--').replaceAll(RegExp(r'https?://[^\s]+'), 'https://***');
     loggy.debug(
       'final generated core config summary: '
       'fakeIp=${LockedCoreConfig.fakeIp}, '

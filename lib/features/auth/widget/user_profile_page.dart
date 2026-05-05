@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
-import 'package:hiddify/core/widget/spaced_list_widget.dart';
+import 'package:hiddify/core/theme/brand_theme.dart';
+import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
@@ -31,21 +33,22 @@ class UserProfilePage extends HookConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('会员')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          child: authState.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => _LoginForm(errorText: t.presentError(error).type),
-            data: (state) {
-              if (state.isInitializing) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final session = state.session;
-              if (session == null) return const _LoginForm();
-              return _MemberCenter(session: session);
-            },
+      extendBody: true,
+      appBar: AppBar(toolbarHeight: 72, title: const Text('会员中心')),
+      body: BrandScaffoldBackground(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: authState.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _LoginForm(errorText: t.presentError(error).type),
+              data: (state) {
+                if (state.isInitializing) return const Center(child: CircularProgressIndicator());
+                final session = state.session;
+                if (session == null) return const _LoginForm();
+                return _MemberCenter(session: session);
+              },
+            ),
           ),
         ),
       ),
@@ -76,62 +79,109 @@ class _LoginForm extends HookConsumerWidget {
       }
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Image.asset('assets/logo.png', height: 44),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text('登录 4376加速', style: theme.textTheme.headlineSmall)),
+    return BrandScaffoldBackground(
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 104),
+          children: [
+            const Center(child: BrandMark(size: 54)),
+            const Gap(34),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: BrandColors.card.withValues(alpha: .95),
+                borderRadius: BorderRadius.circular(BrandRadii.xl),
+                border: Border.all(color: BrandColors.border),
+                boxShadow: BrandShadows.card,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
+                    const Gap(8),
+                    Text('稳定、安全、快速的网络加速体验', style: theme.textTheme.bodyMedium),
+                    if (errorText != null) ...[
+                      const Gap(14),
+                      Text(errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
                     ],
-                  ),
-                  const Text('使用邮箱和密码登录后，将自动获取你的会员套餐和订阅信息。'),
-                  if (errorText != null)
-                    Text(errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error)),
-                  TextFormField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(labelText: '邮箱', prefixIcon: Icon(Icons.email_outlined)),
-                    validator: (value) {
-                      final input = value?.trim() ?? '';
-                      if (input.isEmpty) return '请输入邮箱';
-                      if (!input.contains('@')) return '邮箱格式不正确';
-                      return null;
-                    },
-                    textInputAction: TextInputAction.next,
-                  ),
-                  TextFormField(
-                    controller: passwordController,
-                    obscureText: true,
-                    autofillHints: const [AutofillHints.password],
-                    decoration: const InputDecoration(labelText: '密码', prefixIcon: Icon(Icons.lock_outline)),
-                    validator: (value) => (value == null || value.isEmpty) ? '请输入密码' : null,
-                    onFieldSubmitted: (_) => submit(),
-                  ),
-                  FilledButton.icon(
-                    onPressed: isLoading ? null : submit,
-                    icon: isLoading
-                        ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.login_rounded),
-                    label: const Text('登录'),
-                  ),
-                ].spaceBy(height: 16),
+                    const Gap(24),
+                    TextFormField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: const InputDecoration(
+                        labelText: '邮箱账号',
+                        hintText: '请输入邮箱',
+                        prefixIcon: Icon(Icons.mail_outline_rounded),
+                      ),
+                      validator: (value) {
+                        final input = value?.trim() ?? '';
+                        if (input.isEmpty) return '请输入邮箱';
+                        if (!input.contains('@')) return '邮箱格式不正确';
+                        return null;
+                      },
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const Gap(14),
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: true,
+                      autofillHints: const [AutofillHints.password],
+                      decoration: const InputDecoration(
+                        labelText: '登录密码',
+                        hintText: '请输入密码',
+                        prefixIcon: Icon(Icons.key_rounded),
+                      ),
+                      validator: (value) => (value == null || value.isEmpty) ? '请输入密码' : null,
+                      onFieldSubmitted: (_) => submit(),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
+                    ),
+                    const Gap(4),
+                    _GradientButton(onPressed: isLoading ? null : submit, label: '登录', isLoading: isLoading),
+                  ],
+                ),
               ),
             ),
-          ),
+            const Gap(24),
+            Center(child: Text('登录后将自动准备可用线路', style: theme.textTheme.bodySmall)),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  const _GradientButton({required this.onPressed, required this.label, this.isLoading = false});
+
+  final VoidCallback? onPressed;
+  final String label;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: onPressed == null ? null : BrandGradients.primary,
+        color: onPressed == null ? BrandColors.subtle : null,
+        borderRadius: BorderRadius.circular(BrandRadii.md),
+        boxShadow: onPressed == null ? null : BrandShadows.glow(BrandColors.signalBlue, alpha: .16),
+      ),
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+        child: isLoading
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Text(label),
+      ),
     );
   }
 }
@@ -144,125 +194,127 @@ class _MemberCenter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subscription = session.subscription;
-
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 104),
       children: [
-        _AccountCard(session: session),
-        _PlanCard(subscription: subscription),
+        _HeroMemberCard(session: session, subscription: subscription),
+        const Gap(14),
         _TrafficCard(subscription: subscription),
+        const Gap(14),
         _SupportCard(subscription: subscription),
-      ].spaceBy(height: 12),
+      ],
     );
   }
 }
 
-class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.session});
+class _HeroMemberCard extends HookConsumerWidget {
+  const _HeroMemberCard({required this.session, required this.subscription});
 
   final AuthSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.workspace_premium_rounded)),
-            title: const Text('4376加速会员'),
-            subtitle: Text(session.email),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.subscription});
-
-  final UserSubscription? subscription;
-
-  @override
-  Widget build(BuildContext context) {
-    final expiredAt = subscription?.expiredAt;
-    return Card(
-      child: Column(
-        children: [
-          _PlanActionTile(subscription: subscription),
-          const Divider(height: 1),
-          _InfoTile(icon: Icons.event_available_rounded, title: '到期时间', value: _formatExpiredAt(expiredAt)),
-          const Divider(height: 1),
-          _InfoTile(icon: Icons.devices_rounded, title: '设备数量', value: _formatDeviceLimit(subscription)),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlanActionTile extends HookConsumerWidget {
-  const _PlanActionTile({required this.subscription});
-
   final UserSubscription? subscription;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final actions = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        FilledButton(
-          onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
-          child: const Text('续费'),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [BrandColors.signalBlue, BrandColors.iceCyan],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        OutlinedButton(
-          onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
-          child: const Text('升级'),
-        ),
-      ],
-    );
-
-    final info = Row(
-      children: [
-        const Icon(Icons.card_membership_rounded),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(BrandRadii.xl),
+        boxShadow: BrandShadows.glow(BrandColors.signalBlue, alpha: .18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text('当前套餐', style: theme.textTheme.bodyLarge),
-              const SizedBox(height: 2),
-              Text(_displayText(subscription?.planName), style: theme.textTheme.bodyMedium),
+              const BrandMark(size: 36, dark: true),
+              const Spacer(),
+              _SmallLightButton(
+                label: '续费',
+                onTap: () => _openCustomerService(context, ref, subscription?.customerService),
+              ),
+              const Gap(8),
+              _SmallLightButton(
+                label: '升级',
+                onTap: () => _openCustomerService(context, ref, subscription?.customerService),
+              ),
             ],
           ),
+          const Gap(24),
+          Text('当前套餐', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: .82))),
+          const Gap(4),
+          Text(
+            _displayText(subscription?.planName),
+            style: theme.textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900),
+          ),
+          const Gap(14),
+          Text(session.email, style: theme.textTheme.bodySmall?.copyWith(color: Colors.white.withValues(alpha: .82))),
+          const Gap(18),
+          _LightInfoRow(
+            icon: Icons.event_available_rounded,
+            label: '到期时间',
+            value: _formatExpiredAt(subscription?.expiredAt),
+          ),
+          const Gap(10),
+          _LightInfoRow(icon: Icons.devices_rounded, label: '设备数量', value: _formatDeviceLimit(subscription)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallLightButton extends StatelessWidget {
+  const _SmallLightButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .18),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: .24)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+        ),
+      ),
+    );
+  }
+}
+
+class _LightInfoRow extends StatelessWidget {
+  const _LightInfoRow({required this.icon, required this.label, required this.value});
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white, size: 18),
+        const Gap(8),
+        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: .82))),
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
         ),
       ],
-    );
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth < 420) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                info,
-                const SizedBox(height: 12),
-                Align(alignment: Alignment.centerLeft, child: actions),
-              ],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: info),
-              const SizedBox(width: 12),
-              actions,
-            ],
-          );
-        },
-      ),
     );
   }
 }
@@ -289,18 +341,16 @@ class _TrafficCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final used = subscription?.usedTraffic;
     final remaining = subscription?.remainingTraffic;
-    return Card(
-      child: Column(
-        children: [
-          _InfoTile(icon: Icons.data_usage_rounded, title: '已用流量', value: used == null ? '--' : _formatTrafficGb(used)),
-          const Divider(height: 1),
-          _InfoTile(
-            icon: Icons.battery_5_bar_rounded,
-            title: '剩余流量',
-            value: remaining == null ? '--' : _formatTrafficGb(remaining),
-          ),
-        ],
-      ),
+    return _PremiumCard(
+      children: [
+        _InfoTile(icon: Icons.data_usage_rounded, title: '已用流量', value: used == null ? '--' : _formatTrafficGb(used)),
+        const Divider(),
+        _InfoTile(
+          icon: Icons.battery_5_bar_rounded,
+          title: '剩余流量',
+          value: remaining == null ? '--' : _formatTrafficGb(remaining),
+        ),
+      ],
     );
   }
 }
@@ -320,58 +370,126 @@ class _SupportCard extends HookConsumerWidget {
       versionTapCount.value += 1;
       if (versionTapCount.value >= 7) {
         versionTapCount.value = 0;
-        context.goNamed('diagnostics');
+        context.pushNamed('diagnostics');
       }
     }
 
-    return Card(
-      child: Column(
+    return _PremiumCard(
+      children: [
+        _ActionTile(
+          icon: Icons.support_agent_rounded,
+          title: '联系客服',
+          trailing: Icons.open_in_new_rounded,
+          onTap: () => _openCustomerService(context, ref, subscription?.customerService),
+        ),
+        const Divider(),
+        _ActionTile(icon: Icons.privacy_tip_outlined, title: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
+        const Divider(),
+        _ActionTile(icon: Icons.article_outlined, title: '用户协议', onTap: () => context.pushNamed('termsOfService')),
+        const Divider(),
+        appInfo.when(
+          data: (info) => _ActionTile(
+            icon: Icons.info_outline_rounded,
+            title: 'App 版本',
+            subtitle: info.presentVersion,
+            onTap: openDiagnostics,
+            showChevron: false,
+          ),
+          error: (_, _) =>
+              const _ActionTile(icon: Icons.info_outline_rounded, title: 'App 版本', subtitle: '未获取', showChevron: false),
+          loading: () => const _ActionTile(
+            icon: Icons.info_outline_rounded,
+            title: 'App 版本',
+            subtitle: '读取中...',
+            showChevron: false,
+          ),
+        ),
+        const Divider(),
+        _ActionTile(
+          icon: Icons.logout_rounded,
+          title: '退出登录',
+          titleColor: BrandColors.error,
+          showChevron: false,
+          onTap: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
+        ),
+      ],
+    );
+  }
+}
+
+class _PremiumCard extends StatelessWidget {
+  const _PremiumCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: BrandColors.card,
+        borderRadius: BorderRadius.circular(BrandRadii.lg),
+        border: Border.all(color: BrandColors.border),
+        boxShadow: BrandShadows.card,
+      ),
+      child: Column(children: children),
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  const _InfoTile({required this.icon, required this.title, required this.value});
+
+  final IconData icon;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          ListTile(
-            leading: const Icon(Icons.support_agent_rounded),
-            title: const Text('联系客服'),
-            trailing: const Icon(Icons.open_in_new_rounded),
-            onTap: () => _openCustomerService(context, ref, subscription?.customerService),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('隐私政策'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => context.pushNamed('privacyPolicy'),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.article_outlined),
-            title: const Text('用户协议'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => context.pushNamed('termsOfService'),
-          ),
-          const Divider(height: 1),
-          appInfo.when(
-            data: (info) => ListTile(
-              leading: const Icon(Icons.info_outline_rounded),
-              title: const Text('App 版本'),
-              subtitle: Text(info.presentVersion),
-              onTap: openDiagnostics,
-            ),
-            error: (_, _) =>
-                const ListTile(leading: Icon(Icons.info_outline_rounded), title: Text('App 版本'), subtitle: Text('未获取')),
-            loading: () => const ListTile(
-              leading: Icon(Icons.info_outline_rounded),
-              title: Text('App 版本'),
-              subtitle: Text('读取中...'),
-            ),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.logout_rounded),
-            title: const Text('退出登录'),
-            enabled: !isLoading,
-            onTap: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
-          ),
+          BrandIcon(size: 42, icon: icon),
+          const Gap(12),
+          Expanded(child: Text(title, style: theme.textTheme.bodyMedium)),
+          Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
         ],
       ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.trailing,
+    this.titleColor,
+    this.showChevron = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final IconData? trailing;
+  final Color? titleColor;
+  final bool showChevron;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: BrandIcon(size: 40, icon: icon),
+      title: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: titleColor ?? BrandColors.slate)),
+      subtitle: subtitle == null ? null : Text(subtitle!),
+      trailing: showChevron || trailing != null
+          ? Icon(trailing ?? Icons.chevron_right_rounded, color: BrandColors.subtle)
+          : null,
+      onTap: onTap,
     );
   }
 }
@@ -396,9 +514,7 @@ Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? c
   }
 
   final launched = await UriUtils.tryLaunch(uri);
-  if (!launched) {
-    notification.showErrorToast('无法打开客服，请稍后重试');
-  }
+  if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
 }
 
 Uri? _customerServiceUri(String? customerService) {
@@ -414,17 +530,4 @@ bool _looksLikeEmail(String value) {
   if (value.contains('://') || value.contains(' ')) return false;
   final parts = value.split('@');
   return parts.length == 2 && parts[0].isNotEmpty && parts[1].contains('.');
-}
-
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({required this.icon, required this.title, required this.value});
-
-  final IconData icon;
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(leading: Icon(icon), title: Text(title), subtitle: Text(value));
-  }
 }
