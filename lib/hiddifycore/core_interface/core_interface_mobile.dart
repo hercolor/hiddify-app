@@ -112,7 +112,10 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
 
     _isBgClientAvailable = true;
     loggy.info("Waiting for starting core");
-    for (var i = 0; i < 20; i++) {
+    // First Android VPN authorization can keep the service in a pending state
+    // while the system dialog is visible. Keep waiting instead of surfacing a
+    // misleading generic "core start failed" error after a short timeout.
+    for (var i = 0; i < 90; i++) {
       try {
         final res = await _status.get(timeout: const Duration(seconds: 1));
 
@@ -135,7 +138,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
     }
     loggy.info("Waiting for starting core finished");
 
-    if (!await waitUntilPort(portBack, true, null)) {
+    if (!await waitUntilPort(portBack, true, null, maxTry: 30)) {
       await stopMethodChannel();
       return const CoreStatus.stopped(alert: CoreAlert.startService, message: "starting background core...");
     }

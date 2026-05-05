@@ -216,7 +216,14 @@ class HiddifyCoreService with InfraLogger {
       try {
         await core.bgClient.stop(Empty());
       } on GrpcError catch (e) {
-        if (e.code == StatusCode.unknown && !(e.message?.contains("HTTP/2") ?? false)) {
+        final message = e.message ?? "";
+        final benignStopError =
+            e.code == StatusCode.unavailable ||
+            message.contains("HTTP/2") ||
+            message.toLowerCase().contains("not started") ||
+            message.toLowerCase().contains("already stopped") ||
+            message.toLowerCase().contains("not found");
+        if (!benignStopError) {
           errMsg = e.message ?? "failed to stop core: $e";
 
           loggy.error("failed to stop bg core: $e");

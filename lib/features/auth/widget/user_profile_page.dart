@@ -88,6 +88,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
   int _buildCount = 0;
   int _emailInputCount = 0;
   int _passwordInputCount = 0;
+  bool _isSubmitting = false;
   String? _emailError;
   String? _passwordError;
 
@@ -98,18 +99,25 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
     super.dispose();
   }
 
-  Future<void> _submit(bool isLoading) async {
-    if (isLoading) return;
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!_validateInputs()) return;
     final stopwatch = Stopwatch()..start();
+    setState(() => _isSubmitting = true);
     DiagnosticEventBuffer.addSafe('loginRequestStart');
-    await ref.read(authNotifierProvider.notifier).login(_emailController.text, _passwordController.text);
-    stopwatch.stop();
-    final loggedIn = ref.read(authNotifierProvider).valueOrNull?.isLoggedIn == true;
-    DiagnosticEventBuffer.addSafe('loginRequestEnd success=$loggedIn elapsedMs=${stopwatch.elapsedMilliseconds}');
-    if (!mounted) return;
-    if (loggedIn) {
-      context.goNamed('home');
+    try {
+      await ref.read(authNotifierProvider.notifier).login(_emailController.text, _passwordController.text);
+      stopwatch.stop();
+      final loggedIn = ref.read(authNotifierProvider).valueOrNull?.isLoggedIn == true;
+      DiagnosticEventBuffer.addSafe('loginRequestEnd success=$loggedIn elapsedMs=${stopwatch.elapsedMilliseconds}');
+      if (!mounted) return;
+      if (loggedIn) {
+        context.goNamed('home');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -133,7 +141,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
 
   void _onEmailChanged(String _) {
     _emailInputCount += 1;
-    DiagnosticEventBuffer.addSafe('emailInputChanged count=$_emailInputCount');
+    _recordInputChanged('emailInputChanged', _emailInputCount);
     if (_emailError != null) {
       setState(() => _emailError = null);
     }
@@ -141,18 +149,30 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
 
   void _onPasswordChanged(String _) {
     _passwordInputCount += 1;
-    DiagnosticEventBuffer.addSafe('passwordInputChanged count=$_passwordInputCount');
+    _recordInputChanged('passwordInputChanged', _passwordInputCount);
     if (_passwordError != null) {
       setState(() => _passwordError = null);
+    }
+  }
+
+  void _recordInputChanged(String event, int count) {
+    if (count == 1 || count % 20 == 0) {
+      DiagnosticEventBuffer.addSafe('$event count=$count');
+    }
+  }
+
+  void _recordBuild(bool isLoading) {
+    if (_buildCount == 1 || _buildCount % 10 == 0 || isLoading) {
+      DiagnosticEventBuffer.addSafe('loginPageBuildCount=$_buildCount isLoading=$isLoading');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     _buildCount += 1;
-    final isLoading = ref.watch(authNotifierProvider.select((value) => value.isLoading));
+    final isLoading = _isSubmitting;
     final theme = Theme.of(context);
-    DiagnosticEventBuffer.addSafe('loginPageBuildCount=$_buildCount isLoading=$isLoading');
+    _recordBuild(isLoading);
 
     return SafeArea(
       child: ListView(
@@ -161,66 +181,67 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
         children: [
           const Center(child: RepaintBoundary(child: BrandMark(size: 54))),
           const Gap(34),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: BrandColors.card.withValues(alpha: .98),
-              borderRadius: BorderRadius.circular(BrandRadii.xl),
-              border: Border.all(color: BrandColors.border),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
-                  const Gap(8),
-                  Text('稳定、安全、快速的网络加速体验', style: theme.textTheme.bodyMedium),
-                  if (widget.errorText != null) ...[
+          RepaintBoundary(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: BrandColors.card.withValues(alpha: .98),
+                borderRadius: BorderRadius.circular(BrandRadii.xl),
+                border: Border.all(color: BrandColors.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
+                    const Gap(8),
+                    Text('稳定、安全、快速的网络加速体验', style: theme.textTheme.bodyMedium),
+                    if (widget.errorText != null) ...[
+                      const Gap(14),
+                      Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
+                    ],
+                    const Gap(24),
+                    TextField(
+                      controller: _emailController,
+                      onChanged: _onEmailChanged,
+                      keyboardType: TextInputType.emailAddress,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      smartDashesType: SmartDashesType.disabled,
+                      smartQuotesType: SmartQuotesType.disabled,
+                      decoration: InputDecoration(
+                        labelText: '邮箱账号',
+                        hintText: '请输入邮箱',
+                        errorText: _emailError,
+                        prefixIcon: const Icon(Icons.mail_outline_rounded),
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
                     const Gap(14),
-                    Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
+                    TextField(
+                      controller: _passwordController,
+                      onChanged: _onPasswordChanged,
+                      obscureText: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      smartDashesType: SmartDashesType.disabled,
+                      smartQuotesType: SmartQuotesType.disabled,
+                      decoration: InputDecoration(
+                        labelText: '登录密码',
+                        hintText: '请输入密码',
+                        errorText: _passwordError,
+                        prefixIcon: const Icon(Icons.key_rounded),
+                      ),
+                      onSubmitted: (_) => _submit(),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
+                    ),
+                    const Gap(4),
+                    _GradientButton(onPressed: isLoading ? null : _submit, label: '登录', isLoading: isLoading),
                   ],
-                  const Gap(24),
-                  TextField(
-                    controller: _emailController,
-                    onChanged: _onEmailChanged,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    enableSuggestions: false,
-                    decoration: InputDecoration(
-                      labelText: '邮箱账号',
-                      hintText: '请输入邮箱',
-                      errorText: _emailError,
-                      prefixIcon: const Icon(Icons.mail_outline_rounded),
-                    ),
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const Gap(14),
-                  TextField(
-                    controller: _passwordController,
-                    onChanged: _onPasswordChanged,
-                    obscureText: true,
-                    autofillHints: const [AutofillHints.password],
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    decoration: InputDecoration(
-                      labelText: '登录密码',
-                      hintText: '请输入密码',
-                      errorText: _passwordError,
-                      prefixIcon: const Icon(Icons.key_rounded),
-                    ),
-                    onSubmitted: (_) => _submit(isLoading),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
-                  ),
-                  const Gap(4),
-                  _GradientButton(
-                    onPressed: isLoading ? null : () => _submit(isLoading),
-                    label: '登录',
-                    isLoading: isLoading,
-                  ),
-                ],
+                ),
               ),
             ),
           ),

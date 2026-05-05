@@ -12,6 +12,7 @@ import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/model/connection_error_mapper.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
+import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
@@ -36,6 +37,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   bool _userRequestedConnection = false;
   bool _manualDisconnecting = false;
   bool _vpnPermissionRequestedForAttempt = false;
+  bool _vpnPermissionStartFallbackScheduled = false;
   bool _autoReconnectRunning = false;
   int _reconnectAttempts = 0;
   ConnectionStatus _lastCoreStatus = const ConnectionStatus.disconnected();
@@ -136,6 +138,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     _manualDisconnecting = true;
     _userRequestedConnection = false;
     _vpnPermissionRequestedForAttempt = false;
+    _vpnPermissionStartFallbackScheduled = false;
     _autoReconnectRunning = false;
     _reconnectAttempts = 0;
     await ref.read(Preferences.startedByUser.notifier).update(false);
@@ -212,11 +215,21 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     if (err is MissingVpnPermission) {
       _vpnPermissionRequestedForAttempt = false;
       loggy.info('vpn permission denied, pendingConnect=false');
+      DiagnosticEventBuffer.addSafe('vpn permission denied, pendingConnect=false');
       await _fail(ConnectionErrorMapper.vpnPermissionRequired, reason: 'vpn permission denied');
       return;
     }
 
     final message = ConnectionErrorMapper.fromFailure(err);
+    if (_isVpnPermissionStartRace(message, reconnecting: reconnecting)) {
+      loggy.info(
+        'connect start still waiting for VPN permission/service callback; suppressing transient start failure',
+      );
+      DiagnosticEventBuffer.addSafe('vpn permission/service start pending; transient start failure suppressed');
+      _setClientState(const ClientConnectionState.requestingVpnPermission(), reason: 'vpn permission still pending');
+      _scheduleVpnPermissionStartFallback();
+      return;
+    }
     if (err.toString().contains('panic')) {
       await Sentry.captureException(Exception(err.toString()));
     }
@@ -229,12 +242,35 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   }
 
   Future<void> _disconnect() async {
-    await _connectionRepo.disconnect().mapLeft((err) async {
-      loggy.warning(
-        'error disconnecting sanitized=${ConnectionErrorMapper.fromFailure(err)} rawType=${err.runtimeType}',
-      );
-      await _fail(ConnectionErrorMapper.fromFailure(err), reason: 'disconnect failed');
-    }).run();
+    final result = await _connectionRepo.disconnect().run();
+    await result.match(
+      (err) async {
+        final message = ConnectionErrorMapper.fromFailure(err);
+        loggy.warning('error disconnecting sanitized=$message rawType=${err.runtimeType}');
+        if (_manualDisconnecting) {
+          DiagnosticEventBuffer.addSafe('disconnect completed with benign local error suppressed');
+          _manualDisconnecting = false;
+          _userRequestedConnection = false;
+          _vpnPermissionRequestedForAttempt = false;
+          _vpnPermissionStartFallbackScheduled = false;
+          _autoReconnectRunning = false;
+          _reconnectAttempts = 0;
+          _lastCoreStatus = const ConnectionStatus.disconnected();
+          _setClientState(const ClientConnectionState.disconnected(), reason: 'manual disconnect completed');
+          await ref.read(Preferences.startedByUser.notifier).update(false);
+          return;
+        }
+        await _fail(message, reason: 'disconnect failed');
+      },
+      (_) async {
+        if (_manualDisconnecting) {
+          _manualDisconnecting = false;
+          _lastCoreStatus = const ConnectionStatus.disconnected();
+          _setClientState(const ClientConnectionState.disconnected(), reason: 'manual disconnect completed');
+          await ref.read(Preferences.startedByUser.notifier).update(false);
+        }
+      },
+    );
   }
 
   ConnectionStatus? get _currentStatus => state.valueOrNull ?? _lastCoreStatus;
@@ -253,10 +289,13 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         loggy.info('vpn permission granted or already prepared, continuing connection');
       }
       _vpnPermissionRequestedForAttempt = false;
+      _vpnPermissionStartFallbackScheduled = false;
       _manualDisconnecting = false;
       _reconnectAttempts = 0;
       _setClientState(const ClientConnectionState.connected(), reason: 'core connected');
     } else if (event is Connecting) {
+      _vpnPermissionRequestedForAttempt = false;
+      _vpnPermissionStartFallbackScheduled = false;
       _setClientState(const ClientConnectionState.connecting(), reason: 'core connecting');
     } else if (event is Disconnecting) {
       _setClientState(const ClientConnectionState.preparing(), reason: 'core disconnecting');
@@ -264,8 +303,15 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       final message = ConnectionErrorMapper.fromFailure(failure);
       if (failure is MissingVpnPermission) {
         _vpnPermissionRequestedForAttempt = false;
+        _vpnPermissionStartFallbackScheduled = false;
         loggy.info('vpn permission denied, pendingConnect=false');
+        DiagnosticEventBuffer.addSafe('vpn permission denied, pendingConnect=false');
         unawaited(_fail(ConnectionErrorMapper.vpnPermissionRequired, reason: 'vpn permission denied'));
+      } else if (_isVpnPermissionStartRace(message, reconnecting: false)) {
+        loggy.info('core emitted transient start failure while VPN permission flow is pending; suppressing toast');
+        DiagnosticEventBuffer.addSafe('vpn permission/service status pending; transient start failure suppressed');
+        _setClientState(const ClientConnectionState.requestingVpnPermission(), reason: 'vpn permission still pending');
+        _scheduleVpnPermissionStartFallback();
       } else if (wasRunning && !_manualDisconnecting && _userRequestedConnection) {
         _scheduleAutoReconnect();
       } else {
@@ -312,6 +358,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
 
   Future<void> _fail(String message, {required String reason}) async {
     _vpnPermissionRequestedForAttempt = false;
+    _vpnPermissionStartFallbackScheduled = false;
     _autoReconnectRunning = false;
     _manualDisconnecting = false;
     _userRequestedConnection = false;
@@ -355,6 +402,36 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     loggy.debug(
       'connection state transition: ${previous.phase.name} -> ${next.phase.name}, '
       'reason=$reason, selectedNodeName=${_selectedNodeNameSync()}',
+    );
+    DiagnosticEventBuffer.addSafe(
+      'connection state ${previous.phase.name}->${next.phase.name}, reason=$reason, selectedNodeName=${_selectedNodeNameSync()}',
+    );
+  }
+
+  bool _isVpnPermissionStartRace(String message, {required bool reconnecting}) {
+    if (reconnecting) return false;
+    if (!_vpnPermissionRequestedForAttempt) return false;
+    if (_clientState.phase != ClientConnectionPhase.requestingVpnPermission &&
+        _clientState.phase != ClientConnectionPhase.connecting &&
+        _clientState.phase != ClientConnectionPhase.preparing) {
+      return false;
+    }
+    return message == ConnectionErrorMapper.coreStartFailed;
+  }
+
+  void _scheduleVpnPermissionStartFallback() {
+    if (_vpnPermissionStartFallbackScheduled) return;
+    _vpnPermissionStartFallbackScheduled = true;
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 45), () async {
+        _vpnPermissionStartFallbackScheduled = false;
+        if (!_vpnPermissionRequestedForAttempt) return;
+        if (_lastCoreStatus is Connected || _lastCoreStatus is Connecting) return;
+        if (_clientState.phase != ClientConnectionPhase.requestingVpnPermission) return;
+        _vpnPermissionRequestedForAttempt = false;
+        DiagnosticEventBuffer.addSafe('vpn permission/service start timeout');
+        await _fail(ConnectionErrorMapper.vpnPermissionRequired, reason: 'vpn permission start timeout');
+      }),
     );
   }
 
