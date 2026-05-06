@@ -22,11 +22,18 @@ class XBoardResponseParser {
     return trimmed == null || trimmed.isEmpty ? null : _stripBearer(trimmed);
   }
 
-  static UserSubscription parseSubscription(Object? responseData, {String? fallbackSubscribeUrl, String? baseUrl}) {
+  static String? parseSubscribeUrl(Object? responseData, {String? fallbackSubscribeUrl, String? baseUrl}) {
     final data = _decodeIfString(responseData);
     final subscribeUrl = _resolveSubscribeUrl(_findSubscriptionUrl(data) ?? fallbackSubscribeUrl, baseUrl);
+    final trimmed = subscribeUrl?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  static UserSubscription parseSubscription(Object? responseData, {String? fallbackSubscribeUrl, String? baseUrl}) {
+    final data = _decodeIfString(responseData);
+    final subscribeUrl = parseSubscribeUrl(data, fallbackSubscribeUrl: fallbackSubscribeUrl, baseUrl: baseUrl);
     if (subscribeUrl == null || subscribeUrl.trim().isEmpty) {
-      throw const AuthFailure.badResponse('未获取到节点信息');
+      throw const AuthFailure.serverMessage('订阅信息为空，请联系客服');
     }
 
     return UserSubscription(

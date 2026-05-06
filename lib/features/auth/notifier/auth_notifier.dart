@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dartx/dartx.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:hiddify/core/http_client/http_client_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
@@ -73,7 +75,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       } catch (error, stackTrace) {
         loggy.warning('failed to sync user info after login', error, stackTrace);
         DiagnosticEventBuffer.add('user info sync after login failed: ${_safeError(error)}');
-        ref.read(inAppNotificationControllerProvider).showErrorToast('登录成功，用户信息同步失败，请稍后重试');
+        ref.read(inAppNotificationControllerProvider).showErrorToast(_loginSyncErrorMessage(error));
       }
       await ref.read(authTokenStorageProvider).save(syncedSession);
       ref.read(inAppNotificationControllerProvider).showSuccessToast(userInfoSynced ? '登录成功' : '已登录');
@@ -113,7 +115,10 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       final nextState = AuthState.loggedIn(current);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: current.subscription != null);
-      ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
+      final cachedNodes = await _safeReadCachedNodes();
+      ref
+          .read(inAppNotificationControllerProvider)
+          .showErrorToast(_nodeSyncErrorMessage(error, hasCachedNodes: cachedNodes.nodeCount > 0));
       return false;
     }
   }
@@ -136,11 +141,18 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     final subscriptionService = await ref.read(userSubscriptionServiceProvider.future);
     final syncUserWatch = Stopwatch()..start();
     final subscription = await subscriptionService
-        .fetchSubscription(session.authData, subscribeToken: session.subscribeToken)
+        .fetchSubscription(
+          session.authData,
+          subscribeToken: session.subscribeToken,
+          fallbackSubscribeUrl: session.subscription?.subscribeUrl,
+        )
         .match((err) => throw err, (subscription) => subscription)
         .run();
     syncUserWatch.stop();
     final subscriptionUrl = subscription.subscribeUrl.trim();
+    if (subscriptionUrl.isEmpty) {
+      throw const AuthFailure.serverMessage('订阅信息为空，请联系客服');
+    }
     final syncedSession = session.copyWith(subscription: subscription);
     await ref.read(authTokenStorageProvider).save(syncedSession);
     loggy.info(
@@ -159,17 +171,33 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     final syncNodesWatch = Stopwatch()..start();
     var nodesSynced = false;
     var nodeSummary = _nodeDebugFallback();
+    final cachedBefore = await _safeReadCachedNodes();
+    if (cachedBefore.nodeCount > 0) {
+      nodeSummary = _nodeDebugFromSelection(cachedBefore);
+    }
+
     try {
-      if (subscriptionUrl.isEmpty) {
-        throw const AuthFailure.badResponse('未获取到节点信息');
+      final nodes = await _downloadAndCacheNodes(subscriptionUrl);
+      if (nodes.isNotEmpty) {
+        nodesSynced = true;
+        nodeSummary = await _readNodeDebugSummary();
       }
+    } catch (error, stackTrace) {
+      loggy.warning('failed to parse nodes from subscription content: ${_safeError(error)}', null, stackTrace);
+      DiagnosticEventBuffer.add('subscription node parse failed: ${_safeError(error)}');
+    }
+
+    try {
       final repo = await ref.read(profileRepositoryProvider.future);
       await repo.upsertRemote(subscriptionUrl).match((err) => throw err, (_) => unit).run();
       loggy.debug('remote profile import succeeded');
       DiagnosticEventBuffer.add('remote profile import succeeded');
       ref.invalidate(activeProfileProvider);
-      nodeSummary = await _cacheNodesFromActiveProfile(repo);
-      nodesSynced = true;
+      final importedSummary = await _cacheNodesFromActiveProfile(repo);
+      if (importedSummary.nodeCount > 0) {
+        nodeSummary = importedSummary;
+        nodesSynced = true;
+      }
       if (nodeSummary.nodeCount == 0) {
         loggy.info('node cache is empty after import; core will refresh visible nodes on connect');
         DiagnosticEventBuffer.add('node cache empty after import; visible nodes will refresh when core starts');
@@ -177,9 +205,16 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     } catch (error, stackTrace) {
       loggy.warning('failed to import nodes, preserving user subscription: ${_safeError(error)}', null, stackTrace);
       DiagnosticEventBuffer.add('remote profile import failed: ${_safeError(error)}');
-      if (showNodeFailureToast) {
-        ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
-      }
+    }
+
+    final cachedAfter = await _safeReadCachedNodes();
+    if (!nodesSynced && cachedAfter.nodeCount > 0) {
+      nodeSummary = _nodeDebugFromSelection(cachedAfter);
+    }
+    if (!nodesSynced && showNodeFailureToast) {
+      ref
+          .read(inAppNotificationControllerProvider)
+          .showErrorToast(cachedAfter.nodeCount > 0 ? '节点同步失败，正在使用本地缓存' : '获取节点失败，请稍后重试');
     }
     syncNodesWatch.stop();
     loggy.info(
@@ -200,6 +235,35 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     return (session: syncedSession, nodesSynced: nodesSynced);
   }
 
+  Future<List<ClientNode>> _downloadAndCacheNodes(String subscriptionUrl) async {
+    final response = await ref.read(httpClientProvider).get<Object?>(subscriptionUrl, headers: const {'Accept': '*/*'});
+    if ((response.statusCode ?? 0) >= 400) {
+      throw AuthFailure.badResponse('HTTP ${response.statusCode}');
+    }
+    final content = _subscriptionContentToText(response.data);
+    final nodes = ClientNodeParser.parse(content);
+    DiagnosticEventBuffer.add(
+      'subscription content parsed: nodeCount=${nodes.length}, contentLength=${content.length}',
+    );
+    loggy.info('subscription content parsed: nodeCount=${nodes.length}, contentLength=${content.length}');
+    if (nodes.isNotEmpty) {
+      await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '4376');
+    }
+    return nodes;
+  }
+
+  String _subscriptionContentToText(Object? data) {
+    if (data == null) return '';
+    if (data is String) return data;
+    if (data is List<int>) return utf8.decode(data, allowMalformed: true);
+    if (data is List) {
+      final bytes = data.whereType<int>().toList(growable: false);
+      if (bytes.length == data.length) return utf8.decode(bytes, allowMalformed: true);
+    }
+    if (data is Map || data is Iterable) return jsonEncode(data);
+    return data.toString();
+  }
+
   Future<void> _syncNodesInBackground(AuthSession session) async {
     try {
       final result = await _fetchSubscriptionAndImport(session, showNodeFailureToast: false);
@@ -215,7 +279,10 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? session);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: nextState.session?.subscription != null);
-      ref.read(inAppNotificationControllerProvider).showErrorToast('节点同步失败，正在使用本地缓存');
+      final cachedNodes = await _safeReadCachedNodes();
+      ref
+          .read(inAppNotificationControllerProvider)
+          .showErrorToast(_nodeSyncErrorMessage(error, hasCachedNodes: cachedNodes.nodeCount > 0));
     }
   }
 
@@ -257,12 +324,12 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         source = 'generatedConfig';
       }
       if (nodes.isNotEmpty) {
-        await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: profile.name);
+        await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '4376');
       }
       final selection =
           ref.read(clientNodeSelectionProvider).valueOrNull ??
           await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
-      final summary = _nodeDebugFromSelection(selection.copyWith(profileName: profile.name));
+      final summary = _nodeDebugFromSelection(selection.copyWith(profileName: '4376'));
       DiagnosticEventBuffer.add(
         'node cache parsed: source=$source, profileName=${summary.profileName}, '
         'nodeCount=${summary.nodeCount}, selectedNodeName=${summary.selectedNodeName}',
@@ -285,6 +352,15 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     } catch (error, stackTrace) {
       loggy.debug('failed to read sanitized node debug summary', error, stackTrace);
       return _nodeDebugFallback();
+    }
+  }
+
+  Future<ClientNodeSelection> _safeReadCachedNodes() async {
+    try {
+      return await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
+    } catch (error, stackTrace) {
+      loggy.debug('failed to read cached nodes', error, stackTrace);
+      return const ClientNodeSelection.empty();
     }
   }
 
@@ -327,6 +403,22 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         );
     if (sanitized.length > 160) return '${sanitized.substring(0, 160)}…';
     return sanitized;
+  }
+
+  String _loginSyncErrorMessage(Object error) {
+    return switch (error) {
+      AuthServerMessageFailure(:final message) => message,
+      AuthBadResponseFailure(:final message?) when message.trim().isNotEmpty => message,
+      _ => '登录成功，用户信息同步失败，请稍后重试',
+    };
+  }
+
+  String _nodeSyncErrorMessage(Object error, {required bool hasCachedNodes}) {
+    return switch (error) {
+      AuthServerMessageFailure(:final message) => message,
+      _ when hasCachedNodes => '节点同步失败，正在使用本地缓存',
+      _ => '获取节点失败，请稍后重试',
+    };
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:hiddify/core/http_client/dio_http_client.dart';
 import 'package:hiddify/features/auth/data/xboard_response_parser.dart';
 import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
+import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 
 abstract interface class LoginService {
@@ -34,11 +35,13 @@ class XBoardLoginService with InfraLogger implements LoginService {
 
         final authData = XBoardResponseParser.parseAuthData(response.data);
         final subscribeToken = XBoardResponseParser.parseSubscribeToken(response.data);
+        final subscribeUrl = XBoardResponseParser.parseSubscribeUrl(response.data, baseUrl: _apiBaseUrl);
         return AuthSession(
           authData: authData,
           email: email.trim(),
           createdAt: DateTime.now(),
           subscribeToken: subscribeToken,
+          subscription: subscribeUrl == null ? null : UserSubscription(subscribeUrl: subscribeUrl),
         );
       },
       (error, stackTrace) {

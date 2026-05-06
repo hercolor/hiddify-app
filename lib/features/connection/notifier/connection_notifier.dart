@@ -16,6 +16,7 @@ import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
+import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -170,7 +171,16 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     );
 
     var activeProfile = await ref.read(activeProfileProvider.future);
+    final cachedNodes = await _readCachedNodeSelection();
+    if (activeProfile != null && cachedNodes.selectedNode == null) {
+      loggy.info('node cache empty before connect, syncing nodes in background');
+      unawaited(_syncNodesForConnect());
+    }
     if (activeProfile == null) {
+      if (cachedNodes.selectedNode != null) {
+        loggy.info('cached nodes found but active profile is missing; preparing profile before connect');
+        DiagnosticEventBuffer.addSafe('cached nodes available; active profile missing, preparing profile');
+      }
       final synced = await _syncNodesForConnect();
       if (!synced) {
         await _fail(ConnectionErrorMapper.noNodes, reason: 'no nodes');
@@ -208,6 +218,15 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState?.status != AuthStatus.loggedIn) return false;
     return ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
+  }
+
+  Future<ClientNodeSelection> _readCachedNodeSelection() async {
+    try {
+      return await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
+    } catch (error, stackTrace) {
+      loggy.debug('failed to read cached nodes before connect', error, stackTrace);
+      return const ClientNodeSelection.empty();
+    }
   }
 
   Future<void> _handleConnectFailure(ConnectionFailure err, {bool reconnecting = false}) async {

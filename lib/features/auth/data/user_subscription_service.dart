@@ -7,7 +7,11 @@ import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 
 abstract interface class UserSubscriptionService {
-  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData, {String? subscribeToken});
+  TaskEither<AuthFailure, UserSubscription> fetchSubscription(
+    String authData, {
+    String? subscribeToken,
+    String? fallbackSubscribeUrl,
+  });
 }
 
 class XBoardUserSubscriptionService with InfraLogger implements UserSubscriptionService {
@@ -19,11 +23,18 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
   final String _apiBaseUrl;
 
   @override
-  TaskEither<AuthFailure, UserSubscription> fetchSubscription(String authData, {String? subscribeToken}) {
+  TaskEither<AuthFailure, UserSubscription> fetchSubscription(
+    String authData, {
+    String? subscribeToken,
+    String? fallbackSubscribeUrl,
+  }) {
     return TaskEither.tryCatch(
       () async {
         _logAuthDataForFirstUserRequest(authData);
-        final fallbackSubscribeUrl = _subscribeUrlFromToken(subscribeToken);
+        final storedSubscribeUrl = fallbackSubscribeUrl?.trim();
+        final fallbackUrl = storedSubscribeUrl == null || storedSubscribeUrl.isEmpty
+            ? _subscribeUrlFromToken(subscribeToken)
+            : storedSubscribeUrl;
         final response = await _httpClient.get<Map<String, dynamic>>(
           '$_apiBaseUrl/api/v1/user/getSubscribe',
           headers: {'Accept': 'application/json', 'Authorization': authData},
@@ -36,7 +47,7 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         loggy.debug('subscription response keys: ${_sanitizedKeys(response.data).join(',')}');
         final subscription = XBoardResponseParser.parseSubscription(
           response.data,
-          fallbackSubscribeUrl: fallbackSubscribeUrl,
+          fallbackSubscribeUrl: fallbackUrl,
           baseUrl: _apiBaseUrl,
         );
         _logSubscribeUrlSummary(subscription.subscribeUrl);
