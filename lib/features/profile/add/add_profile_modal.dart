@@ -20,7 +20,7 @@ class AddProfileModal extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(addProfileNotifierProvider).isLoading;
-    final currentWidget = ref.watch(addProfilePageNotifierProvider);
+    final AddProfilePages currentWidget = ref.watch(addProfilePageNotifierProvider);
     ref.listen(freeSwitchNotifierProvider, (_, _) {});
     ref.listen(addProfileNotifierProvider, (previous, next) {
       if (next case AsyncData(value: final _?)) {

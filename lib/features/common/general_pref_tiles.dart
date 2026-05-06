@@ -81,7 +81,7 @@ class ThemeModePrefTile extends ConsumerWidget {
     return ListTile(
       title: Text(t.pages.settings.general.themeMode),
       subtitle: Text(themeMode.present(t)),
-      leading: Icon(switch (ref.watch(themePreferencesProvider)) {
+      leading: Icon(switch (themeMode) {
         AppThemeMode.system => Icons.auto_awesome_rounded,
         AppThemeMode.light => Icons.light_mode_rounded,
         AppThemeMode.dark => Icons.dark_mode_rounded,
