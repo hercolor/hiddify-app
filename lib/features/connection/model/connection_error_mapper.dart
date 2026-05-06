@@ -1,3 +1,4 @@
+import 'package:hiddify/features/connection/data/windows_network_mode_guard.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 
 abstract final class ConnectionErrorMapper {
@@ -8,6 +9,8 @@ abstract final class ConnectionErrorMapper {
   static const String authExpired = '登录已过期，请重新登录';
   static const String noNodes = '暂无可用节点，请联系客服';
   static const String coreStartFailed = '加速服务启动失败，请重试';
+  static const String networkComponentMissing = '网络组件未安装，请重新安装客户端';
+  static const String missingPrivilege = '请以管理员身份运行或重新安装网络组件';
   static const String nodeUnstable = '当前节点不稳定，请切换节点';
 
   static String fromFailure(Object error) {
@@ -15,6 +18,10 @@ abstract final class ConnectionErrorMapper {
       return vpnPermissionRequired;
     }
     if (error is MissingNotificationPermission) return notificationPermissionRequired;
+    if (error is MissingPrivilege) return missingPrivilege;
+    if (error is BackgroundCoreNotAvailable && error.message == WindowsNetworkModeGuard.networkComponentMissingMarker) {
+      return networkComponentMissing;
+    }
     if (error is InvalidConfig || error is InvalidConfigOption || error is BackgroundCoreNotAvailable) {
       return coreStartFailed;
     }
@@ -30,6 +37,15 @@ abstract final class ConnectionErrorMapper {
         text.contains('network unreachable') ||
         text.contains('no route to host')) {
       return networkUnreachable;
+    }
+    if (text.contains('windows_network_component_missing') || text.contains('wintun') && text.contains('not found')) {
+      return networkComponentMissing;
+    }
+    if (text.contains('missingprivilege') ||
+        text.contains('administrator') ||
+        text.contains('elevat') ||
+        text.contains('privilege')) {
+      return missingPrivilege;
     }
     if (text.contains('permission denied') ||
         text.contains('missing vpn permission') ||

@@ -5,6 +5,7 @@ display_name: 4376
 create_desktop_icon: true
 install_dir_name: "{autopf64}\\4376"
 setup_icon_file: windows\runner\resources\app_icon.ico
+privileges_required: admin
 locales:
   - ar
   - en

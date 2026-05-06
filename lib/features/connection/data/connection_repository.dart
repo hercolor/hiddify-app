@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/core/model/directories.dart';
 import 'package:hiddify/core/utils/exception_handler.dart';
+import 'package:hiddify/features/connection/data/windows_network_mode_guard.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/profile/data/final_config_guard.dart';
@@ -43,6 +44,7 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   final ConfigOptionRepository configOptionRepository;
   final ProfilePathResolver profilePathResolver;
   final FinalConfigGuard finalConfigGuard = const FinalConfigGuard();
+  final WindowsNetworkModeGuard windowsNetworkModeGuard = WindowsNetworkModeGuard();
 
   SingboxConfigOption? _configOptionsSnapshot;
   @override
@@ -109,6 +111,9 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           .mapLeft((l) => ConnectionFailure.invalidConfigOption(null, l))
           .flatMap(
             (overridedOptions) => TaskEither.tryCatch(() async {
+              final modeReady = await windowsNetworkModeGuard.ensureReady(overridedOptions);
+              final modeFailure = modeReady.getLeft().toNullable();
+              if (modeFailure != null) throw modeFailure;
               _configOptionsSnapshot = overridedOptions;
               await singbox.changeOptions(overridedOptions).run();
               return unit;
