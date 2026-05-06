@@ -4,8 +4,10 @@ import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
+import 'package:hiddify/features/proxy/overview/desktop_nodes_page.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/proxy/widget/proxy_tile.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final _nodeSearchProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -15,6 +17,8 @@ class ProxiesOverviewPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (PlatformUtils.isWindows) return const DesktopNodesPage();
+
     final proxies = ref.watch(proxiesOverviewNotifierProvider);
     final search = ref.watch(_nodeSearchProvider).trim().toLowerCase();
 

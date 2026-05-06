@@ -12,7 +12,9 @@ import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
+import 'package:hiddify/features/auth/widget/desktop_membership_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -35,6 +37,10 @@ class UserProfilePage extends HookConsumerWidget {
             .showErrorToast(pair.message == null ? pair.type : '${pair.type}\n${pair.message}');
       }
     });
+
+    if (PlatformUtils.isWindows) {
+      return DesktopMembershipPage(authState: authState, errorText: authState.readableError(t));
+    }
 
     return Scaffold(
       extendBody: true,

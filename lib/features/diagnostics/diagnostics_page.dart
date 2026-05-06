@@ -8,6 +8,7 @@ import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/diagnostics/desktop_diagnostics_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
 import 'package:hiddify/features/log/model/log_entity.dart';
@@ -16,6 +17,7 @@ import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/singbox/model/singbox_config_option.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class DiagnosticsPage extends HookConsumerWidget {
@@ -23,6 +25,8 @@ class DiagnosticsPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (PlatformUtils.isWindows) return const DesktopDiagnosticsPage();
+
     final connection = ref.watch(connectionNotifierProvider);
     final clientState = ref.watch(clientConnectionStateProvider);
     final authState = ref.watch(authNotifierProvider);
