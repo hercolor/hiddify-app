@@ -3,14 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
-import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tray_manager/tray_manager.dart';
@@ -33,46 +32,25 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
 
   Future<void> _initializeTray() async {
     final nodeSelection = ref.watch(clientNodeSelectionProvider);
+    final clientState = ref.watch(clientConnectionStateProvider);
     final t = await ref.watch(translationsProvider.future);
-    final urlTestDelay = await ref
-        .watch(activeProxyNotifierProvider.future)
-        .catchError((e) {
-          loggy.warning("error getting active proxy", e);
-          return OutboundInfo(urlTestDelay: 0);
-        })
-        .then((connection) => connection.urlTestDelay);
-    final connection = await ref
-        .watch(connectionNotifierProvider.future)
-        .catchError((e) {
-          loggy.warning("error getting connection status", e);
-          return const ConnectionStatus.disconnected();
-        })
-        .then((connection) => _modifyConnectionStatus(connection, urlTestDelay));
-
     final selectedNodeName = _currentNodeName(nodeSelection);
+    final connection = clientState.toCoreStatusHint();
 
     await trayManager.setIcon(_trayIconPath(connection), isTemplate: PlatformUtils.isMacOS);
-    if (!PlatformUtils.isLinux) await trayManager.setToolTip(_trayTooltip(connection, urlTestDelay, t));
-    await trayManager.setContextMenu(_trayMenu(connection, t, selectedNodeName));
+    if (!PlatformUtils.isLinux) await trayManager.setToolTip(_trayTooltip(clientState, selectedNodeName));
+    await trayManager.setContextMenu(_trayMenu(clientState, t, selectedNodeName));
   }
 
-  Menu _trayMenu(ConnectionStatus connection, Translations t, String selectedNodeName) => Menu(
+  Menu _trayMenu(ClientConnectionState state, Translations t, String selectedNodeName) => Menu(
     items: [
       MenuItem(key: 'title', label: Constants.appName, disabled: true),
+      MenuItem(key: 'status', label: '状态：${state.trayStatusLabel}', disabled: true),
       MenuItem(key: 'dashboard', label: '打开应用'),
       MenuItem.separator(),
       MenuItem(key: 'current-node', label: '当前节点：${_safeTrayText(selectedNodeName)}', disabled: true),
       MenuItem.separator(),
-      MenuItem(
-        key: 'connection',
-        label: switch (connection) {
-          Disconnected() => t.connection.connect,
-          Connecting() => t.connection.connecting,
-          Connected() => t.connection.disconnect,
-          Disconnecting() => t.connection.disconnecting,
-        },
-        disabled: connection.isSwitching,
-      ),
+      MenuItem(key: 'connection', label: state.trayActionLabel(t), disabled: state.isTrayActionDisabled),
       MenuItem.separator(),
       MenuItem(key: 'quit', label: t.common.quit),
     ],
@@ -102,15 +80,11 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     }
   }
 
-  String _trayTooltip(ConnectionStatus connection, int urlTestDelay, Translations t) {
-    final r = "${Constants.appName} - ${connection.present(t)}";
-    if (connection is Connected) {
-      if (Platform.isMacOS) windowManager.setBadgeLabel("${urlTestDelay}ms");
-      return '$r : ${urlTestDelay}ms';
-    } else {
-      if (Platform.isMacOS) windowManager.setBadgeLabel("-ms");
-      return r;
+  String _trayTooltip(ClientConnectionState state, String selectedNodeName) {
+    if (Platform.isMacOS) {
+      windowManager.setBadgeLabel(state.phase == ClientConnectionPhase.connected ? 'ON' : '');
     }
+    return '${Constants.appName} - ${state.trayStatusLabel} - ${_safeTrayText(selectedNodeName)}';
   }
 
   String _safeTrayText(String value) {
@@ -118,14 +92,6 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
         .replaceAll(RegExp(r'https?://[^\s]+'), '***')
         .replaceAll(RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '***');
     return sanitized.length > 48 ? '${sanitized.substring(0, 48)}…' : sanitized;
-  }
-
-  ConnectionStatus _modifyConnectionStatus(ConnectionStatus connection, int urlTestDelay) {
-    if (connection is Connected) {
-      return urlTestDelay > 0 && urlTestDelay < 65000 ? const Connected() : const Connecting();
-    } else {
-      return connection;
-    }
   }
 
   @override
@@ -156,6 +122,51 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
   Future<void> onTrayIconRightMouseDown() async {
     await trayManager.popUpContextMenu();
   }
+}
+
+extension _ClientConnectionTrayX on ClientConnectionState {
+  String get trayStatusLabel => switch (phase) {
+    ClientConnectionPhase.initializing => '初始化中',
+    ClientConnectionPhase.loggedOut => '未登录',
+    ClientConnectionPhase.disconnected => '未连接',
+    ClientConnectionPhase.preparing ||
+    ClientConnectionPhase.requestingVpnPermission ||
+    ClientConnectionPhase.connecting => '连接中',
+    ClientConnectionPhase.connected => '已连接',
+    ClientConnectionPhase.reconnecting => '重连中',
+    ClientConnectionPhase.stopping => '停止中',
+    ClientConnectionPhase.failed => '连接异常',
+  };
+
+  String trayActionLabel(Translations t) => switch (phase) {
+    ClientConnectionPhase.connected => t.connection.disconnect,
+    ClientConnectionPhase.preparing ||
+    ClientConnectionPhase.requestingVpnPermission ||
+    ClientConnectionPhase.connecting => t.connection.connecting,
+    ClientConnectionPhase.reconnecting => '正在重连',
+    ClientConnectionPhase.stopping => t.connection.disconnecting,
+    _ => t.connection.connect,
+  };
+
+  bool get isTrayActionDisabled => switch (phase) {
+    ClientConnectionPhase.initializing ||
+    ClientConnectionPhase.preparing ||
+    ClientConnectionPhase.requestingVpnPermission ||
+    ClientConnectionPhase.connecting ||
+    ClientConnectionPhase.reconnecting ||
+    ClientConnectionPhase.stopping => true,
+    _ => false,
+  };
+
+  ConnectionStatus toCoreStatusHint() => switch (phase) {
+    ClientConnectionPhase.connected => const ConnectionStatus.connected(),
+    ClientConnectionPhase.preparing ||
+    ClientConnectionPhase.requestingVpnPermission ||
+    ClientConnectionPhase.connecting ||
+    ClientConnectionPhase.reconnecting => const ConnectionStatus.connecting(),
+    ClientConnectionPhase.stopping => const ConnectionStatus.disconnecting(),
+    _ => const ConnectionStatus.disconnected(),
+  };
 }
 
 // @Riverpod(keepAlive: true)

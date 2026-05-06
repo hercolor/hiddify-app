@@ -121,10 +121,10 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
   Future<void> exit() async {
     await ref
         .read(connectionNotifierProvider.notifier)
-        .abortConnection()
-        .timeout(const Duration(seconds: 2))
+        .shutdownForExit()
+        .timeout(const Duration(seconds: 10))
         .catchError((e) {
-          loggy.warning("error aborting connection on quit", e);
+          loggy.warning("error stopping connection on quit", e);
         });
     await trayManager.destroy();
     await windowManager.destroy();

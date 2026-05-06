@@ -186,7 +186,8 @@ class _StatusPanel extends StatelessWidget {
       ClientConnectionPhase.connecting ||
       ClientConnectionPhase.preparing ||
       ClientConnectionPhase.requestingVpnPermission ||
-      ClientConnectionPhase.reconnecting => BrandDesktopColors.warning,
+      ClientConnectionPhase.reconnecting ||
+      ClientConnectionPhase.stopping => BrandDesktopColors.warning,
       _ => BrandDesktopColors.textMuted,
     };
     final label = switch (state.phase) {
@@ -195,6 +196,7 @@ class _StatusPanel extends StatelessWidget {
       ClientConnectionPhase.preparing ||
       ClientConnectionPhase.requestingVpnPermission => '连接中',
       ClientConnectionPhase.reconnecting => '重连中',
+      ClientConnectionPhase.stopping => '停止中',
       ClientConnectionPhase.failed => '连接异常',
       ClientConnectionPhase.loggedOut => '未登录',
       ClientConnectionPhase.initializing => '初始化中',

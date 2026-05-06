@@ -104,7 +104,8 @@ class _ConnectionButton extends StatelessWidget {
         phase == ClientConnectionPhase.connecting ||
         phase == ClientConnectionPhase.preparing ||
         phase == ClientConnectionPhase.requestingVpnPermission ||
-        phase == ClientConnectionPhase.reconnecting;
+        phase == ClientConnectionPhase.reconnecting ||
+        phase == ClientConnectionPhase.stopping;
     final theme = Theme.of(context);
 
     return Column(

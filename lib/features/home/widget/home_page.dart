@@ -86,6 +86,7 @@ class _StatusHero extends StatelessWidget {
       ClientConnectionPhase.requestingVpnPermission ||
       ClientConnectionPhase.connecting ||
       ClientConnectionPhase.reconnecting => '连接中',
+      ClientConnectionPhase.stopping => '正在停止',
       _ => '未连接',
     };
     final color = connected

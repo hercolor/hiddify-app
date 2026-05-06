@@ -41,6 +41,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   bool _vpnPermissionStartFallbackScheduled = false;
   bool _autoReconnectRunning = false;
   int _reconnectAttempts = 0;
+  int _startAttemptId = 0;
   ConnectionStatus _lastCoreStatus = const ConnectionStatus.disconnected();
   ClientConnectionState _clientState = const ClientConnectionState.initializing();
 
@@ -93,7 +94,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   Future<void> toggleConnection() => connectRequested();
 
   Future<void> connectRequested() async {
-    final computed = _computeClientState();
+    final computed = _actionableClientState();
     _setClientState(computed, reason: 'connect requested');
     loggy.info('connect requested: state=${computed.phase.name}, selectedNodeName=${_selectedNodeNameSync()}');
 
@@ -111,7 +112,8 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       case ClientConnectionPhase.preparing ||
           ClientConnectionPhase.requestingVpnPermission ||
           ClientConnectionPhase.connecting ||
-          ClientConnectionPhase.reconnecting:
+          ClientConnectionPhase.reconnecting ||
+          ClientConnectionPhase.stopping:
         loggy.debug('connect ignored while busy: state=${computed.phase.name}');
     }
   }
@@ -136,12 +138,22 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   Future<void> abortConnection() => userDisconnect();
 
   Future<void> userDisconnect() async {
+    final current = _actionableClientState();
+    if (current.phase == ClientConnectionPhase.disconnected || current.phase == ClientConnectionPhase.loggedOut) {
+      loggy.debug('disconnect ignored because state=${current.phase.name}');
+      _resetUserConnectionIntent();
+      _setClientState(current, reason: 'disconnect ignored while stopped');
+      return;
+    }
+    if (current.phase == ClientConnectionPhase.stopping) {
+      loggy.debug('disconnect ignored because stop is already in progress');
+      return;
+    }
+
     _manualDisconnecting = true;
-    _userRequestedConnection = false;
-    _vpnPermissionRequestedForAttempt = false;
-    _vpnPermissionStartFallbackScheduled = false;
-    _autoReconnectRunning = false;
-    _reconnectAttempts = 0;
+    _resetUserConnectionIntent();
+    _startAttemptId++;
+    _setClientState(const ClientConnectionState.stopping(), reason: 'user disconnect requested');
     await ref.read(Preferences.startedByUser.notifier).update(false);
     loggy.info('user disconnect requested');
     await _disconnect();
@@ -150,13 +162,24 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   final _singleStart = SingleCall();
 
   Future<void> _startUserConnection() async {
+    if (_clientState.phase == ClientConnectionPhase.preparing ||
+        _clientState.phase == ClientConnectionPhase.requestingVpnPermission ||
+        _clientState.phase == ClientConnectionPhase.connecting ||
+        _clientState.phase == ClientConnectionPhase.connected ||
+        _clientState.phase == ClientConnectionPhase.reconnecting ||
+        _clientState.phase == ClientConnectionPhase.stopping) {
+      loggy.debug('start ignored because current state=${_clientState.phase.name}');
+      return;
+    }
+
     await _singleStart.run(
       () async {
         _userRequestedConnection = true;
         _manualDisconnecting = false;
         _reconnectAttempts = 0;
+        final attemptId = ++_startAttemptId;
         await ref.read(Preferences.startedByUser.notifier).update(true);
-        await _connectThrottled();
+        await _connectThrottled(attemptId: attemptId);
       },
       onIgnored: () {
         loggy.debug('connect called while another connect/disconnect is still running, ignoring');
@@ -164,13 +187,18 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     );
   }
 
-  Future<void> _connectThrottled({bool reconnecting = false}) async {
+  Future<void> _connectThrottled({bool reconnecting = false, int? attemptId}) async {
+    final currentAttemptId = attemptId ?? ++_startAttemptId;
     _setClientState(
       reconnecting ? const ClientConnectionState.reconnecting() : const ClientConnectionState.preparing(),
       reason: reconnecting ? 'reconnect preparing' : 'connect preparing',
     );
 
     var activeProfile = await ref.read(activeProfileProvider.future);
+    if (!_isStartAttemptActive(currentAttemptId)) {
+      loggy.debug('connect aborted before node preparation completed');
+      return;
+    }
     final cachedNodes = await _readCachedNodeSelection();
     if (activeProfile != null && cachedNodes.selectedNode == null) {
       loggy.info('node cache empty before connect, syncing nodes in background');
@@ -183,7 +211,11 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       }
       final synced = await _syncNodesForConnect();
       if (!synced) {
-        await _fail(ConnectionErrorMapper.noNodes, reason: 'no nodes');
+        if (_isStartAttemptActive(currentAttemptId)) await _fail(ConnectionErrorMapper.noNodes, reason: 'no nodes');
+        return;
+      }
+      if (!_isStartAttemptActive(currentAttemptId)) {
+        loggy.debug('connect aborted after node sync');
         return;
       }
       ref.invalidate(activeProfileProvider);
@@ -191,9 +223,15 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
           .read(activeProfileProvider.future)
           .timeout(const Duration(seconds: 3), onTimeout: () => null);
       if (activeProfile == null) {
-        await _fail(ConnectionErrorMapper.noNodes, reason: 'no nodes after sync');
+        if (_isStartAttemptActive(currentAttemptId)) {
+          await _fail(ConnectionErrorMapper.noNodes, reason: 'no nodes after sync');
+        }
         return;
       }
+    }
+    if (!_isStartAttemptActive(currentAttemptId)) {
+      loggy.debug('connect aborted before core start');
+      return;
     }
 
     if (Platform.isAndroid && !reconnecting) {
@@ -212,6 +250,10 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         .connect(activeProfile, ref.read(Preferences.disableMemoryLimit))
         .mapLeft((err) => _handleConnectFailure(err, reconnecting: reconnecting))
         .run();
+    if (!_isStartAttemptActive(currentAttemptId) && _lastCoreStatus is Connected) {
+      loggy.info('core connected after user cancelled start; stopping immediately');
+      unawaited(_disconnect());
+    }
   }
 
   Future<bool> _syncNodesForConnect() async {
@@ -231,6 +273,15 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
 
   Future<void> _handleConnectFailure(ConnectionFailure err, {bool reconnecting = false}) async {
     loggy.warning('error connecting sanitized=${ConnectionErrorMapper.fromFailure(err)} rawType=${err.runtimeType}');
+    if (!_userRequestedConnection || _manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping) {
+      loggy.info('connect failure suppressed because connection was cancelled or stopping');
+      DiagnosticEventBuffer.addSafe('connect failure suppressed after user stop/cancel');
+      await _cleanupPartialStart();
+      if (_manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping) {
+        _setClientState(const ClientConnectionState.disconnected(), reason: 'cancelled start failure suppressed');
+      }
+      return;
+    }
     if (err is MissingVpnPermission) {
       _vpnPermissionRequestedForAttempt = false;
       loggy.info('vpn permission denied, pendingConnect=false');
@@ -257,10 +308,24 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _scheduleAutoReconnect();
       return;
     }
+    await _cleanupPartialStart();
     await _fail(message, reason: 'connect failed');
   }
 
   Future<void> _disconnect() async {
+    if (_lastCoreStatus is Disconnected &&
+        _clientState.phase != ClientConnectionPhase.preparing &&
+        _clientState.phase != ClientConnectionPhase.connecting &&
+        _clientState.phase != ClientConnectionPhase.requestingVpnPermission &&
+        _clientState.phase != ClientConnectionPhase.reconnecting) {
+      _manualDisconnecting = false;
+      _lastCoreStatus = const ConnectionStatus.disconnected();
+      _setClientState(const ClientConnectionState.disconnected(), reason: 'disconnect ignored while core stopped');
+      await ref.read(Preferences.startedByUser.notifier).update(false);
+      return;
+    }
+
+    _setClientState(const ClientConnectionState.stopping(), reason: 'core stopping');
     final result = await _connectionRepo.disconnect().run();
     await result.match(
       (err) async {
@@ -305,6 +370,11 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     }
 
     if (event is Connected) {
+      if (!_userRequestedConnection && (_manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping)) {
+        loggy.info('core connected while stop was requested; stopping immediately');
+        unawaited(_disconnect());
+        return;
+      }
       if (_vpnPermissionRequestedForAttempt) {
         loggy.info('vpn permission granted or already prepared, continuing connection');
       }
@@ -313,16 +383,22 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _manualDisconnecting = false;
       _reconnectAttempts = 0;
       _setClientState(const ClientConnectionState.connected(), reason: 'core connected');
+      if (previousStatus is! Connected) _showSuccess('4376 已连接');
     } else if (event is Connecting) {
+      if (_manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping) {
+        loggy.info('core reported connecting while stop is pending; preserving stopping state');
+        _setClientState(const ClientConnectionState.stopping(), reason: 'core connecting while stopping');
+        return;
+      }
       _vpnPermissionRequestedForAttempt = false;
       _vpnPermissionStartFallbackScheduled = false;
       _setClientState(const ClientConnectionState.connecting(), reason: 'core connecting');
     } else if (event is Disconnecting) {
-      _setClientState(const ClientConnectionState.preparing(), reason: 'core disconnecting');
+      _setClientState(const ClientConnectionState.stopping(), reason: 'core disconnecting');
     } else if (event case Disconnected(connectionFailure: final failure?)) {
       final message = ConnectionErrorMapper.fromFailure(failure);
       if (ClientConnectionStatePolicy.shouldSuppressDisconnectFailure(
-        manualDisconnecting: _manualDisconnecting,
+        manualDisconnecting: _manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping,
         wasDisconnecting: wasDisconnecting,
       )) {
         _manualDisconnecting = false;
@@ -333,6 +409,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         _reconnectAttempts = 0;
         DiagnosticEventBuffer.addSafe('manual/core disconnect failure suppressed');
         _setClientState(const ClientConnectionState.disconnected(), reason: 'manual/core disconnected');
+        _showInfo('4376 已断开');
       } else if (failure is MissingVpnPermission) {
         _vpnPermissionRequestedForAttempt = false;
         _vpnPermissionStartFallbackScheduled = false;
@@ -353,6 +430,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       if (_manualDisconnecting || !_userRequestedConnection) {
         _manualDisconnecting = false;
         _setClientState(_computeClientState(), reason: 'manual/core disconnected');
+        if (previousStatus is Connected || previousStatus is Disconnecting) _showInfo('4376 已断开');
       } else if (wasRunning) {
         _scheduleAutoReconnect();
       } else {
@@ -383,7 +461,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         _autoReconnectRunning = false;
         if (_manualDisconnecting || !_userRequestedConnection) return;
         if (_lastCoreStatus is Connected || _lastCoreStatus is Connecting) return;
-        await _connectThrottled(reconnecting: true);
+        await _connectThrottled(reconnecting: true, attemptId: ++_startAttemptId);
       }),
     );
   }
@@ -394,9 +472,24 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     _autoReconnectRunning = false;
     _manualDisconnecting = false;
     _userRequestedConnection = false;
+    _lastCoreStatus = const ConnectionStatus.disconnected();
     _setClientState(ClientConnectionState.failed(message), reason: reason);
     _showError(message);
     await ref.read(Preferences.startedByUser.notifier).update(false);
+  }
+
+  Future<void> shutdownForExit({bool keepConnection = false}) async {
+    if (keepConnection) {
+      loggy.info('app exit requested, preserving running connection by setting');
+      return;
+    }
+    loggy.info('app exit requested, stopping core and restoring system state');
+    await userDisconnect().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        loggy.warning('timeout while stopping core during app exit');
+      },
+    );
   }
 
   ClientConnectionState _computeClientState() {
@@ -412,7 +505,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     return switch (_lastCoreStatus) {
       Connected() => const ClientConnectionState.connected(),
       Connecting() => const ClientConnectionState.connecting(),
-      Disconnecting() => const ClientConnectionState.preparing(),
+      Disconnecting() => const ClientConnectionState.stopping(),
       Disconnected(connectionFailure: final failure?) => ClientConnectionState.failed(
         ConnectionErrorMapper.fromFailure(failure),
       ),
@@ -429,6 +522,20 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       return;
     }
     _setClientState(computed, reason: reason);
+  }
+
+  ClientConnectionState _actionableClientState() {
+    if (_clientState.phase == ClientConnectionPhase.preparing ||
+        _clientState.phase == ClientConnectionPhase.requestingVpnPermission ||
+        _clientState.phase == ClientConnectionPhase.connecting ||
+        _clientState.phase == ClientConnectionPhase.reconnecting ||
+        _clientState.phase == ClientConnectionPhase.stopping) {
+      return _clientState;
+    }
+    if (_clientState.phase == ClientConnectionPhase.connected && _lastCoreStatus is Connected) {
+      return _clientState;
+    }
+    return _computeClientState();
   }
 
   void _setClientState(ClientConnectionState next, {required String reason}) {
@@ -489,6 +596,33 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
 
   void _showInfo(String message) {
     ref.read(inAppNotificationControllerProvider).showInfoToast(message);
+  }
+
+  void _showSuccess(String message) {
+    ref.read(inAppNotificationControllerProvider).showSuccessToast(message);
+  }
+
+  bool _isStartAttemptActive(int attemptId) {
+    return _userRequestedConnection && !_manualDisconnecting && attemptId == _startAttemptId;
+  }
+
+  void _resetUserConnectionIntent() {
+    _userRequestedConnection = false;
+    _vpnPermissionRequestedForAttempt = false;
+    _vpnPermissionStartFallbackScheduled = false;
+    _autoReconnectRunning = false;
+    _reconnectAttempts = 0;
+  }
+
+  Future<void> _cleanupPartialStart() async {
+    if (_lastCoreStatus is Disconnected) return;
+    try {
+      await _connectionRepo.disconnect().run();
+    } catch (error, stackTrace) {
+      loggy.debug('partial start cleanup skipped', error, stackTrace);
+    } finally {
+      _lastCoreStatus = const ConnectionStatus.disconnected();
+    }
   }
 
   String _selectedNodeNameSync() {

@@ -7,6 +7,7 @@ enum ClientConnectionPhase {
   connecting,
   connected,
   reconnecting,
+  stopping,
   failed,
 }
 
@@ -29,6 +30,8 @@ class ClientConnectionState {
 
   const ClientConnectionState.reconnecting() : this(ClientConnectionPhase.reconnecting);
 
+  const ClientConnectionState.stopping() : this(ClientConnectionPhase.stopping);
+
   const ClientConnectionState.failed(String message) : this(ClientConnectionPhase.failed, message: message);
 
   final ClientConnectionPhase phase;
@@ -43,14 +46,16 @@ class ClientConnectionState {
     ClientConnectionPhase.preparing ||
     ClientConnectionPhase.requestingVpnPermission ||
     ClientConnectionPhase.connecting ||
-    ClientConnectionPhase.reconnecting => false,
+    ClientConnectionPhase.reconnecting ||
+    ClientConnectionPhase.stopping => false,
   };
 
   bool get isBusy => switch (phase) {
     ClientConnectionPhase.preparing ||
     ClientConnectionPhase.requestingVpnPermission ||
     ClientConnectionPhase.connecting ||
-    ClientConnectionPhase.reconnecting => true,
+    ClientConnectionPhase.reconnecting ||
+    ClientConnectionPhase.stopping => true,
     _ => false,
   };
 
@@ -63,6 +68,7 @@ class ClientConnectionState {
     ClientConnectionPhase.connecting => '连接中',
     ClientConnectionPhase.connected => '停止加速',
     ClientConnectionPhase.reconnecting => '正在重连',
+    ClientConnectionPhase.stopping => '正在停止',
     ClientConnectionPhase.failed => '重新连接',
   };
 
@@ -76,6 +82,11 @@ abstract final class ClientConnectionStatePolicy {
     required ClientConnectionState current,
     required ClientConnectionState computed,
   }) {
+    if (current.phase == ClientConnectionPhase.stopping) {
+      return computed.phase == ClientConnectionPhase.connected ||
+          computed.phase == ClientConnectionPhase.connecting ||
+          computed.phase == ClientConnectionPhase.failed;
+    }
     if (!userRequestedConnection) return false;
     if (!current.isBusy) return false;
     return computed.phase == ClientConnectionPhase.disconnected ||

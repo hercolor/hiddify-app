@@ -258,6 +258,11 @@ _StatusInfo _statusInfo(ClientConnectionState state) {
       BrandDesktopColors.warning,
       Icons.restart_alt_rounded,
     ),
+    ClientConnectionPhase.stopping => const _StatusInfo(
+      '停止中',
+      BrandDesktopColors.warning,
+      Icons.power_settings_new_rounded,
+    ),
     ClientConnectionPhase.failed => const _StatusInfo('连接异常', BrandDesktopColors.error, Icons.error_rounded),
     ClientConnectionPhase.loggedOut => const _StatusInfo('未登录', BrandDesktopColors.textMuted, Icons.person_off_rounded),
     ClientConnectionPhase.initializing => const _StatusInfo(
