@@ -1,6 +1,6 @@
 import 'package:hiddify/utils/sentry_utils.dart';
 import 'package:loggy/loggy.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:sentry/sentry.dart';
 
 // modified version of https://github.com/getsentry/sentry-dart/tree/main/logging
 class SentryLoggyIntegration extends LoggyPrinter implements Integration<SentryOptions> {

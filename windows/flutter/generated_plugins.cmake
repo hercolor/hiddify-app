@@ -7,7 +7,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   dynamic_color
   flutter_secure_storage_windows
   screen_retriever_windows
-  sentry_flutter
   share_plus
   sqlite3_flutter_libs
   tray_manager

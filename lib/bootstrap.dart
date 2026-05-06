@@ -24,7 +24,6 @@ import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/riverpod_observer.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async {
   Timer? splashFailsafeTimer;
@@ -102,13 +101,7 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
     unawaited(_postFirstFrameInit(container));
   });
 
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: SentryUserInteractionWidget(child: const App()),
-    ),
-  );
-  // SentryFlutter.s(DateTime.now().toUtc());
+  runApp(UncontrolledProviderScope(container: container, child: const App()));
 }
 
 Future<void> _postFirstFrameInit(ProviderContainer container) async {

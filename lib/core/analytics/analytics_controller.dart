@@ -7,7 +7,7 @@ import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:sentry/sentry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'analytics_controller.g.dart';
@@ -39,19 +39,16 @@ class AnalyticsController extends _$AnalyticsController with AppLogger {
       final sentryLogger = SentryLoggyIntegration();
       LoggerController.instance.addPrinter("analytics", sentryLogger);
 
-      await SentryFlutter.init((options) {
+      await Sentry.init((options) {
         options.dsn = dsn;
         // options.environment = env.name;
         // options.dist = appInfo.release.name;
         options.debug = kDebugMode;
-        options.enableNativeCrashHandling = true;
-        options.enableNdkScopeSync = true;
         // options.autoAppStart = false;
         // options.attachScreenshot = true;
         options.serverName = "";
         options.attachThreads = true;
         options.tracesSampleRate = 0.20;
-        options.enableUserInteractionTracing = true;
         options.addIntegration(sentryLogger);
         options.beforeSend = sentryBeforeSend;
       });
