@@ -5,7 +5,7 @@ New-Item -ItemType Directory -Force -Name "out"
 # Get-ChildItem -Recurse -File -Path "dist" -Filter "*windows-setup.exe" | Copy-Item -Destination "dist\tmp\4376-setup.exe" -ErrorAction SilentlyContinue
 # Compress-Archive -Force -Path "dist\tmp\4376-setup.exe",".github\help\mac-windows\*.url" -DestinationPath "out\4376-windows-x64-setup.zip"
 Get-ChildItem -Recurse -File -Path "dist" -Filter "*windows-setup.exe" | Copy-Item -Destination "out\4376-Windows-Setup-x64.exe" -ErrorAction SilentlyContinue
-Get-ChildItem -Recurse -File -Path "dist" -Filter "*windows.msix" | Copy-Item -Destination "out\4376-Windows-Setup-x64.msix" -ErrorAction SilentlyContinue
+Get-ChildItem -Recurse -File -Path "dist" -Filter "*windows.msix" | Copy-Item -Destination "out\4376-Windows-x64.msix" -ErrorAction SilentlyContinue
 
 
 # windows portable
