@@ -33,29 +33,16 @@ class HomePage extends HookConsumerWidget {
 
     return Scaffold(
       extendBody: true,
-      appBar: AppBar(
-        toolbarHeight: 72,
-        title: Text(
-          '4376',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -.6),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 20),
-            child: Icon(Icons.security_rounded, color: connected ? BrandColors.signalBlue : BrandColors.subtle),
-          ),
-        ],
-      ),
       body: BrandScaffoldBackground(
         child: SafeArea(
-          top: false,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 96),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 96),
                 child: Column(
                   children: [
+                    _HomeHeader(connected: connected),
                     Expanded(child: _ConnectionFocus(state: clientState)),
                     _NodeCard(nodeName: nodeName, delay: delay),
                     const Gap(12),
@@ -72,6 +59,30 @@ class HomePage extends HookConsumerWidget {
 }
 
 int? _resolveDelay(ClientNode? selectedNode) => selectedNode?.delay;
+
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({required this.connected});
+
+  final bool connected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '4376',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: BrandColors.slate,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -.6,
+          ),
+        ),
+        Icon(Icons.security_rounded, color: connected ? BrandColors.signalBlue : BrandColors.subtle),
+      ],
+    );
+  }
+}
 
 class _ConnectionFocus extends StatelessWidget {
   const _ConnectionFocus({required this.state});
@@ -95,14 +106,6 @@ class _ConnectionFocus extends StatelessWidget {
       ClientConnectionPhase.stopping => '正在停止',
       _ => '未连接',
     };
-    final color = connected
-        ? BrandColors.signalBlue
-        : busy
-        ? BrandColors.signalBlue
-        : state.phase == ClientConnectionPhase.failed
-        ? BrandColors.error
-        : BrandColors.muted;
-
     final helper = connected
         ? '连接稳定，正在保护您的网络'
         : busy
@@ -113,30 +116,6 @@ class _ConnectionFocus extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: .10),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: color.withValues(alpha: .18)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                ),
-                const Gap(7),
-                Text(
-                  label,
-                  style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w900),
-                ),
-              ],
-            ),
-          ),
-          const Gap(14),
           Text(
             label,
             textAlign: TextAlign.center,
@@ -151,7 +130,7 @@ class _ConnectionFocus extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.muted),
           ),
-          const Gap(42),
+          const Gap(64),
           const ConnectionButton(),
         ],
       ),

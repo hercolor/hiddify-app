@@ -44,8 +44,8 @@ class UserProfilePage extends HookConsumerWidget {
 
     return Scaffold(
       extendBody: true,
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(toolbarHeight: 72, title: const Text('会员中心')),
+      resizeToAvoidBottomInset: showingLogin,
+      appBar: showingLogin ? null : AppBar(toolbarHeight: 72, title: const Text('会员中心')),
       body: BrandScaffoldBackground(
         showHalos: !showingLogin,
         child: Center(
@@ -167,87 +167,123 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
     final theme = Theme.of(context);
 
     return SafeArea(
-      child: ListView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 104),
-        children: [
-          const Center(child: RepaintBoundary(child: BrandMark(size: 54))),
-          const Gap(34),
-          RepaintBoundary(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: BrandColors.card.withValues(alpha: .98),
-                borderRadius: BorderRadius.circular(BrandRadii.xl),
-                border: Border.all(color: BrandColors.border),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
-                    const Gap(8),
-                    Text('登录后将自动同步节点', style: theme.textTheme.bodyMedium),
-                    if (widget.errorText != null) ...[
-                      const Gap(14),
-                      Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
-                    ],
-                    const Gap(24),
-                    ValueListenableBuilder<String?>(
-                      valueListenable: _emailError,
-                      builder: (context, errorText, _) {
-                        return TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          enableSuggestions: false,
-                          autocorrect: false,
-                          smartDashesType: SmartDashesType.disabled,
-                          smartQuotesType: SmartQuotesType.disabled,
-                          decoration: InputDecoration(
-                            labelText: '邮箱账号',
-                            hintText: '请输入邮箱',
-                            errorText: errorText,
-                            prefixIcon: const Icon(Icons.mail_outline_rounded),
-                          ),
-                          textInputAction: TextInputAction.next,
-                        );
-                      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 42),
+                  const _LoginMark(),
+                  const Gap(24),
+                  const Text(
+                    '4376',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: BrandColors.signalBlue,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const Gap(8),
+                  Text('安全、极速、无界', style: theme.textTheme.bodyMedium),
+                  const Gap(48),
+                  if (widget.errorText != null) ...[
+                    Text(
+                      widget.errorText!,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error),
                     ),
                     const Gap(14),
-                    ValueListenableBuilder<String?>(
-                      valueListenable: _passwordError,
-                      builder: (context, errorText, _) {
-                        return TextField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          enableSuggestions: false,
-                          autocorrect: false,
-                          smartDashesType: SmartDashesType.disabled,
-                          smartQuotesType: SmartQuotesType.disabled,
-                          decoration: InputDecoration(
-                            labelText: '登录密码',
-                            hintText: '请输入密码',
-                            errorText: errorText,
-                            prefixIcon: const Icon(Icons.key_rounded),
-                          ),
-                          onSubmitted: (_) => _submit(),
-                        );
-                      },
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
-                    ),
-                    const Gap(4),
-                    _GradientButton(onPressed: isLoading ? null : _submit, label: '登录', isLoading: isLoading),
                   ],
-                ),
+                  ValueListenableBuilder<String?>(
+                    valueListenable: _emailError,
+                    builder: (context, errorText, _) {
+                      return TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        smartDashesType: SmartDashesType.disabled,
+                        smartQuotesType: SmartQuotesType.disabled,
+                        decoration: InputDecoration(
+                          hintText: '邮箱账号',
+                          errorText: errorText,
+                          prefixIcon: const Icon(Icons.mail_outline_rounded),
+                        ),
+                        textInputAction: TextInputAction.next,
+                      );
+                    },
+                  ),
+                  const Gap(16),
+                  ValueListenableBuilder<String?>(
+                    valueListenable: _passwordError,
+                    builder: (context, errorText, _) {
+                      return TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        smartDashesType: SmartDashesType.disabled,
+                        smartQuotesType: SmartQuotesType.disabled,
+                        decoration: InputDecoration(
+                          hintText: '密码',
+                          errorText: errorText,
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        ),
+                        onSubmitted: (_) => _submit(),
+                      );
+                    },
+                  ),
+                  const Gap(12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
+                  ),
+                  const Gap(12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: _GradientButton(onPressed: isLoading ? null : _submit, label: '登 录', isLoading: isLoading),
+                  ),
+                  const SizedBox(height: 44),
+                  Text('登录后将自动准备线路', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.signalBlue)),
+                  const Gap(32),
+                ],
               ),
             ),
-          ),
-          const Gap(24),
-          Center(child: Text('登录后将自动同步节点', style: theme.textTheme.bodySmall)),
-        ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LoginMark extends StatelessWidget {
+  const _LoginMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          color: BrandColors.card,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: BrandColors.signalBlue.withValues(alpha: .15),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: const Center(child: BrandMark(size: 52, showWordmark: false)),
       ),
     );
   }

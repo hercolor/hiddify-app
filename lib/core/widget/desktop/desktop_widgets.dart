@@ -342,17 +342,23 @@ class DesktopGradientButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(BrandDesktopRadii.control),
         boxShadow: onPressed == null ? null : BrandDesktopShadows.glow(BrandDesktopColors.accent, alpha: .16),
       ),
-      child: FilledButton.icon(
-        onPressed: onPressed,
-        icon: isLoading
-            ? const SizedBox.square(
-                dimension: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : Icon(icon ?? Icons.arrow_forward_rounded),
-        label: Text(label),
-        style: FilledButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
-      ),
+      child: icon == null && !isLoading
+          ? FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+              child: Text(label),
+            )
+          : FilledButton.icon(
+              onPressed: onPressed,
+              icon: isLoading
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Icon(icon),
+              label: Text(label),
+              style: FilledButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+            ),
     );
   }
 }

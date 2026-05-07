@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
-import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
@@ -31,13 +30,10 @@ class DesktopHomePage extends HookConsumerWidget {
 
     return DesktopPageScaffold(
       title: '4376',
-      subtitle: '稳定、安全、简洁的一键加速体验',
-      actions: [DesktopStatusPill(label: status.label, color: status.color, icon: status.icon)],
+      actions: [Icon(Icons.security_rounded, color: status.color)],
       child: Column(
         children: [
-          Expanded(
-            child: _ConnectionCard(state: state, status: status, nodeName: nodeName),
-          ),
+          Expanded(child: _ConnectionCard(state: state)),
           const Gap(14),
           _HomeInfoCard(node: selectedNode, nodeName: nodeName),
           const Gap(12),
@@ -49,46 +45,34 @@ class DesktopHomePage extends HookConsumerWidget {
 }
 
 class _ConnectionCard extends StatelessWidget {
-  const _ConnectionCard({required this.state, required this.status, required this.nodeName});
+  const _ConnectionCard({required this.state});
 
   final ClientConnectionState state;
-  final _StatusInfo status;
-  final String nodeName;
 
   @override
   Widget build(BuildContext context) {
     final connected = state.phase == ClientConnectionPhase.connected;
     final busy = state.isBusy;
     final title = connected
-        ? '加速已开启'
+        ? '已受保护'
         : busy
-        ? '正在建立连接'
+        ? '连接中...'
         : state.phase == ClientConnectionPhase.loggedOut
-        ? '登录后即可加速'
-        : '准备就绪';
-    final subtitle = connected ? '当前节点：$nodeName' : '点击中央按钮开始加速';
+        ? '未登录'
+        : '尚未连接';
+    final subtitle = connected
+        ? '连接稳定，正在保护您的网络'
+        : busy
+        ? '正在建立安全连接'
+        : '点击按钮以保护您的隐私';
 
     return DesktopCard(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
-      gradient: const LinearGradient(
-        colors: [Color(0xFFFFFFFF), Color(0xFFEAF2FF)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
+      gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFF5F7FA)]),
       borderColor: connected ? BrandDesktopColors.success.withValues(alpha: .28) : BrandDesktopColors.border,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              const BrandMark(size: 44),
-              const Spacer(),
-              DesktopStatusPill(label: status.label, color: status.color, icon: status.icon),
-            ],
-          ),
-          const Spacer(),
-          Center(child: _DesktopPowerButton(state: state)),
-          const Spacer(),
           Text(
             title,
             textAlign: TextAlign.center,
@@ -104,6 +88,8 @@ class _ConnectionCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.textSecondary),
           ),
+          const Gap(54),
+          Center(child: _DesktopPowerButton(state: state)),
         ],
       ),
     );
@@ -148,8 +134,8 @@ class _DesktopPowerButton extends ConsumerWidget {
                 : null,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 154,
-              height: 154,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: connected ? BrandDesktopColors.accent : BrandDesktopColors.cardSolid,
@@ -159,9 +145,9 @@ class _DesktopPowerButton extends ConsumerWidget {
                     color: connected
                         ? BrandDesktopColors.accent.withValues(alpha: .30)
                         : Colors.black.withValues(alpha: .05),
-                    blurRadius: connected ? 32 : 16,
-                    spreadRadius: connected ? 8 : 4,
-                    offset: const Offset(0, 8),
+                    blurRadius: connected ? 40 : 20,
+                    spreadRadius: connected ? 10 : 5,
+                    offset: const Offset(0, 10),
                   ),
                   if (busy) BoxShadow(color: color.withValues(alpha: .18), blurRadius: 40, spreadRadius: 8),
                 ],
@@ -172,17 +158,10 @@ class _DesktopPowerButton extends ConsumerWidget {
                     : Icon(
                         connected ? Icons.check_rounded : Icons.power_settings_new_rounded,
                         color: connected ? Colors.white : BrandDesktopColors.textMuted,
-                        size: 62,
+                        size: 80,
                       ),
               ),
             ),
-          ),
-          const Gap(16),
-          Text(
-            state.buttonLabel,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
           ),
         ],
       ),

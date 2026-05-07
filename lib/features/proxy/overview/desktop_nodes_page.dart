@@ -25,21 +25,22 @@ class DesktopNodesPage extends HookConsumerWidget {
     final proxies = ref.watch(proxiesOverviewNotifierProvider);
     return DesktopPageScaffold(
       title: '选择节点',
-      subtitle: '只展示节点名称与延迟，保护连接参数',
-      actions: [
-        SizedBox(
-          width: 320,
-          child: TextField(
+      child: Column(
+        children: [
+          TextField(
             onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
             decoration: const InputDecoration(hintText: '搜索节点', prefixIcon: Icon(Icons.search_rounded)),
           ),
-        ),
-      ],
-      child: proxies.when(
-        data: (group) =>
-            group == null ? _CachedDesktopNodes(search: search) : _LiveDesktopNodes(group: group, search: search),
-        error: (_, _) => _CachedDesktopNodes(search: search),
-        loading: () => const Center(child: CircularProgressIndicator()),
+          const Gap(14),
+          Expanded(
+            child: proxies.when(
+              data: (group) =>
+                  group == null ? _CachedDesktopNodes(search: search) : _LiveDesktopNodes(group: group, search: search),
+              error: (_, _) => _CachedDesktopNodes(search: search),
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -124,40 +125,11 @@ class _NodesList extends StatelessWidget {
   Widget build(BuildContext context) {
     return DesktopCard(
       padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-            child: Row(
-              children: [
-                const DesktopIconBox(icon: Icons.hub_rounded, selected: true),
-                const Gap(14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '可用节点',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: BrandDesktopColors.textPrimary),
-                      ),
-                      const Gap(4),
-                      Text('共 $itemCount 条线路', style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(color: BrandDesktopColors.border.withValues(alpha: .8), height: 1),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(14),
-              itemCount: itemCount,
-              separatorBuilder: (_, _) => const Gap(10),
-              itemBuilder: itemBuilder,
-            ),
-          ),
-        ],
+      child: ListView.separated(
+        padding: const EdgeInsets.all(14),
+        itemCount: itemCount,
+        separatorBuilder: (_, _) => const Gap(10),
+        itemBuilder: itemBuilder,
       ),
     );
   }

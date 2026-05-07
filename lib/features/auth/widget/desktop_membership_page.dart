@@ -96,107 +96,122 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
 
   @override
   Widget build(BuildContext context) {
-    return DesktopPageScaffold(
-      title: '会员中心',
-      subtitle: '登录后将自动准备可用线路',
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 880),
-          child: DesktopCard(
-            padding: EdgeInsets.zero,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(34),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const BrandMark(size: 50),
-                        const Gap(34),
-                        Text(
-                          '欢迎使用 4376',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.headlineSmall?.copyWith(color: BrandDesktopColors.textPrimary),
-                        ),
-                        const Gap(8),
-                        Text('登录账号后自动准备可用线路。', style: Theme.of(context).textTheme.bodyMedium),
-                        if (widget.errorText != null) ...[
-                          const Gap(14),
-                          Text(
-                            widget.errorText!,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.error),
-                          ),
-                        ],
-                        const Gap(28),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          enableSuggestions: false,
-                          autocorrect: false,
-                          decoration: InputDecoration(
-                            labelText: '邮箱账号',
-                            hintText: '请输入邮箱',
-                            errorText: _emailError,
-                            prefixIcon: const Icon(Icons.mail_outline_rounded),
-                          ),
-                          textInputAction: TextInputAction.next,
-                          onChanged: (_) {
-                            if (_emailError != null) setState(() => _emailError = null);
-                          },
-                        ),
-                        const Gap(14),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          enableSuggestions: false,
-                          autocorrect: false,
-                          decoration: InputDecoration(
-                            labelText: '登录密码',
-                            hintText: '请输入密码',
-                            errorText: _passwordError,
-                            prefixIcon: const Icon(Icons.key_rounded),
-                          ),
-                          onSubmitted: (_) => _submit(),
-                          onChanged: (_) {
-                            if (_passwordError != null) setState(() => _passwordError = null);
-                          },
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
-                        ),
-                        const Gap(4),
-                        SizedBox(
-                          width: double.infinity,
-                          child: DesktopGradientButton(
-                            label: '登录',
-                            icon: Icons.login_rounded,
-                            isLoading: _isSubmitting,
-                            onPressed: _isSubmitting ? null : _submit,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (MediaQuery.sizeOf(context).width > 980)
-                  Expanded(
-                    child: Container(
-                      height: 520,
-                      decoration: const BoxDecoration(
-                        gradient: BrandDesktopGradients.primary,
-                        borderRadius: BorderRadius.horizontal(right: Radius.circular(BrandDesktopRadii.card)),
+    return DesktopTheme(
+      child: DesktopBackdrop(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 326),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _DesktopLoginMark(),
+                    const Gap(24),
+                    const Text(
+                      '4376',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: BrandDesktopColors.accent,
+                        letterSpacing: 2,
                       ),
-                      child: const Center(child: BrandMark(size: 96, showWordmark: false, dark: true)),
                     ),
-                  ),
-              ],
+                    const Gap(8),
+                    Text('安全、极速、无界', style: Theme.of(context).textTheme.bodyMedium),
+                    const Gap(42),
+                    if (widget.errorText != null) ...[
+                      Text(
+                        widget.errorText!,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.error),
+                      ),
+                      const Gap(14),
+                    ],
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      decoration: InputDecoration(
+                        hintText: '邮箱账号',
+                        errorText: _emailError,
+                        prefixIcon: const Icon(Icons.mail_outline_rounded),
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) {
+                        if (_emailError != null) setState(() => _emailError = null);
+                      },
+                    ),
+                    const Gap(16),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      decoration: InputDecoration(
+                        hintText: '密码',
+                        errorText: _passwordError,
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      ),
+                      onSubmitted: (_) => _submit(),
+                      onChanged: (_) {
+                        if (_passwordError != null) setState(() => _passwordError = null);
+                      },
+                    ),
+                    const Gap(12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
+                    ),
+                    const Gap(12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: DesktopGradientButton(
+                        label: '登 录',
+                        isLoading: _isSubmitting,
+                        onPressed: _isSubmitting ? null : _submit,
+                      ),
+                    ),
+                    const Gap(42),
+                    Text(
+                      '登录后将自动准备线路',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.accent),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DesktopLoginMark extends StatelessWidget {
+  const _DesktopLoginMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          color: BrandDesktopColors.cardSolid,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: BrandDesktopColors.accent.withValues(alpha: .15),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: const Center(child: BrandMark(size: 52, showWordmark: false)),
       ),
     );
   }
