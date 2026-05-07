@@ -21,75 +21,67 @@ class DesktopHomePage extends HookConsumerWidget {
     final nodeSelection = ref.watch(clientNodeSelectionProvider);
     final selectedNode = nodeSelection.valueOrNull?.selectedNode;
     final nodeName = nodeSelection.when(
-      data: (selection) => _safeNodeName(selection.selectedNode?.name ?? '暂无可用节点'),
+      data: (selection) => _safeNodeName(
+        selection.selectedNode?.name ?? (selection.nodes.isNotEmpty ? selection.nodes.first.name : '暂无可用节点'),
+      ),
       error: (_, _) => '暂无可用节点',
       loading: () => '读取线路中',
     );
     final status = _statusInfo(state);
 
     return DesktopPageScaffold(
-      title: '首页',
-      subtitle: '一键开启稳定、安全的网络加速体验',
+      title: '4376',
+      subtitle: '稳定、安全、简洁的一键加速体验',
       actions: [DesktopStatusPill(label: status.label, color: status.color, icon: status.icon)],
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final narrow = constraints.maxWidth < 900;
-          final hero = _ConnectionHero(state: state, status: status, nodeName: nodeName);
-          final side = _HomeSideCards(
-            node: selectedNode,
-            nodeName: nodeName,
-            connected: state.phase == ClientConnectionPhase.connected,
-          );
-          if (narrow) {
-            return ListView(
-              padding: const EdgeInsets.only(bottom: 24),
-              children: [
-                SizedBox(height: 560, child: hero),
-                const Gap(18),
-                side,
-              ],
-            );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(flex: 7, child: hero),
-              const Gap(22),
-              Expanded(flex: 4, child: side),
-            ],
-          );
-        },
+      child: Column(
+        children: [
+          Expanded(
+            child: _ConnectionCard(state: state, status: status, nodeName: nodeName),
+          ),
+          const Gap(14),
+          _HomeInfoCard(node: selectedNode, nodeName: nodeName),
+          const Gap(12),
+          _TodayTrafficCard(connected: state.phase == ClientConnectionPhase.connected),
+        ],
       ),
     );
   }
 }
 
-class _ConnectionHero extends ConsumerWidget {
-  const _ConnectionHero({required this.state, required this.status, required this.nodeName});
+class _ConnectionCard extends StatelessWidget {
+  const _ConnectionCard({required this.state, required this.status, required this.nodeName});
 
   final ClientConnectionState state;
   final _StatusInfo status;
   final String nodeName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context) {
     final connected = state.phase == ClientConnectionPhase.connected;
     final busy = state.isBusy;
+    final title = connected
+        ? '加速已开启'
+        : busy
+        ? '正在建立连接'
+        : state.phase == ClientConnectionPhase.loggedOut
+        ? '登录后即可加速'
+        : '准备就绪';
+    final subtitle = connected ? '当前节点：$nodeName' : '点击中央按钮开始加速';
+
     return DesktopCard(
-      padding: const EdgeInsets.all(30),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
       gradient: const LinearGradient(
-        colors: [Color(0xE5192740), Color(0xB30B1222)],
+        colors: [Color(0xE5192740), Color(0xCC0B1222)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
       borderColor: connected ? BrandDesktopColors.success.withValues(alpha: .28) : BrandDesktopColors.border,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              const BrandMark(size: 46, dark: true),
+              const BrandMark(size: 44, dark: true),
               const Spacer(),
               DesktopStatusPill(label: status.label, color: status.color, icon: status.icon),
             ],
@@ -98,22 +90,19 @@ class _ConnectionHero extends ConsumerWidget {
           Center(child: _DesktopPowerButton(state: state)),
           const Spacer(),
           Text(
-            connected
-                ? '加速已开启'
-                : busy
-                ? '正在建立连接'
-                : state.phase == ClientConnectionPhase.loggedOut
-                ? '登录后即可加速'
-                : '准备就绪',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: BrandDesktopColors.textPrimary,
-              fontWeight: FontWeight.w900,
-            ),
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
           ),
-          const Gap(8),
+          const Gap(6),
           Text(
-            connected ? '当前线路 $nodeName 运行稳定' : '选择可用节点后，点击按钮开始加速',
-            style: theme.textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.textSecondary),
+            subtitle,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.textSecondary),
           ),
         ],
       ),
@@ -158,30 +147,30 @@ class _DesktopPowerButton extends ConsumerWidget {
                   }
                 : null,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: 178,
-              height: 178,
+              duration: const Duration(milliseconds: 180),
+              width: 154,
+              height: 154,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: connected ? BrandDesktopGradients.connected : BrandDesktopGradients.primary,
-                boxShadow: BrandDesktopShadows.glow(color, alpha: state.canTap ? .26 : .10),
+                boxShadow: BrandDesktopShadows.glow(color, alpha: state.canTap ? .24 : .10),
               ),
               child: Center(
                 child: busy
                     ? const SizedBox.square(
-                        dimension: 38,
+                        dimension: 34,
                         child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
                       )
-                    : Icon(connected ? Icons.stop_rounded : Icons.bolt_rounded, color: Colors.white, size: 70),
+                    : Icon(connected ? Icons.stop_rounded : Icons.bolt_rounded, color: Colors.white, size: 62),
               ),
             ),
           ),
-          const Gap(20),
+          const Gap(16),
           Text(
             state.buttonLabel,
             style: Theme.of(
               context,
-            ).textTheme.headlineSmall?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
+            ).textTheme.titleLarge?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -189,52 +178,61 @@ class _DesktopPowerButton extends ConsumerWidget {
   }
 }
 
-class _HomeSideCards extends ConsumerWidget {
-  const _HomeSideCards({required this.node, required this.nodeName, required this.connected});
+class _HomeInfoCard extends StatelessWidget {
+  const _HomeInfoCard({required this.node, required this.nodeName});
 
   final ClientNode? node;
   final String nodeName;
-  final bool connected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final delay = node?.delay;
     final delayText = delay == null || delay == 0
         ? '待测速'
         : delay > 65000
         ? '不可用'
         : '$delay ms';
+    return DesktopMetricTile(
+      icon: Icons.hub_rounded,
+      label: '当前节点',
+      value: nodeName,
+      accent: _delayColor(delay),
+    ).withBadge(context, delayText, _delayColor(delay));
+  }
+}
+
+class _TodayTrafficCard extends ConsumerWidget {
+  const _TodayTrafficCard({required this.connected});
+
+  final bool connected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final stats = connected ? ref.watch(statsNotifierProvider).valueOrNull : null;
     final usedBytes = connected ? ((stats?.uplinkTotal.toInt() ?? 0) + (stats?.downlinkTotal.toInt() ?? 0)) : 0;
+    return DesktopMetricTile(
+      icon: Icons.data_usage_rounded,
+      label: '今日流量',
+      value: usedBytes.sizeGB(),
+      accent: BrandDesktopColors.accent,
+    );
+  }
+}
 
-    return Column(
+extension _MetricBadgeX on DesktopMetricTile {
+  Widget withBadge(BuildContext context, String label, Color color) {
+    return Stack(
       children: [
-        DesktopMetricTile(icon: Icons.hub_rounded, label: '当前节点', value: nodeName, accent: BrandDesktopColors.cyan),
-        const Gap(16),
-        DesktopMetricTile(icon: Icons.speed_rounded, label: '节点延迟', value: delayText, accent: _delayColor(delay)),
-        const Gap(16),
-        DesktopMetricTile(
-          icon: Icons.data_usage_rounded,
-          label: '今日流量',
-          value: usedBytes.sizeGB(),
-          accent: BrandDesktopColors.accent,
-        ),
-        const Gap(16),
-        SizedBox(
-          height: 220,
-          child: DesktopCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const DesktopIconBox(icon: Icons.verified_user_rounded, selected: true),
-                const Spacer(),
-                Text(
-                  '商业级体验',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(color: BrandDesktopColors.textPrimary),
-                ),
-                const Gap(8),
-                Text('普通界面仅展示必要状态，不暴露协议、端口或订阅信息。', style: Theme.of(context).textTheme.bodyMedium),
-              ],
+        this,
+        Positioned(
+          right: 16,
+          top: 14,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(999)),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w800),
             ),
           ),
         ),

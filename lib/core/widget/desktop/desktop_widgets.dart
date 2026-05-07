@@ -151,7 +151,7 @@ class DesktopPageScaffold extends StatelessWidget {
       child: DesktopBackdrop(
         child: SafeArea(
           child: Padding(
-            padding: padding ?? const EdgeInsets.fromLTRB(30, 26, 30, 28),
+            padding: padding ?? const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -180,7 +180,7 @@ class DesktopPageScaffold extends StatelessWidget {
                     if (actions != null && actions!.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: actions!),
                   ],
                 ),
-                const Gap(24),
+                const Gap(16),
                 Expanded(child: child),
               ],
             ),
@@ -205,7 +205,7 @@ class DesktopCard extends StatelessWidget {
     final content = ClipRRect(
       borderRadius: BorderRadius.circular(BrandDesktopRadii.card),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           padding: padding ?? const EdgeInsets.all(22),
           decoration: BoxDecoration(

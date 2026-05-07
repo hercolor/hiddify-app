@@ -122,7 +122,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                           ).textTheme.headlineSmall?.copyWith(color: BrandDesktopColors.textPrimary),
                         ),
                         const Gap(8),
-                        Text('登录账号后自动同步节点，普通界面不暴露订阅链接。', style: Theme.of(context).textTheme.bodyMedium),
+                        Text('登录账号后自动准备可用线路。', style: Theme.of(context).textTheme.bodyMedium),
                         if (widget.errorText != null) ...[
                           const Gap(14),
                           Text(

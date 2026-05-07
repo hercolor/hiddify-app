@@ -91,6 +91,15 @@ abstract final class BrandDesktopRadii {
   static const hero = 32.0;
 }
 
+abstract final class BrandDesktopWindow {
+  static const defaultSize = Size(430, 760);
+  static const minimumSize = Size(390, 690);
+  static const maximumSize = Size(560, 980);
+  static const aspectRatio = 4 / 7;
+  static const contentMaxWidth = 520.0;
+  static const bottomNavHeight = 82.0;
+}
+
 abstract final class BrandDesktopGradients {
   static const background = LinearGradient(
     colors: [BrandDesktopColors.background, Color(0xFF0A1020), Color(0xFF060914)],
