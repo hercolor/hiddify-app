@@ -71,7 +71,7 @@ class _ConnectionCard extends StatelessWidget {
     return DesktopCard(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
       gradient: const LinearGradient(
-        colors: [Color(0xE5192740), Color(0xCC0B1222)],
+        colors: [Color(0xFFFFFFFF), Color(0xFFEAF2FF)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -81,7 +81,7 @@ class _ConnectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const BrandMark(size: 44, dark: true),
+              const BrandMark(size: 44),
               const Spacer(),
               DesktopStatusPill(label: status.label, color: status.color, icon: status.icon),
             ],

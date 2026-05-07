@@ -18,12 +18,11 @@ class DesktopTheme extends StatelessWidget {
     );
     return Theme(
       data: base.copyWith(
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
         scaffoldBackgroundColor: BrandDesktopColors.background,
-        colorScheme: const ColorScheme.dark(
+        colorScheme: const ColorScheme.light(
           primary: BrandDesktopColors.accent,
           secondary: BrandDesktopColors.cyan,
-          surface: BrandDesktopColors.panel,
           error: BrandDesktopColors.error,
           onSurface: BrandDesktopColors.textPrimary,
           onSurfaceVariant: BrandDesktopColors.textSecondary,
@@ -390,7 +389,7 @@ class _GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: .025)
+      ..color = BrandDesktopColors.accent.withValues(alpha: .035)
       ..strokeWidth = 1;
     const step = 48.0;
     for (var x = 0.0; x < size.width; x += step) {

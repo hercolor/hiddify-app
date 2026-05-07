@@ -113,7 +113,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const BrandMark(size: 50, dark: true),
+                        const BrandMark(size: 50),
                         const Gap(34),
                         Text(
                           '欢迎使用 4376',
@@ -236,14 +236,8 @@ class _DesktopMemberCenter extends HookConsumerWidget {
           );
           if (narrow) {
             return ListView(
-              padding: const EdgeInsets.only(bottom: 24),
-              children: [
-                SizedBox(height: 360, child: plan),
-                const Gap(16),
-                traffic,
-                const Gap(16),
-                SizedBox(height: 520, child: actions),
-              ],
+              padding: const EdgeInsets.only(bottom: 16),
+              children: [plan, const Gap(12), traffic, const Gap(12), actions],
             );
           }
           return Row(
@@ -279,53 +273,103 @@ class _PlanCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return DesktopCard(
       gradient: const LinearGradient(
-        colors: [Color(0xE61C3355), Color(0xBF0E1729)],
+        colors: [Color(0xFFFFFFFF), Color(0xFFEAF2FF)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
       borderColor: BrandDesktopColors.accent.withValues(alpha: .24),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const BrandMark(size: 44, dark: true),
-              const Spacer(),
-              OutlinedButton(
-                onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
-                child: const Text('续费'),
+              Expanded(
+                child: _PlanField(label: '账号', value: _maskUser(session.email)),
               ),
-              const Gap(10),
-              DesktopGradientButton(
+              const Gap(8),
+              _SmallPlanButton(
+                label: '续费',
+                onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
+              ),
+              const Gap(6),
+              _SmallPlanButton(
                 label: '升级',
-                icon: Icons.trending_up_rounded,
+                filled: true,
                 onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
               ),
             ],
           ),
-          const Spacer(),
-          Text('当前套餐', style: Theme.of(context).textTheme.bodyMedium),
-          const Gap(8),
-          Text(
-            _displayText(subscription?.planName),
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
-          ),
-          const Gap(14),
-          Text(
-            _maskUser(session.email),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.textSecondary),
-          ),
-          const Gap(22),
-          DesktopStatusPill(
-            label: '到期 ${_formatExpiredAt(subscription?.expiredAt)}',
-            color: BrandDesktopColors.cyan,
-            icon: Icons.event_available_rounded,
+          const Gap(18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _PlanField(label: '当前套餐', value: _displayText(subscription?.planName), prominent: true),
+              ),
+              const Gap(16),
+              Expanded(
+                child: _PlanField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt)),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+}
+
+class _PlanField extends StatelessWidget {
+  const _PlanField({required this.label, required this.value, this.prominent = false});
+
+  final String label;
+  final String value;
+  final bool prominent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textMuted)),
+        const Gap(5),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: (prominent ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.titleSmall)
+              ?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
+        ),
+      ],
+    );
+  }
+}
+
+class _SmallPlanButton extends StatelessWidget {
+  const _SmallPlanButton({required this.label, required this.onPressed, this.filled = false});
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = filled
+        ? FilledButton.styleFrom(
+            minimumSize: const Size(52, 34),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          )
+        : OutlinedButton.styleFrom(
+            minimumSize: const Size(52, 34),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          );
+    final child = Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800));
+    return filled
+        ? FilledButton(onPressed: onPressed, style: style, child: child)
+        : OutlinedButton(onPressed: onPressed, style: style, child: child);
   }
 }
 
@@ -338,33 +382,75 @@ class _TrafficAndDeviceGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final used = subscription?.usedTraffic;
     final remaining = subscription?.remainingTraffic;
-    return GridView.count(
-      crossAxisCount: MediaQuery.sizeOf(context).width < 980 ? 1 : 3,
-      mainAxisSpacing: 14,
-      crossAxisSpacing: 14,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 2.8,
+    return Row(
       children: [
-        DesktopMetricTile(
-          icon: Icons.data_usage_rounded,
-          label: '已用流量',
-          value: used == null ? '--' : _formatTrafficGb(used),
-          accent: BrandDesktopColors.accent,
+        Expanded(
+          child: _CompactMetricTile(
+            icon: Icons.data_usage_rounded,
+            label: '已用流量',
+            value: used == null ? '--' : _formatTrafficGb(used),
+            accent: BrandDesktopColors.accent,
+          ),
         ),
-        DesktopMetricTile(
-          icon: Icons.battery_5_bar_rounded,
-          label: '剩余流量',
-          value: remaining == null ? '--' : _formatTrafficGb(remaining),
-          accent: BrandDesktopColors.success,
+        const Gap(8),
+        Expanded(
+          child: _CompactMetricTile(
+            icon: Icons.battery_5_bar_rounded,
+            label: '剩余流量',
+            value: remaining == null ? '--' : _formatTrafficGb(remaining),
+            accent: BrandDesktopColors.success,
+          ),
         ),
-        DesktopMetricTile(
-          icon: Icons.devices_rounded,
-          label: '设备数量',
-          value: _formatDeviceLimit(subscription),
-          accent: BrandDesktopColors.cyan,
+        const Gap(8),
+        Expanded(
+          child: _CompactMetricTile(
+            icon: Icons.devices_rounded,
+            label: '设备数量',
+            value: _formatDeviceLimit(subscription),
+            accent: BrandDesktopColors.cyan,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _CompactMetricTile extends StatelessWidget {
+  const _CompactMetricTile({required this.icon, required this.label, required this.value, required this.accent});
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return DesktopCard(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DesktopIconBox(icon: icon, color: accent, size: 30),
+          const Gap(7),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: BrandDesktopColors.textMuted),
+          ),
+          const Gap(3),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: BrandDesktopColors.textPrimary,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -381,43 +467,46 @@ class _MemberActions extends ConsumerWidget {
     final isLoading = ref.watch(authNotifierProvider).isLoading;
     return DesktopCard(
       padding: EdgeInsets.zero,
-      child: ListView(
-        padding: const EdgeInsets.all(14),
-        children: [
-          _ActionRow(
-            icon: Icons.support_agent_rounded,
-            title: '联系客服',
-            subtitle: '获取套餐与线路支持',
-            onTap: () => _openCustomerService(context, ref, subscription?.customerService),
-          ),
-          _ActionRow(
-            icon: Icons.privacy_tip_outlined,
-            title: '隐私政策',
-            subtitle: '本地显示',
-            onTap: () => context.pushNamed('privacyPolicy'),
-          ),
-          _ActionRow(
-            icon: Icons.article_outlined,
-            title: '用户协议',
-            subtitle: '本地显示',
-            onTap: () => context.pushNamed('termsOfService'),
-          ),
-          _ActionRow(
-            icon: Icons.info_outline_rounded,
-            title: 'App 版本',
-            subtitle: version == null || version!.isBlank ? '--' : version!,
-            onTap: onVersionTap,
-            showChevron: false,
-          ),
-          _ActionRow(
-            icon: Icons.logout_rounded,
-            title: '退出登录',
-            subtitle: '清除本机登录状态',
-            danger: true,
-            showChevron: false,
-            onTap: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ActionRow(
+              icon: Icons.support_agent_rounded,
+              title: '联系客服',
+              subtitle: '获取套餐与线路支持',
+              onTap: () => _openCustomerService(context, ref, subscription?.customerService),
+            ),
+            _ActionRow(
+              icon: Icons.privacy_tip_outlined,
+              title: '隐私政策',
+              subtitle: '本地显示',
+              onTap: () => context.pushNamed('privacyPolicy'),
+            ),
+            _ActionRow(
+              icon: Icons.article_outlined,
+              title: '用户协议',
+              subtitle: '本地显示',
+              onTap: () => context.pushNamed('termsOfService'),
+            ),
+            _ActionRow(
+              icon: Icons.info_outline_rounded,
+              title: 'App 版本',
+              subtitle: version == null || version!.isBlank ? '--' : version!,
+              onTap: onVersionTap,
+              showChevron: false,
+            ),
+            _ActionRow(
+              icon: Icons.logout_rounded,
+              title: '退出登录',
+              subtitle: '清除本机登录状态',
+              danger: true,
+              showChevron: false,
+              onTap: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
+            ),
+          ],
+        ),
       ),
     );
   }

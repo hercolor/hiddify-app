@@ -66,8 +66,9 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
     );
     if (Platform.isWindows) {
       await windowManager.setAspectRatio(BrandDesktopWindow.aspectRatio);
-      await windowManager.setResizable(true);
-      await windowManager.setMaximizable(true);
+      await windowManager.setResizable(false);
+      await windowManager.setMaximizable(false);
+      await windowManager.setSize(BrandDesktopWindow.defaultSize);
     }
     if (isWindowVisible) {
       await windowManager.setPosition(position);
@@ -75,7 +76,7 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
     } else {
       loggy.debug("no previous position found, centering window");
     }
-    if (isMaximized) {
+    if (isMaximized && !Platform.isWindows) {
       await windowManager.maximize();
       loggy.debug("restoring window to maximized state");
     }
@@ -108,6 +109,7 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
   }
 
   Size _sanitizeWindowSize(Size? raw) {
+    if (Platform.isWindows) return defaultWindowSize;
     if (raw == null || raw.width <= 0 || raw.height <= 0) return defaultWindowSize;
     final width = raw.width.clamp(minimumWindowSize.width, BrandDesktopWindow.maximumSize.width);
     final height = raw.height.clamp(minimumWindowSize.height, BrandDesktopWindow.maximumSize.height);

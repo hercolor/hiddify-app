@@ -65,24 +65,24 @@ abstract final class BrandShadows {
 }
 
 abstract final class BrandDesktopColors {
-  static const background = Color(0xFF070B14);
-  static const panel = Color(0xFF0C1220);
-  static const panelAlt = Color(0xFF0F172A);
-  static const card = Color(0xCC111A2C);
-  static const cardSolid = Color(0xFF111A2C);
-  static const cardElevated = Color(0xFF162238);
-  static const input = Color(0xFF0D1525);
-  static const border = Color(0x2E94A3B8);
-  static const borderStrong = Color(0x527AA2FF);
-  static const textPrimary = Color(0xFFF8FAFC);
-  static const textSecondary = Color(0xFF94A3B8);
-  static const textMuted = Color(0xFF64748B);
-  static const accent = Color(0xFF4F8CFF);
-  static const cyan = Color(0xFF22D3EE);
-  static const indigo = Color(0xFF5B5CFF);
-  static const success = Color(0xFF22C55E);
+  static const background = BrandColors.porcelain;
+  static const panel = BrandColors.card;
+  static const panelAlt = BrandColors.mist;
+  static const card = Color(0xF7FFFFFF);
+  static const cardSolid = BrandColors.card;
+  static const cardElevated = BrandColors.cardBlue;
+  static const input = BrandColors.card;
+  static const border = BrandColors.border;
+  static const borderStrong = Color(0x667AA2FF);
+  static const textPrimary = BrandColors.slate;
+  static const textSecondary = BrandColors.muted;
+  static const textMuted = BrandColors.subtle;
+  static const accent = BrandColors.signalBlue;
+  static const cyan = BrandColors.iceCyan;
+  static const indigo = BrandColors.deepSignal;
+  static const success = BrandColors.success;
   static const warning = Color(0xFFF59E0B);
-  static const error = Color(0xFFEF4444);
+  static const error = BrandColors.error;
 }
 
 abstract final class BrandDesktopRadii {
@@ -92,17 +92,17 @@ abstract final class BrandDesktopRadii {
 }
 
 abstract final class BrandDesktopWindow {
-  static const defaultSize = Size(430, 760);
-  static const minimumSize = Size(390, 690);
-  static const maximumSize = Size(560, 980);
-  static const aspectRatio = 4 / 7;
-  static const contentMaxWidth = 520.0;
-  static const bottomNavHeight = 82.0;
+  static const defaultSize = Size(390, 910);
+  static const minimumSize = defaultSize;
+  static const maximumSize = defaultSize;
+  static const aspectRatio = 3 / 7;
+  static const contentMaxWidth = 390.0;
+  static const bottomNavHeight = 78.0;
 }
 
 abstract final class BrandDesktopGradients {
   static const background = LinearGradient(
-    colors: [BrandDesktopColors.background, Color(0xFF0A1020), Color(0xFF060914)],
+    colors: [BrandColors.porcelain, BrandColors.mist, Color(0xFFEFF7FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -120,7 +120,7 @@ abstract final class BrandDesktopGradients {
   );
 
   static const card = LinearGradient(
-    colors: [Color(0xE6172338), Color(0xB50D1525)],
+    colors: [Color(0xFFFFFFFF), Color(0xFFF5F8FC)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -128,8 +128,8 @@ abstract final class BrandDesktopGradients {
 
 abstract final class BrandDesktopShadows {
   static List<BoxShadow> card = [
-    BoxShadow(color: Colors.black.withValues(alpha: .28), blurRadius: 30, offset: const Offset(0, 18)),
-    BoxShadow(color: BrandDesktopColors.accent.withValues(alpha: .035), blurRadius: 42, offset: const Offset(0, 10)),
+    BoxShadow(color: BrandDesktopColors.accent.withValues(alpha: .08), blurRadius: 28, offset: const Offset(0, 12)),
+    BoxShadow(color: Colors.white.withValues(alpha: .9), blurRadius: 1, offset: const Offset(0, 1)),
   ];
 
   static List<BoxShadow> glow(Color color, {double alpha = .22}) => [
