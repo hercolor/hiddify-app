@@ -1,7 +1,5 @@
-import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
@@ -31,31 +29,39 @@ class HomePage extends HookConsumerWidget {
       loading: () => '读取线路中',
     );
     final delay = _resolveDelay(selectedNode);
+    final connected = clientState.phase == ClientConnectionPhase.connected;
 
     return Scaffold(
       extendBody: true,
       appBar: AppBar(
-        toolbarHeight: 76,
-        title: const BrandMark(size: 34),
-        actions: const [Padding(padding: EdgeInsetsDirectional.only(end: 20), child: AppVersionLabel())],
+        toolbarHeight: 72,
+        title: Text(
+          '4376',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -.6),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 20),
+            child: Icon(Icons.security_rounded, color: connected ? BrandColors.signalBlue : BrandColors.subtle),
+          ),
+        ],
       ),
       body: BrandScaffoldBackground(
         child: SafeArea(
           top: false,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(BrandSpacing.page, 8, BrandSpacing.page, 104),
-                children: [
-                  _StatusHero(state: clientState),
-                  const Gap(24),
-                  const Center(child: ConnectionButton()),
-                  const Gap(28),
-                  _NodeCard(nodeName: nodeName, delay: delay),
-                  const Gap(14),
-                  _TodayTrafficCard(connected: clientState.phase == ClientConnectionPhase.connected),
-                ],
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 96),
+                child: Column(
+                  children: [
+                    Expanded(child: _ConnectionFocus(state: clientState)),
+                    _NodeCard(nodeName: nodeName, delay: delay),
+                    const Gap(12),
+                    _TodayTrafficCard(connected: clientState.phase == ClientConnectionPhase.connected),
+                  ],
+                ),
               ),
             ),
           ),
@@ -67,8 +73,8 @@ class HomePage extends HookConsumerWidget {
 
 int? _resolveDelay(ClientNode? selectedNode) => selectedNode?.delay;
 
-class _StatusHero extends StatelessWidget {
-  const _StatusHero({required this.state});
+class _ConnectionFocus extends StatelessWidget {
+  const _ConnectionFocus({required this.state});
 
   final ClientConnectionState state;
 
@@ -78,7 +84,7 @@ class _StatusHero extends StatelessWidget {
     final busy = state.isBusy;
     final theme = Theme.of(context);
     final label = switch (state.phase) {
-      ClientConnectionPhase.connected => '已连接',
+      ClientConnectionPhase.connected => '已受保护',
       ClientConnectionPhase.initializing => '初始化中',
       ClientConnectionPhase.loggedOut => '未登录',
       ClientConnectionPhase.failed => '连接异常',
@@ -90,41 +96,29 @@ class _StatusHero extends StatelessWidget {
       _ => '未连接',
     };
     final color = connected
-        ? BrandColors.success
+        ? BrandColors.signalBlue
         : busy
         ? BrandColors.signalBlue
         : state.phase == ClientConnectionPhase.failed
         ? BrandColors.error
         : BrandColors.muted;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: BrandColors.card.withValues(alpha: .86),
-        borderRadius: BorderRadius.circular(BrandRadii.xl),
-        border: Border.all(color: BrandColors.border),
-        boxShadow: BrandShadows.card,
-      ),
-      child: Row(
+    final helper = connected
+        ? '连接稳定，正在保护您的网络'
+        : busy
+        ? '正在建立安全连接'
+        : '点击按钮以保护您的隐私';
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          BrandIcon(size: 52, selected: connected || busy),
-          const Gap(14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('连接状态', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
-                const Gap(4),
-                Text(label, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-              ],
-            ),
-          ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
             decoration: BoxDecoration(
               color: color.withValues(alpha: .10),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: color.withValues(alpha: .20)),
+              border: Border.all(color: color.withValues(alpha: .18)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -134,16 +128,90 @@ class _StatusHero extends StatelessWidget {
                   height: 7,
                   decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                 ),
-                const Gap(6),
+                const Gap(7),
                 Text(
                   label,
-                  style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w800),
+                  style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w900),
                 ),
               ],
             ),
           ),
+          const Gap(14),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: connected ? BrandColors.signalBlue : BrandColors.muted,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const Gap(8),
+          Text(
+            helper,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.muted),
+          ),
+          const Gap(42),
+          const ConnectionButton(),
         ],
       ),
+    );
+  }
+}
+
+class _DemoNodeIcon extends StatelessWidget {
+  const _DemoNodeIcon({this.icon = Icons.hub_rounded});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: BrandColors.mist, borderRadius: BorderRadius.circular(12)),
+      child: Icon(icon, color: BrandColors.signalBlue, size: 22),
+    );
+  }
+}
+
+class _DemoDelayPill extends StatelessWidget {
+  const _DemoDelayPill({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(8)),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w900),
+      ),
+    );
+  }
+}
+
+class _DemoCard extends StatelessWidget {
+  const _DemoCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: BrandColors.card,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: .03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: BrandColors.signalBlue.withValues(alpha: .04), blurRadius: 24, offset: const Offset(0, 10)),
+        ],
+        border: Border.all(color: BrandColors.border.withValues(alpha: .72)),
+      ),
+      child: child,
     );
   }
 }
@@ -163,13 +231,32 @@ class _NodeCard extends StatelessWidget {
         ? '延迟不可用'
         : '$delay ms';
 
-    return _BrandInfoCard(
-      icon: Icons.hub_rounded,
-      title: '当前节点',
-      value: nodeName,
-      trailing: delayText,
-      trailingColor: delay != null && delay! > 0 && delay! < 800 ? BrandColors.success : BrandColors.muted,
-      footer: Text('仅显示节点名称，保护连接信息', style: theme.textTheme.bodySmall),
+    final delayColor = delay != null && delay! > 0 && delay! < 800 ? BrandColors.success : BrandColors.muted;
+    return _DemoCard(
+      child: Row(
+        children: [
+          const _DemoNodeIcon(),
+          const Gap(16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nodeName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const Gap(4),
+                Text('当前节点', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
+              ],
+            ),
+          ),
+          _DemoDelayPill(label: delayText, color: delayColor),
+          const Gap(8),
+          const Icon(Icons.chevron_right_rounded, color: BrandColors.subtle),
+        ],
+      ),
     );
   }
 }
@@ -184,135 +271,14 @@ class _TodayTrafficCard extends ConsumerWidget {
     final stats = connected ? ref.watch(statsNotifierProvider).valueOrNull : null;
     final usedBytes = connected ? ((stats?.uplinkTotal.toInt() ?? 0) + (stats?.downlinkTotal.toInt() ?? 0)) : 0;
     final used = usedBytes.sizeGB();
-    return _BrandInfoCard(
-      icon: Icons.data_usage_rounded,
-      title: '今日流量',
-      value: used,
-      trailing: '实时',
-      trailingColor: BrandColors.signalBlue,
-      footer: const _MiniWave(),
-    );
-  }
-}
-
-class _BrandInfoCard extends StatelessWidget {
-  const _BrandInfoCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.trailing,
-    required this.trailingColor,
-    required this.footer,
-  });
-
-  final IconData icon;
-  final String title;
-  final String value;
-  final String trailing;
-  final Color trailingColor;
-  final Widget footer;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: BrandColors.card,
-        borderRadius: BorderRadius.circular(BrandRadii.lg),
-        border: Border.all(color: BrandColors.border),
-        boxShadow: BrandShadows.card,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return _DemoCard(
+      child: Row(
         children: [
-          Row(
-            children: [
-              BrandIcon(size: 42, icon: icon),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
-                    const Gap(3),
-                    Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleMedium),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: trailingColor.withValues(alpha: .09),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(trailing, style: theme.textTheme.labelMedium?.copyWith(color: trailingColor)),
-              ),
-            ],
-          ),
-          const Gap(14),
-          footer,
+          const _DemoNodeIcon(icon: Icons.data_usage_rounded),
+          const Gap(16),
+          Expanded(child: Text('今日流量', style: Theme.of(context).textTheme.bodyMedium)),
+          Text(used, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
         ],
-      ),
-    );
-  }
-}
-
-class _MiniWave extends StatelessWidget {
-  const _MiniWave();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 28,
-      width: double.infinity,
-      child: CustomPaint(painter: _MiniWavePainter()),
-    );
-  }
-}
-
-class _MiniWavePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = BrandGradients.primary.createShader(Offset.zero & size)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    final path = Path()..moveTo(0, size.height * .64);
-    for (var i = 0; i <= 6; i++) {
-      final x = size.width * (i + 1) / 7;
-      final y = size.height * (.58 - (i.isEven ? .18 : -.10));
-      path.lineTo(x, y);
-    }
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class AppVersionLabel extends HookConsumerWidget {
-  const AppVersionLabel({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    final version = ref.watch(appInfoProvider).requireValue.presentVersion;
-    if (version.isBlank) return const SizedBox();
-
-    return Semantics(
-      label: '版本',
-      button: false,
-      child: Container(
-        decoration: BoxDecoration(color: BrandColors.mistBlue, borderRadius: BorderRadius.circular(999)),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        child: Text(
-          version,
-          textDirection: TextDirection.ltr,
-          style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.signalBlue, fontWeight: FontWeight.w800),
-        ),
       ),
     );
   }

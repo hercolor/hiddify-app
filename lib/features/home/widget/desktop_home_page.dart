@@ -121,7 +121,7 @@ class _DesktopPowerButton extends ConsumerWidget {
     final busy = state.isBusy;
     final failed = state.phase == ClientConnectionPhase.failed;
     final color = connected
-        ? BrandDesktopColors.success
+        ? BrandDesktopColors.accent
         : failed
         ? BrandDesktopColors.error
         : busy
@@ -152,16 +152,28 @@ class _DesktopPowerButton extends ConsumerWidget {
               height: 154,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: connected ? BrandDesktopGradients.connected : BrandDesktopGradients.primary,
-                boxShadow: BrandDesktopShadows.glow(color, alpha: state.canTap ? .24 : .10),
+                color: connected ? BrandDesktopColors.accent : BrandDesktopColors.cardSolid,
+                border: Border.all(color: connected ? Colors.transparent : BrandDesktopColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: connected
+                        ? BrandDesktopColors.accent.withValues(alpha: .30)
+                        : Colors.black.withValues(alpha: .05),
+                    blurRadius: connected ? 32 : 16,
+                    spreadRadius: connected ? 8 : 4,
+                    offset: const Offset(0, 8),
+                  ),
+                  if (busy) BoxShadow(color: color.withValues(alpha: .18), blurRadius: 40, spreadRadius: 8),
+                ],
               ),
               child: Center(
                 child: busy
-                    ? const SizedBox.square(
-                        dimension: 34,
-                        child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                      )
-                    : Icon(connected ? Icons.stop_rounded : Icons.bolt_rounded, color: Colors.white, size: 62),
+                    ? SizedBox.square(dimension: 34, child: CircularProgressIndicator(strokeWidth: 3, color: color))
+                    : Icon(
+                        connected ? Icons.check_rounded : Icons.power_settings_new_rounded,
+                        color: connected ? Colors.white : BrandDesktopColors.textMuted,
+                        size: 62,
+                      ),
               ),
             ),
           ),

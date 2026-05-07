@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/animated_text.dart';
-import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -67,7 +65,7 @@ class ConnectionButton extends HookConsumerWidget {
       label: clientState.buttonLabel,
       phase: clientState.phase,
       accentColor: connected
-          ? BrandColors.success
+          ? BrandColors.signalBlue
           : failed
           ? BrandColors.error
           : busy
@@ -115,55 +113,53 @@ class _ConnectionButton extends StatelessWidget {
           button: true,
           enabled: enabled,
           label: label,
-          child:
-              Container(
-                    width: 188,
-                    height: 188,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          accentColor.withValues(alpha: connected ? .24 : .16),
-                          accentColor.withValues(alpha: .07),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Container(
-                        clipBehavior: Clip.antiAlias,
-                        width: 148,
-                        height: 148,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: connected ? BrandGradients.connected : BrandGradients.primary,
-                          boxShadow: BrandShadows.glow(accentColor, alpha: enabled ? .22 : .08),
-                        ),
-                        child: Material(
-                          key: const ValueKey("home_connection_button"),
-                          shape: const CircleBorder(),
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: enabled ? onTap : null,
-                            child: Center(
-                              child: busy
-                                  ? const SizedBox.square(
-                                      dimension: 36,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                                    )
-                                  : const BrandMark(size: 62, showWordmark: false, dark: true),
-                            ),
+          child: AnimatedScale(
+            scale: animated ? 1.03 : 1,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: connected ? BrandColors.signalBlue : BrandColors.card,
+                border: Border.all(color: connected ? Colors.transparent : BrandColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: connected
+                        ? BrandColors.signalBlue.withValues(alpha: .30)
+                        : Colors.black.withValues(alpha: .05),
+                    blurRadius: connected ? 32 : 16,
+                    spreadRadius: connected ? 8 : 4,
+                    offset: const Offset(0, 8),
+                  ),
+                  if (busy) BoxShadow(color: accentColor.withValues(alpha: .18), blurRadius: 44, spreadRadius: 10),
+                ],
+              ),
+              child: Material(
+                key: const ValueKey("home_connection_button"),
+                shape: const CircleBorder(),
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: enabled ? onTap : null,
+                  customBorder: const CircleBorder(),
+                  child: Center(
+                    child: busy
+                        ? SizedBox.square(
+                            dimension: 36,
+                            child: CircularProgressIndicator(color: accentColor, strokeWidth: 3),
+                          )
+                        : Icon(
+                            connected ? Icons.check_rounded : Icons.power_settings_new_rounded,
+                            size: 64,
+                            color: connected ? Colors.white : BrandColors.subtle,
                           ),
-                        ),
-                      ),
-                    ),
-                  )
-                  .animate(target: animated ? 1 : 0)
-                  .scaleXY(end: 1.035, duration: const Duration(milliseconds: 900), curve: Curves.easeInOut)
-                  .then()
-                  .scaleXY(end: .966, duration: const Duration(milliseconds: 900), curve: Curves.easeInOut)
-                  .animate(target: enabled ? 0 : 1)
-                  .scaleXY(end: .92, curve: Curves.easeIn),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
         const Gap(18),
         ExcludeSemantics(

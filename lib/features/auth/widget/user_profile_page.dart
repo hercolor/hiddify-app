@@ -187,7 +187,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                   children: [
                     Text('欢迎使用 4376', style: theme.textTheme.headlineSmall),
                     const Gap(8),
-                    Text('稳定、安全、快速的网络加速体验', style: theme.textTheme.bodyMedium),
+                    Text('登录后将自动同步节点', style: theme.textTheme.bodyMedium),
                     if (widget.errorText != null) ...[
                       const Gap(14),
                       Text(widget.errorText!, style: theme.textTheme.bodyMedium?.copyWith(color: BrandColors.error)),
@@ -246,7 +246,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             ),
           ),
           const Gap(24),
-          Center(child: Text('登录后将自动准备可用线路', style: theme.textTheme.bodySmall)),
+          Center(child: Text('登录后将自动同步节点', style: theme.textTheme.bodySmall)),
         ],
       ),
     );
@@ -312,25 +312,22 @@ class _HeroMemberCard extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [BrandColors.signalBlue, BrandColors.iceCyan],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(BrandRadii.xl),
-        boxShadow: BrandShadows.glow(BrandColors.signalBlue, alpha: .18),
+        color: BrandColors.card,
+        borderRadius: BorderRadius.circular(BrandRadii.lg),
+        border: Border.all(color: BrandColors.border),
+        boxShadow: BrandShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const BrandMark(size: 36, dark: true),
-              const Spacer(),
+              Expanded(
+                child: _MemberField(label: '账号', value: _maskAccount(session.email)),
+              ),
               _SmallLightButton(
                 label: '续费',
                 onTap: () => _openCustomerService(context, ref, subscription?.customerService),
@@ -342,25 +339,49 @@ class _HeroMemberCard extends HookConsumerWidget {
               ),
             ],
           ),
-          const Gap(24),
-          Text('当前套餐', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: .82))),
-          const Gap(4),
-          Text(
-            _displayText(subscription?.planName),
-            style: theme.textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900),
-          ),
-          const Gap(14),
-          Text(session.email, style: theme.textTheme.bodySmall?.copyWith(color: Colors.white.withValues(alpha: .82))),
           const Gap(18),
-          _LightInfoRow(
-            icon: Icons.event_available_rounded,
-            label: '到期时间',
-            value: _formatExpiredAt(subscription?.expiredAt),
+          Row(
+            children: [
+              Expanded(
+                child: _MemberField(label: '当前套餐', value: _displayText(subscription?.planName), prominent: true),
+              ),
+              const Gap(14),
+              Expanded(
+                child: _MemberField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt)),
+              ),
+            ],
           ),
-          const Gap(10),
-          _LightInfoRow(icon: Icons.devices_rounded, label: '设备数量', value: _formatDeviceLimit(subscription)),
         ],
       ),
+    );
+  }
+}
+
+class _MemberField extends StatelessWidget {
+  const _MemberField({required this.label, required this.value, this.prominent = false});
+
+  final String label;
+  final String value;
+  final bool prominent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
+        const Gap(5),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: (prominent ? theme.textTheme.titleLarge : theme.textTheme.titleSmall)?.copyWith(
+            color: BrandColors.slate,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -379,39 +400,15 @@ class _SmallLightButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .18),
+          color: BrandColors.mistBlue,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: .24)),
+          border: Border.all(color: BrandColors.signalBlue.withValues(alpha: .18)),
         ),
         child: Text(
           label,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+          style: const TextStyle(color: BrandColors.signalBlue, fontWeight: FontWeight.w800, fontSize: 13),
         ),
       ),
-    );
-  }
-}
-
-class _LightInfoRow extends StatelessWidget {
-  const _LightInfoRow({required this.icon, required this.label, required this.value});
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white, size: 18),
-        const Gap(8),
-        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: .82))),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-        ),
-      ],
     );
   }
 }
@@ -429,6 +426,14 @@ String _displayText(String? value) {
   return trimmed;
 }
 
+String _maskAccount(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return '--';
+  final at = trimmed.indexOf('@');
+  if (at <= 1) return '${trimmed.substring(0, 1)}***';
+  return '${trimmed.substring(0, 1)}***${trimmed.substring(at)}';
+}
+
 class _TrafficCard extends StatelessWidget {
   const _TrafficCard({required this.subscription});
 
@@ -438,16 +443,73 @@ class _TrafficCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final used = subscription?.usedTraffic;
     final remaining = subscription?.remainingTraffic;
-    return _PremiumCard(
+    return Row(
       children: [
-        _InfoTile(icon: Icons.data_usage_rounded, title: '已用流量', value: used == null ? '--' : _formatTrafficGb(used)),
-        const Divider(),
-        _InfoTile(
-          icon: Icons.battery_5_bar_rounded,
-          title: '剩余流量',
-          value: remaining == null ? '--' : _formatTrafficGb(remaining),
+        Expanded(
+          child: _MetricMiniCard(
+            icon: Icons.data_usage_rounded,
+            title: '已用流量',
+            value: used == null ? '--' : _formatTrafficGb(used),
+            color: BrandColors.signalBlue,
+          ),
+        ),
+        const Gap(8),
+        Expanded(
+          child: _MetricMiniCard(
+            icon: Icons.battery_5_bar_rounded,
+            title: '剩余流量',
+            value: remaining == null ? '--' : _formatTrafficGb(remaining),
+            color: BrandColors.success,
+          ),
+        ),
+        const Gap(8),
+        Expanded(
+          child: _MetricMiniCard(
+            icon: Icons.devices_rounded,
+            title: '设备数量',
+            value: _formatDeviceLimit(subscription),
+            color: BrandColors.iceCyan,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _MetricMiniCard extends StatelessWidget {
+  const _MetricMiniCard({required this.icon, required this.title, required this.value, required this.color});
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+      decoration: BoxDecoration(
+        color: BrandColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: BrandColors.border),
+        boxShadow: BrandShadows.card,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BrandIcon(size: 34, icon: icon),
+          const Gap(8),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
+          const Gap(4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelLarge?.copyWith(color: color, fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -529,30 +591,6 @@ class _PremiumCard extends StatelessWidget {
         boxShadow: BrandShadows.card,
       ),
       child: Column(children: children),
-    );
-  }
-}
-
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({required this.icon, required this.title, required this.value});
-
-  final IconData icon;
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          BrandIcon(size: 42, icon: icon),
-          const Gap(12),
-          Expanded(child: Text(title, style: theme.textTheme.bodyMedium)),
-          Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
-        ],
-      ),
     );
   }
 }
