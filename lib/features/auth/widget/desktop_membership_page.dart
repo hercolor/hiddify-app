@@ -12,6 +12,7 @@ import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
+import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -620,26 +621,11 @@ String _maskUser(String value) {
 
 Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
   final notification = ref.read(inAppNotificationControllerProvider);
-  final uri = _customerServiceUri(customerService);
+  final uri = customerServiceUri(customerService);
   if (uri == null) {
     notification.showInfoToast('客服暂未配置');
     return;
   }
   final launched = await UriUtils.tryLaunch(uri);
   if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
-}
-
-Uri? _customerServiceUri(String? customerService) {
-  final trimmed = customerService?.trim();
-  if (trimmed == null || trimmed.isEmpty) return null;
-  if (_looksLikeEmail(trimmed)) return Uri(scheme: 'mailto', path: trimmed);
-  final uri = Uri.tryParse(trimmed);
-  if (uri == null || uri.scheme.isEmpty) return null;
-  return uri;
-}
-
-bool _looksLikeEmail(String value) {
-  if (value.contains('://') || value.contains(' ')) return false;
-  final parts = value.split('@');
-  return parts.length == 2 && parts[0].isNotEmpty && parts[1].contains('.');
 }
