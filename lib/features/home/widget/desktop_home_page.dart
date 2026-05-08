@@ -31,57 +31,95 @@ class DesktopHomePage extends HookConsumerWidget {
       loading: () => '读取线路中',
     );
 
-    return DesktopPageScaffold(
-      title: '4376 VPN',
-      actions: const [_TopRoundIcon(icon: Icons.workspace_premium_outlined)],
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _SpeedCard(
-                  label: '下载速率',
-                  value: stats.downlink.toInt().speed(),
-                  icon: Icons.arrow_downward_rounded,
-                ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _TopRoundIcon(icon: Icons.settings_outlined, onTap: () => context.pushNamed('settings')),
+                  const Text(
+                    '4376 VPN',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  _TopRoundIcon(icon: Icons.workspace_premium_outlined, onTap: () => context.goNamed('settings')),
+                ],
               ),
-              const Gap(16),
-              Expanded(
-                child: _SpeedCard(label: '上传速率', value: stats.uplink.toInt().speed(), icon: Icons.arrow_upward_rounded),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SpeedCard(
+                          label: '下载速率',
+                          value: stats.downlink.toInt().speed(),
+                          icon: Icons.arrow_downward_rounded,
+                        ),
+                      ),
+                      const Gap(16),
+                      Expanded(
+                        child: _SpeedCard(
+                          label: '上传速率',
+                          value: stats.uplink.toInt().speed(),
+                          icon: Icons.arrow_upward_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Gap(48),
+                  _ConnectionHero(state: state),
+                  const Gap(64),
+                  _HomeNodeCard(node: selectedNode, nodeName: nodeName),
+                  const Gap(24),
+                  const _RouteModeSegmentedControl(),
+                  const Gap(48),
+                ],
               ),
-            ],
-          ),
-          const Gap(24),
-          Expanded(child: _ConnectionHero(state: state)),
-          const Gap(24),
-          _HomeNodeCard(node: selectedNode, nodeName: nodeName),
-          const Gap(16),
-          const _RouteModeSegmentedControl(),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _TopRoundIcon extends StatelessWidget {
-  const _TopRoundIcon({required this.icon});
+  const _TopRoundIcon({required this.icon, this.onTap});
 
   final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF0F172A), size: 22),
       ),
-      child: Icon(icon, color: const Color(0xFF0F172A), size: 22),
     );
   }
 }
@@ -188,9 +226,9 @@ class _ConnectionHero extends StatelessWidget {
               ),
             ),
           ),
-          const Spacer(),
+          const Gap(48),
           _DesktopPowerButton(state: state),
-          const Spacer(),
+          const Gap(48),
           Text(
             connected ? '点击停止加速' : state.buttonLabel,
             style: TextStyle(

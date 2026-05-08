@@ -187,48 +187,69 @@ class _DesktopNodeTile extends StatelessWidget {
         ? '超时'
         : '$delay ms';
     final delayColor = _delayColor(delay);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: selected ? BrandDesktopColors.accent.withOpacity(.10) : BrandDesktopColors.cardSolid,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? BrandDesktopColors.accent.withOpacity(.38) : BrandDesktopColors.border,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF2563EB).withOpacity(.05) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: selected ? const Color(0xFF2563EB).withOpacity(.1) : const Color(0xFF0F172A).withOpacity(.03),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
             ),
-            boxShadow: BrandDesktopShadows.card,
-          ),
-          child: Row(
-            children: [
-              _NodeFlag(name: name, selected: selected),
-              const Gap(14),
-              Expanded(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w800),
-                ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _NodeFlag(name: name, selected: selected),
+            const Gap(16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: selected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const Gap(4),
+                  Text(
+                    '智能路由推荐',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? const Color(0xFF2563EB).withOpacity(.8) : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
               ),
-              const Gap(12),
-              Text(
+            ),
+            const Gap(12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: delayColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              child: Text(
                 delayText,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: delayColor, fontWeight: FontWeight.w900),
+                style: TextStyle(color: delayColor, fontWeight: FontWeight.bold, fontSize: 12),
               ),
-              const Gap(12),
-              Icon(
-                selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
-              ),
-            ],
-          ),
+            ),
+            const Gap(12),
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+              color: selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+            ),
+          ],
         ),
       ),
     );
@@ -244,20 +265,20 @@ class _NodeFlag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
+      width: 52,
+      height: 52,
       decoration: BoxDecoration(
-        color: selected ? BrandDesktopColors.accent.withOpacity(.10) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: selected ? BrandDesktopColors.accent.withOpacity(.24) : const Color(0xFFE2E8F0)),
+        color: selected ? const Color(0xFF2563EB).withOpacity(0.1) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: selected ? const Color(0xFF2563EB).withOpacity(0.3) : const Color(0xFFE2E8F0)),
       ),
       child: Center(
         child: Text(
           _nodeFlagFor(name),
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: selected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
           ),
         ),
       ),
