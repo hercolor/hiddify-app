@@ -246,7 +246,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                     child: _GradientButton(onPressed: isLoading ? null : _submit, label: '登 录', isLoading: isLoading),
                   ),
                   const SizedBox(height: 44),
-                  Text('登录后将自动准备线路', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.signalBlue)),
+                  Text('登录后将自动同步节点', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.signalBlue)),
                   const Gap(32),
                 ],
               ),

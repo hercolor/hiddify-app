@@ -172,7 +172,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                     ),
                     const Gap(42),
                     Text(
-                      '登录后将自动准备线路',
+                      '登录后将自动同步节点',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.accent),
                     ),
                   ],
