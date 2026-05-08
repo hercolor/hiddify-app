@@ -19,7 +19,6 @@ class DesktopShell extends HookConsumerWidget {
         color: BrandDesktopColors.background,
         child: Stack(
           children: [
-            const Positioned(left: 0, top: 0, right: 58, height: 16, child: DragToMoveArea(child: SizedBox.expand())),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: BrandDesktopWindow.contentMaxWidth),
@@ -36,6 +35,7 @@ class DesktopShell extends HookConsumerWidget {
                 ),
               ),
             ),
+            const Positioned(left: 0, top: 0, right: 58, height: 44, child: DragToMoveArea(child: SizedBox.expand())),
             const Positioned(top: 10, right: 10, child: _DesktopCloseButton()),
           ],
         ),
