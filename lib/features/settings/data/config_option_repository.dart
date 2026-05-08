@@ -171,6 +171,7 @@ abstract class ConfigOptions {
   );
 
   static final bypassLan = PreferencesNotifier.create<bool, bool>("bypass-lan", false);
+  static final globalRouteMode = PreferencesNotifier.create<bool, bool>("client-global-route-mode", false);
 
   static final allowConnectionFromLan = PreferencesNotifier.create<bool, bool>("allow-connection-from-lan", false);
 
@@ -366,6 +367,7 @@ abstract class ConfigOptions {
   };
 
   static final singboxConfigOptions = Provider<SingboxConfigOption>((ref) {
+    final useGlobalRouteMode = ref.watch(globalRouteMode);
     // final region = ref.watch(Preferences.region);
     const rules = <SingboxRule>[];
     // final rules = switch (region) {
@@ -436,7 +438,7 @@ abstract class ConfigOptions {
       enableTun: true,
       // enableTunService: mode == false, //ServiceMode.tunService,
       setSystemProxy: false,
-      bypassLan: false,
+      bypassLan: !useGlobalRouteMode,
       allowConnectionFromLan: false,
       enableFakeDns: false,
       // enableDnsRouting: ref.watch(enableDnsRouting),
@@ -543,7 +545,7 @@ class ConfigOptionRepository with ExceptionHandler, InfraLogger {
       clashApiPort: LockedCoreConfig.clashApiPort,
       enableTun: true,
       setSystemProxy: false,
-      bypassLan: false,
+      bypassLan: options.bypassLan,
       allowConnectionFromLan: false,
       enableFakeDns: false,
       independentDnsCache: true,

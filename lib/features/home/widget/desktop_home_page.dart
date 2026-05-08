@@ -8,6 +8,7 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
+import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/number_formatters.dart';
@@ -55,6 +56,8 @@ class DesktopHomePage extends HookConsumerWidget {
           Expanded(child: _ConnectionHero(state: state)),
           const Gap(16),
           _HomeNodeCard(node: selectedNode, nodeName: nodeName),
+          const Gap(14),
+          const _RouteModeSegmentedControl(),
         ],
       ),
     );
@@ -379,6 +382,110 @@ class _DesktopNodeFlag extends StatelessWidget {
         child: Text(
           _nodeFlagFor(nodeName),
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: BrandDesktopColors.textPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+class _RouteModeSegmentedControl extends ConsumerWidget {
+  const _RouteModeSegmentedControl();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isGlobalMode = ref.watch(ConfigOptions.globalRouteMode);
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _RouteModeChoice(
+              selected: !isGlobalMode,
+              icon: Icons.alt_route_rounded,
+              title: '自动',
+              subtitle: '智能路由',
+              onTap: () => ref.read(ConfigOptions.globalRouteMode.notifier).update(false),
+            ),
+          ),
+          Expanded(
+            child: _RouteModeChoice(
+              selected: isGlobalMode,
+              icon: Icons.public_rounded,
+              title: '全局',
+              subtitle: '全部流量',
+              onTap: () => ref.read(ConfigOptions.globalRouteMode.notifier).update(true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteModeChoice extends StatelessWidget {
+  const _RouteModeChoice({
+    required this.selected,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? BrandDesktopColors.accent : BrandDesktopColors.textSecondary;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: selected ? BrandDesktopColors.accent.withOpacity(.20) : Colors.transparent),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withOpacity(.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const Gap(8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w900),
+              ),
+              const Gap(2),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: selected ? BrandDesktopColors.accent.withOpacity(.80) : BrandDesktopColors.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -13,6 +13,7 @@ import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
+import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -244,6 +245,10 @@ class _DesktopMemberCenter extends HookConsumerWidget {
               children: [
                 plan,
                 const Gap(22),
+                const _DesktopSectionLabel('路由设置'),
+                const Gap(8),
+                const _RouteModeSwitchCard(),
+                const Gap(22),
                 const _DesktopSectionLabel('其他功能'),
                 const Gap(8),
                 actions,
@@ -257,6 +262,10 @@ class _DesktopMemberCenter extends HookConsumerWidget {
             children: [
               plan,
               const Gap(22),
+              const _DesktopSectionLabel('路由设置'),
+              const Gap(8),
+              const _RouteModeSwitchCard(),
+              const Gap(22),
               const _DesktopSectionLabel('其他功能'),
               const Gap(8),
               actions,
@@ -265,6 +274,46 @@ class _DesktopMemberCenter extends HookConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _RouteModeSwitchCard extends ConsumerWidget {
+  const _RouteModeSwitchCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isGlobalMode = ref.watch(ConfigOptions.globalRouteMode);
+    return DesktopCard(
+      padding: EdgeInsets.zero,
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        title: Text(
+          '全局代理模式',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w800),
+        ),
+        subtitle: Text(
+          isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary),
+        ),
+        activeThumbColor: BrandDesktopColors.accent,
+        value: isGlobalMode,
+        onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isGlobalMode ? BrandDesktopColors.accent.withOpacity(.10) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.public_rounded,
+            color: isGlobalMode ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
+            size: 20,
+          ),
+        ),
       ),
     );
   }
