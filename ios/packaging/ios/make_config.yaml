@@ -1,18 +1,13 @@
-display_name: Hiddify
+display_name: 4376
 
 icon: ..\..\assets\images\windows.ico
 
 keywords:
-  - Hiddify
+  - 4376
   - Proxy
   - VPN
-  - V2ray
-  - Nekoray
-  - Xray
-  - Psiphon
-  - OpenVPN
 
-generic_name: Hiddify
+generic_name: 4376
 
 actions:
   - name: Start
