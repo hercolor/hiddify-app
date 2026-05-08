@@ -28,13 +28,24 @@ class DesktopNodesPage extends HookConsumerWidget {
     _useAutoLatencyRefresh(ref, proxies.valueOrNull?.tag);
     return DesktopPageScaffold(
       title: '选择节点',
+      subtitle: '只显示线路名称与延迟',
       child: Column(
         children: [
-          TextField(
-            onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
-            decoration: const InputDecoration(hintText: '搜索国家或地区...', prefixIcon: Icon(Icons.search_rounded)),
+          DesktopCard(
+            padding: EdgeInsets.zero,
+            borderColor: const Color(0xFFE2E8F0),
+            child: TextField(
+              onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
+              decoration: const InputDecoration(
+                hintText: '搜索国家或地区...',
+                prefixIcon: Icon(Icons.search_rounded),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
           ),
-          const Gap(14),
+          const Gap(16),
           Expanded(
             child: proxies.when(
               data: (group) =>
@@ -194,7 +205,7 @@ class _DesktopNodeTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              DesktopIconBox(icon: Icons.language_rounded, selected: selected, size: 40),
+              _NodeFlag(name: name, selected: selected),
               const Gap(14),
               Expanded(
                 child: Text(
@@ -207,13 +218,46 @@ class _DesktopNodeTile extends StatelessWidget {
                 ),
               ),
               const Gap(12),
-              DesktopStatusPill(label: delayText, color: delayColor, icon: Icons.speed_rounded),
+              Text(
+                delayText,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: delayColor, fontWeight: FontWeight.w900),
+              ),
               const Gap(12),
               Icon(
                 selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                 color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NodeFlag extends StatelessWidget {
+  const _NodeFlag({required this.name, required this.selected});
+
+  final String name;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: selected ? BrandDesktopColors.accent.withOpacity(.10) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: selected ? BrandDesktopColors.accent.withOpacity(.24) : const Color(0xFFE2E8F0)),
+      ),
+      child: Center(
+        child: Text(
+          _nodeFlagFor(name),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
           ),
         ),
       ),
@@ -285,4 +329,17 @@ Color _delayColor(int? delay) {
   if (delay < 800) return BrandDesktopColors.success;
   if (delay < 1500) return BrandDesktopColors.warning;
   return BrandDesktopColors.error;
+}
+
+String _nodeFlagFor(String name) {
+  if (name.contains('香港')) return 'HK';
+  if (name.contains('台湾') || name.contains('台灣')) return 'TW';
+  if (name.contains('日本') || name.contains('东京') || name.contains('東京')) return 'JP';
+  if (name.contains('新加坡')) return 'SG';
+  if (name.contains('美国') || name.contains('美國') || name.contains('洛杉矶') || name.contains('洛杉磯')) return 'US';
+  if (name.contains('英国') || name.contains('英國') || name.contains('伦敦') || name.contains('倫敦')) return 'UK';
+  if (name.contains('韩国') || name.contains('韓國') || name.contains('首尔') || name.contains('首爾')) return 'KR';
+  if (name.contains('德国') || name.contains('德國')) return 'DE';
+  if (name.contains('法国') || name.contains('法國')) return 'FR';
+  return 'GL';
 }
