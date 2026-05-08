@@ -92,18 +92,19 @@ class MyAdaptiveLayout extends HookConsumerWidget {
         bottomNavigationBar: isMobileBreakpoint
             ? FocusScope(
                 node: navScopeNode,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: BrandColors.card.withValues(alpha: .96),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                    border: const Border(top: BorderSide(color: BrandColors.border)),
-                    boxShadow: BrandShadows.card,
-                  ),
-                  child: NavigationBar(
-                    selectedIndex: selectedIndex,
-                    destinations: _navDests(actions),
-                    onDestinationSelected: (index) => _onTap(context, index),
-                  ),
+                child: BottomNavigationBar(
+                  currentIndex: selectedIndex,
+                  onTap: (index) => _onTap(context, index),
+                  backgroundColor: BrandColors.card,
+                  elevation: 10,
+                  type: BottomNavigationBarType.fixed,
+                  selectedItemColor: BrandColors.signalBlue,
+                  unselectedItemColor: BrandColors.subtle,
+                  showSelectedLabels: true,
+                  showUnselectedLabels: true,
+                  selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                  items: _bottomNavItems(actions),
                 ),
               )
             : null,
@@ -117,14 +118,14 @@ class MyAdaptiveLayout extends HookConsumerWidget {
   }
 
   List<ShellRouteAction> _actions(Translations t, bool showProfilesAction, bool isMobileBreakpoint) => [
-    ShellRouteAction(Icons.home_rounded, '首页'),
+    ShellRouteAction(Icons.shield_rounded, '连接'),
     if (showProfilesAction && !isMobileBreakpoint) ShellRouteAction(Icons.view_list_rounded, t.pages.profiles.title),
-    ShellRouteAction(Icons.hub_rounded, '节点'),
-    ShellRouteAction(Icons.workspace_premium_rounded, '会员'),
+    ShellRouteAction(Icons.language_rounded, '节点'),
+    ShellRouteAction(Icons.person_rounded, '我的'),
   ];
 
-  List<NavigationDestination> _navDests(List<ShellRouteAction> actions) =>
-      actions.map((e) => NavigationDestination(icon: Icon(e.icon), label: e.title)).toList();
   List<NavigationRailDestination> _navRailDests(List<ShellRouteAction> actions) =>
       actions.map((e) => NavigationRailDestination(icon: Icon(e.icon), label: Text(e.title))).toList();
+  List<BottomNavigationBarItem> _bottomNavItems(List<ShellRouteAction> actions) =>
+      actions.map((e) => BottomNavigationBarItem(icon: Icon(e.icon), label: e.title)).toList();
 }

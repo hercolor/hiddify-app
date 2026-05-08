@@ -20,11 +20,19 @@ void main() {
     expect(connectionText, contains("context.goNamed('settings')"));
     expect(desktopHomeText, contains("context.goNamed('settings')"));
 
-    expect(adaptiveLayoutText, contains("'首页'"));
+    expect(adaptiveLayoutText, contains("'连接'"));
     expect(adaptiveLayoutText, contains("'节点'"));
-    expect(adaptiveLayoutText, contains("'会员'"));
-    expect(adaptiveLayoutText, isNot(contains("'设置'")), reason: 'visible navigation label must be Membership/会员');
-    expect(adaptiveLayoutText, isNot(contains("'Settings'")), reason: 'visible navigation label must be Membership/会员');
+    expect(adaptiveLayoutText, contains("'我的'"));
+    expect(
+      adaptiveLayoutText,
+      isNot(contains("'设置'")),
+      reason: 'visible navigation label must be demo-style account page',
+    );
+    expect(
+      adaptiveLayoutText,
+      isNot(contains("'Settings'")),
+      reason: 'visible navigation label must be demo-style account page',
+    );
 
     for (final forbidden in ['DNS', 'TUN', 'fake-ip', 'IPv6', '高级设置', 'Kill Switch']) {
       expect(settingsText, isNot(contains(forbidden)), reason: 'legacy settings wrapper must not expose $forbidden');

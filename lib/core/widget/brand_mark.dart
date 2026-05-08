@@ -84,44 +84,8 @@ class BrandScaffoldBackground extends StatelessWidget {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: DecoratedBox(
-        decoration: const BoxDecoration(gradient: BrandGradients.softBackground),
-        child: Stack(
-          children: [
-            if (showHalos) ...const [
-              Positioned(top: -96, right: -88, child: RepaintBoundary(child: _SignalHalo(size: 260, opacity: .32))),
-              Positioned(top: 148, left: -132, child: RepaintBoundary(child: _SignalHalo(size: 240, opacity: .20))),
-              Positioned(bottom: -112, right: -96, child: RepaintBoundary(child: _SignalHalo(size: 220, opacity: .16))),
-            ],
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SignalHalo extends StatelessWidget {
-  const _SignalHalo({required this.size, required this.opacity});
-
-  final double size;
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              BrandColors.iceCyan.withValues(alpha: opacity),
-              BrandColors.signalBlue.withValues(alpha: opacity * .18),
-              Colors.transparent,
-            ],
-          ),
-        ),
+        decoration: const BoxDecoration(color: BrandColors.mist),
+        child: child,
       ),
     );
   }

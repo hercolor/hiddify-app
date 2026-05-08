@@ -30,7 +30,7 @@ class DesktopNodesPage extends HookConsumerWidget {
         children: [
           TextField(
             onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
-            decoration: const InputDecoration(hintText: '搜索节点', prefixIcon: Icon(Icons.search_rounded)),
+            decoration: const InputDecoration(hintText: '搜索国家或地区...', prefixIcon: Icon(Icons.search_rounded)),
           ),
           const Gap(14),
           Expanded(
@@ -126,14 +126,11 @@ class _NodesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DesktopCard(
-      padding: EdgeInsets.zero,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(14),
-        itemCount: itemCount,
-        separatorBuilder: (_, _) => const Gap(10),
-        itemBuilder: itemBuilder,
-      ),
+    return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 16),
+      itemCount: itemCount,
+      separatorBuilder: (_, _) => const Gap(12),
+      itemBuilder: itemBuilder,
     );
   }
 }
@@ -163,17 +160,16 @@ class _DesktopNodeTile extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: selected
-                ? BrandDesktopColors.accent.withValues(alpha: .13)
-                : BrandDesktopColors.cardElevated.withValues(alpha: .54),
-            borderRadius: BorderRadius.circular(18),
+            color: selected ? BrandDesktopColors.accent.withValues(alpha: .10) : BrandDesktopColors.cardSolid,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected ? BrandDesktopColors.accent.withValues(alpha: .38) : BrandDesktopColors.border,
             ),
+            boxShadow: BrandDesktopShadows.card,
           ),
           child: Row(
             children: [
-              DesktopIconBox(icon: Icons.route_rounded, selected: selected, size: 40),
+              DesktopIconBox(icon: Icons.language_rounded, selected: selected, size: 40),
               const Gap(14),
               Expanded(
                 child: Text(

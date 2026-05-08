@@ -35,7 +35,7 @@ class ProxiesOverviewPage extends HookConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                 child: TextField(
                   onChanged: (value) => ref.read(_nodeSearchProvider.notifier).state = value,
-                  decoration: const InputDecoration(hintText: '搜索节点', prefixIcon: Icon(Icons.search_rounded)),
+                  decoration: const InputDecoration(hintText: '搜索国家或地区...', prefixIcon: Icon(Icons.search_rounded)),
                 ),
               ),
               Expanded(
@@ -61,12 +61,9 @@ class ProxiesOverviewPage extends HookConsumerWidget {
                       onRefresh: () => ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(group.tag),
                       child: ListView.builder(
                         padding: const EdgeInsets.only(bottom: 112),
-                        itemCount: items.length + 1,
+                        itemCount: items.length,
                         itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return const Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 8), child: _NodePageIntro());
-                          }
-                          final proxy = items[index - 1];
+                          final proxy = items[index];
                           return ProxyTile(
                             proxy,
                             selected: group.selected == proxy.tag,
@@ -107,12 +104,9 @@ class _CachedNodesList extends ConsumerWidget {
         if (items.isEmpty) return const _EmptyNodes();
         return ListView.builder(
           padding: const EdgeInsets.only(bottom: 112),
-          itemCount: items.length + 1,
+          itemCount: items.length,
           itemBuilder: (context, index) {
-            if (index == 0) {
-              return const Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 8), child: _NodePageIntro());
-            }
-            final node = items[index - 1];
+            final node = items[index];
             return _CachedNodeTile(
               node: node,
               selected: state.effectiveSelectedNodeId == node.id,
@@ -155,7 +149,7 @@ class _CachedNodeTile extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(BrandRadii.lg),
+          borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
@@ -168,7 +162,7 @@ class _CachedNodeTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                BrandIcon(selected: selected, icon: Icons.hub_rounded),
+                BrandIcon(selected: selected, icon: Icons.language_rounded),
                 const Gap(14),
                 Expanded(
                   child: Text(
@@ -198,40 +192,6 @@ class _CachedNodeTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _NodePageIntro extends StatelessWidget {
-  const _NodePageIntro();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: BrandColors.card,
-        borderRadius: BorderRadius.circular(BrandRadii.lg),
-        border: Border.all(color: BrandColors.border),
-        boxShadow: BrandShadows.card,
-      ),
-      child: Row(
-        children: [
-          const BrandIcon(selected: true),
-          const Gap(14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('智能线路', style: theme.textTheme.titleMedium),
-                const Gap(3),
-                Text('只展示节点名称与延迟，点击即可切换', style: theme.textTheme.bodySmall),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

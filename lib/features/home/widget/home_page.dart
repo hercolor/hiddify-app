@@ -105,7 +105,7 @@ class _ConnectionFocus extends StatelessWidget {
       ClientConnectionPhase.connecting ||
       ClientConnectionPhase.reconnecting => '连接中',
       ClientConnectionPhase.stopping => '正在停止',
-      _ => '未连接',
+      _ => '尚未连接',
     };
     final helper = connected
         ? '连接稳定，正在保护您的网络'

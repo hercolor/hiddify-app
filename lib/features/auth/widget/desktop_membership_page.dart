@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
-import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
@@ -173,7 +172,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                     ),
                     const Gap(42),
                     Text(
-                      '登录后将自动同步节点',
+                      '登录后自动完成加速准备',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.accent),
                     ),
                   ],
@@ -207,7 +206,7 @@ class _DesktopLoginMark extends StatelessWidget {
             ),
           ],
         ),
-        child: const Center(child: BrandMark(size: 52, showWordmark: false)),
+        child: const Center(child: Icon(Icons.shield_rounded, size: 52, color: BrandDesktopColors.accent)),
       ),
     );
   }
@@ -233,8 +232,7 @@ class _DesktopMemberCenter extends HookConsumerWidget {
     }
 
     return DesktopPageScaffold(
-      title: '会员中心',
-      subtitle: '管理套餐、流量与账号服务',
+      title: '我的账号',
       child: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 980;
@@ -284,11 +282,11 @@ class _PlanCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return DesktopCard(
       gradient: const LinearGradient(
-        colors: [Color(0xFFFFFFFF), Color(0xFFEAF2FF)],
+        colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      borderColor: BrandDesktopColors.accent.withValues(alpha: .24),
+      borderColor: Colors.white10,
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,7 +294,7 @@ class _PlanCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _PlanField(label: '账号', value: _maskUser(session.email)),
+                child: _PlanField(label: '账号', value: _maskUser(session.email), dark: true),
               ),
               const Gap(8),
               _SmallPlanButton(
@@ -316,11 +314,16 @@ class _PlanCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _PlanField(label: '当前套餐', value: _displayText(subscription?.planName), prominent: true),
+                child: _PlanField(
+                  label: '当前套餐',
+                  value: _displayText(subscription?.planName),
+                  prominent: true,
+                  dark: true,
+                ),
               ),
               const Gap(16),
               Expanded(
-                child: _PlanField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt)),
+                child: _PlanField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
               ),
             ],
           ),
@@ -331,11 +334,12 @@ class _PlanCard extends ConsumerWidget {
 }
 
 class _PlanField extends StatelessWidget {
-  const _PlanField({required this.label, required this.value, this.prominent = false});
+  const _PlanField({required this.label, required this.value, this.prominent = false, this.dark = false});
 
   final String label;
   final String value;
   final bool prominent;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
@@ -343,14 +347,19 @@ class _PlanField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textMuted)),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: dark ? Colors.white60 : BrandDesktopColors.textMuted),
+        ),
         const Gap(5),
         Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: (prominent ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.titleSmall)
-              ?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
+              ?.copyWith(color: dark ? Colors.white : BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
         ),
       ],
     );
@@ -366,17 +375,14 @@ class _SmallPlanButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = filled
-        ? FilledButton.styleFrom(
-            minimumSize: const Size(52, 34),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          )
-        : OutlinedButton.styleFrom(
-            minimumSize: const Size(52, 34),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          );
+    final style = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(52, 34)),
+      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
+      foregroundColor: const WidgetStatePropertyAll(Color(0xFFFFD700)),
+      backgroundColor: WidgetStatePropertyAll(Colors.white.withValues(alpha: .10)),
+      side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withValues(alpha: filled ? .20 : .12))),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+    );
     final child = Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800));
     return filled
         ? FilledButton(onPressed: onPressed, style: style, child: child)

@@ -46,7 +46,7 @@ class UserProfilePage extends HookConsumerWidget {
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: showingLogin,
-      appBar: showingLogin ? null : AppBar(toolbarHeight: 72, title: const Text('会员中心')),
+      appBar: showingLogin ? null : AppBar(toolbarHeight: 72, title: const Text('我的账号')),
       body: BrandScaffoldBackground(
         showHalos: !showingLogin,
         child: Center(
@@ -247,7 +247,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                     child: _GradientButton(onPressed: isLoading ? null : _submit, label: '登 录', isLoading: isLoading),
                   ),
                   const SizedBox(height: 44),
-                  Text('登录后将自动同步节点', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.signalBlue)),
+                  Text('登录后自动完成加速准备', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.signalBlue)),
                   const Gap(32),
                 ],
               ),
@@ -279,7 +279,7 @@ class _LoginMark extends StatelessWidget {
             ),
           ],
         ),
-        child: const Center(child: BrandMark(size: 52, showWordmark: false)),
+        child: const Center(child: Icon(Icons.shield_rounded, size: 52, color: BrandColors.signalBlue)),
       ),
     );
   }
@@ -347,10 +347,15 @@ class _HeroMemberCard extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: BrandColors.card,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(BrandRadii.lg),
-        border: Border.all(color: BrandColors.border),
-        boxShadow: BrandShadows.card,
+        boxShadow: [
+          BoxShadow(color: BrandColors.slate.withValues(alpha: .26), blurRadius: 22, offset: const Offset(0, 12)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,7 +363,7 @@ class _HeroMemberCard extends HookConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _MemberField(label: '账号', value: _maskAccount(session.email)),
+                child: _MemberField(label: '账号', value: _maskAccount(session.email), dark: true),
               ),
               _SmallLightButton(
                 label: '续费',
@@ -375,11 +380,16 @@ class _HeroMemberCard extends HookConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _MemberField(label: '当前套餐', value: _displayText(subscription?.planName), prominent: true),
+                child: _MemberField(
+                  label: '当前套餐',
+                  value: _displayText(subscription?.planName),
+                  prominent: true,
+                  dark: true,
+                ),
               ),
               const Gap(14),
               Expanded(
-                child: _MemberField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt)),
+                child: _MemberField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
               ),
             ],
           ),
@@ -390,11 +400,12 @@ class _HeroMemberCard extends HookConsumerWidget {
 }
 
 class _MemberField extends StatelessWidget {
-  const _MemberField({required this.label, required this.value, this.prominent = false});
+  const _MemberField({required this.label, required this.value, this.prominent = false, this.dark = false});
 
   final String label;
   final String value;
   final bool prominent;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
@@ -402,14 +413,14 @@ class _MemberField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: dark ? Colors.white60 : BrandColors.muted)),
         const Gap(5),
         Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: (prominent ? theme.textTheme.titleLarge : theme.textTheme.titleSmall)?.copyWith(
-            color: BrandColors.slate,
+            color: dark ? Colors.white : BrandColors.slate,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -432,13 +443,13 @@ class _SmallLightButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: BrandColors.mistBlue,
+          color: Colors.white.withValues(alpha: .10),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: BrandColors.signalBlue.withValues(alpha: .18)),
+          border: Border.all(color: Colors.white.withValues(alpha: .14)),
         ),
         child: Text(
           label,
-          style: const TextStyle(color: BrandColors.signalBlue, fontWeight: FontWeight.w800, fontSize: 13),
+          style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w800, fontSize: 13),
         ),
       ),
     );

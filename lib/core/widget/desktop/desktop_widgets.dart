@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
@@ -99,30 +97,8 @@ class DesktopBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: BrandDesktopGradients.background),
-      child: Stack(
-        children: [
-          const Positioned(
-            top: -180,
-            left: -120,
-            child: _DesktopGlow(size: 360, color: BrandDesktopColors.accent, alpha: .20),
-          ),
-          const Positioned(
-            top: 120,
-            right: -140,
-            child: _DesktopGlow(size: 420, color: BrandDesktopColors.cyan, alpha: .12),
-          ),
-          const Positioned(
-            bottom: -220,
-            left: 220,
-            child: _DesktopGlow(size: 520, color: BrandDesktopColors.indigo, alpha: .13),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(child: CustomPaint(painter: _GridPainter())),
-          ),
-          child,
-        ],
-      ),
+      decoration: const BoxDecoration(color: BrandDesktopColors.background),
+      child: child,
     );
   }
 }
@@ -203,19 +179,16 @@ class DesktopCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = ClipRRect(
       borderRadius: BorderRadius.circular(BrandDesktopRadii.card),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            color: gradient == null ? BrandDesktopColors.card : null,
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(BrandDesktopRadii.card),
-            border: Border.all(color: borderColor ?? BrandDesktopColors.border),
-            boxShadow: BrandDesktopShadows.card,
-          ),
-          child: child,
+      child: Container(
+        padding: padding ?? const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: gradient == null ? BrandDesktopColors.card : null,
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(BrandDesktopRadii.card),
+          border: Border.all(color: borderColor ?? BrandDesktopColors.border),
+          boxShadow: BrandDesktopShadows.card,
         ),
+        child: child,
       ),
     );
     if (onTap == null) return content;
@@ -361,51 +334,4 @@ class DesktopGradientButton extends StatelessWidget {
             ),
     );
   }
-}
-
-class _DesktopGlow extends StatelessWidget {
-  const _DesktopGlow({required this.size, required this.color, required this.alpha});
-
-  final double size;
-  final Color color;
-  final double alpha;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: alpha),
-              color.withValues(alpha: alpha * .22),
-              Colors.transparent,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = BrandDesktopColors.accent.withValues(alpha: .035)
-      ..strokeWidth = 1;
-    const step = 48.0;
-    for (var x = 0.0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (var y = 0.0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

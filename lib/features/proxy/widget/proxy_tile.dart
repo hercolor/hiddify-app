@@ -30,7 +30,7 @@ class ProxyTile extends HookConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(BrandRadii.lg),
+          borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
@@ -43,7 +43,7 @@ class ProxyTile extends HookConsumerWidget {
             ),
             child: Row(
               children: [
-                BrandIcon(selected: selected, icon: Icons.hub_rounded),
+                BrandIcon(selected: selected, icon: Icons.language_rounded),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
