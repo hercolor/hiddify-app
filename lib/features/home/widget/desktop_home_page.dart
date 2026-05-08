@@ -51,7 +51,10 @@ class DesktopHomePage extends HookConsumerWidget {
                       letterSpacing: 0.5,
                     ),
                   ),
-                  _TopRoundIcon(icon: Icons.workspace_premium_outlined, onTap: () => context.goNamed('settings')),
+                  _TopRoundIcon(
+                    icon: Icons.workspace_premium_outlined,
+                    onTap: () => context.pushNamed('premiumRenewal'),
+                  ),
                 ],
               ),
             ),

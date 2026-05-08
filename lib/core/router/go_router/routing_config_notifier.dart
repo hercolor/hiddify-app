@@ -9,6 +9,7 @@ import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
 import 'package:hiddify/features/legal/privacy_policy_page.dart';
 import 'package:hiddify/features/legal/terms_of_service_page.dart';
+import 'package:hiddify/features/premium/premium_screens.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_page.dart';
 import 'package:hiddify/features/settings/overview/settings_page.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -128,6 +129,33 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
               ],
             ),
           ],
+        ),
+
+        GoRoute(
+          name: 'premiumRenewal',
+          path: '/premium/renewal',
+          pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const PremiumRenewalPage()),
+        ),
+        GoRoute(
+          name: 'premiumInvite',
+          path: '/premium/invite',
+          pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const PremiumInvitePage()),
+        ),
+        GoRoute(
+          name: 'premiumFeedback',
+          path: '/premium/feedback',
+          pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const PremiumFeedbackPage()),
+        ),
+        GoRoute(
+          name: 'premiumWebsite',
+          path: '/premium/website',
+          pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const PremiumWebsitePage()),
+        ),
+        GoRoute(
+          name: 'premiumPreferences',
+          path: '/premium/preferences',
+          pageBuilder: (_, state) =>
+              customTransition(TransitionType.slide, state.pageKey, const PremiumPreferencesPage()),
         ),
         GoRoute(
           name: 'diagnostics',

@@ -15,6 +15,7 @@ import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/auth/widget/desktop_membership_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
+import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -324,6 +325,10 @@ class _MemberCenter extends StatelessWidget {
       children: [
         _HeroMemberCard(session: session, subscription: subscription),
         const Gap(24),
+        const _SectionLabel('路由设置'),
+        const Gap(8),
+        const _MobileRouteModeCard(),
+        const Gap(24),
         const _SectionLabel('其他功能'),
         const Gap(8),
         _SupportCard(subscription: subscription),
@@ -426,15 +431,9 @@ class _HeroMemberCard extends HookConsumerWidget {
                 child: _MemberField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
               ),
               const Gap(12),
-              _SmallLightButton(
-                label: '续费',
-                onTap: () => _openCustomerService(context, ref, subscription?.customerService),
-              ),
+              _SmallLightButton(label: '续费', onTap: () => context.pushNamed('premiumRenewal')),
               const Gap(8),
-              _SmallLightButton(
-                label: '升级',
-                onTap: () => _openCustomerService(context, ref, subscription?.customerService),
-              ),
+              _SmallLightButton(label: '升级', onTap: () => context.pushNamed('premiumRenewal')),
             ],
           ),
         ],
@@ -553,6 +552,45 @@ String _maskAccount(String value) {
   return '${trimmed.substring(0, 1)}***${trimmed.substring(at)}';
 }
 
+class _MobileRouteModeCard extends ConsumerWidget {
+  const _MobileRouteModeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isGlobalMode = ref.watch(ConfigOptions.globalRouteMode);
+    return _PremiumCard(
+      children: [
+        SwitchListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          title: const Text(
+            '全局代理模式',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF111827)),
+          ),
+          subtitle: Text(
+            isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          ),
+          activeThumbColor: BrandColors.signalBlue,
+          value: isGlobalMode,
+          onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
+          secondary: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isGlobalMode ? BrandColors.signalBlue.withOpacity(.10) : BrandColors.mist,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isGlobalMode ? Icons.public_rounded : Icons.alt_route_rounded,
+              color: isGlobalMode ? BrandColors.signalBlue : BrandColors.subtle,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SupportCard extends HookConsumerWidget {
   const _SupportCard({required this.subscription});
 
@@ -580,6 +618,36 @@ class _SupportCard extends HookConsumerWidget {
           iconColor: const Color(0xFF007AFF),
           trailing: Icons.open_in_new_rounded,
           onTap: () => _openCustomerService(context, ref, subscription?.customerService),
+        ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.card_giftcard_rounded,
+          title: '邀请有礼',
+          subtitle: '邀请好友了解 4376',
+          iconColor: const Color(0xFFFF9500),
+          onTap: () => context.pushNamed('premiumInvite'),
+        ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.feedback_outlined,
+          title: '反馈问题',
+          iconColor: const Color(0xFF2563EB),
+          onTap: () => context.pushNamed('premiumFeedback'),
+        ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.language_rounded,
+          title: '官网链接',
+          iconColor: const Color(0xFF10B981),
+          onTap: () => context.pushNamed('premiumWebsite'),
+        ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.settings_outlined,
+          title: '高级设置',
+          subtitle: '全局/智能路由模式',
+          iconColor: const Color(0xFF64748B),
+          onTap: () => context.pushNamed('premiumPreferences'),
         ),
         const _ActionDivider(),
         _ActionTile(
