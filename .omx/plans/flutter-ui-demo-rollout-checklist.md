@@ -47,6 +47,7 @@ Record any hit from the required `git diff --name-only` guard. Category must be 
 | Phase 0 | existing dirty tree | blocker-needs-separate-approval | Baseline diff guard reports many pre-existing changes under Android native, hiddifycore, singbox, profile data, connection data, windows runner. | Do not stage or modify in UI rollout; later phase commits must include only task-owned files. |
 | Phase 1 | task-owned diff | allowed-test-doc-only | Phase 1 task-owned files did not include core/API/native/connection state-machine paths; full diff guard still reports pre-existing dirty tree from Phase 0. | Commit only Phase 1 UI/helper/test files. |
 | Phase 2 | task-owned diff | allowed-test-doc-only | Phase 2 only aligns logged-out Login/Membership helper text with demo/product copy and updates this checklist. | Commit only Phase 2 UI text and checklist files. |
+| Phase 3 | task-owned diff | allowed-test-doc-only | Phase 3 centralizes customer-service URI parsing for Membership renewal/upgrade/support actions and adds unit coverage. | Commit only helper, Membership imports, helper test, and checklist. |
 
 ## Phase Commit Evidence
 
@@ -55,7 +56,7 @@ Record any hit from the required `git diff --name-only` guard. Category must be 
 | Phase 0 | 5ef93668 | Baseline checklist/audit intake | Constraint/Directive/Tested/Not-tested recorded | `git status --short --ignore-submodules=all`; forbidden baseline audit; hardcoded URL baseline; `git diff --name-only --ignore-submodules=all` guard | pass-with-existing-dirty-tree-noted | Existing working tree has many pre-existing dirty files; Phase 0 committed only checklist evidence. |
 | Phase 1 | 2f66e2b6 (+ checklist evidence commit) | Node label safety + route guard | Constraint/Rejected/Directive/Tested/Not-tested recorded | dart format; flutter test safe_node_display_name_test; dart analyze changed files; flutter pub get && flutter analyze; helper/raw-name/no-op/forbidden/URL/diff audits | pass-with-existing-dirty-tree-noted | Code commit 2f66e2b6. Existing unrelated diff-guard hits remain pre-existing and were not staged. |
 | Phase 2 | ff9f0f1e | UI parity pages | Constraint/Rejected/Directive/Tested/Not-tested recorded | dart format; dart analyze changed files; flutter pub get && flutter analyze; flutter build apk --debug -t lib/main.dart; flutter build windows --release -t lib/main.dart | pass-with-android-env-blocker | Login helper copy now matches demo/product wording. Android debug build blocked by local Java 8 vs Gradle Java 11 requirement; Windows release build passed and produced `build\\windows\\x64\\runner\\Release\\4376.exe`. |
-| Phase 3 | pending | Safe business action mapping | pending | pending | pending | No fake URLs/no dead buttons. |
+| Phase 3 | 30bf5059 | Safe business action mapping | Constraint/Rejected/Directive/Tested/Not-tested recorded | dart format; flutter test customer_service_uri_test; dart analyze changed files; flutter analyze | pass | Renewal/upgrade/support now reuse backend-provided `customer_service` only and allow only http/https/tg/mailto/plain email; no fake invite/feedback/website actions implemented. |
 | Phase 4 | pending | Final audit/release sweep | pending | pending | pending | Builds + forbidden-string classification. |
 
 ## Forbidden-String Audit Classification
@@ -73,6 +74,8 @@ Every audit hit from the required `rg` command must be recorded here before a ph
 | Phase 0 | android/app/src/main/res/xml/shortcuts.xml | hiddify package path | generated/internal | Package/native path, not user-visible label. | none |
 | Phase 1 | lib/features/proxy/widget/safe_node_display_name.dart | server/address/domain/port/cipher/password/http/tg/mailto | UI sanitizer implementation | internal | Regex literals are masking rules, not rendered user text or fallback service URLs. | none |
 | Phase 1 | lib/features/system_tray/notifier/system_tray_notifier.dart | current node sanitized | Tray current-node surface | internal | Tray now uses `safeNodeDisplayName(..., fallback: 暂无可用节点)`. | none |
+| Phase 3 | lib/features/auth/widget/customer_service_uri.dart | http/https/tg/mailto | Customer-service URI parser | internal | Allowed URI schemes for backend-provided `customer_service`; not hardcoded support destination. | none |
+| Phase 3 | test/features/auth/widget/customer_service_uri_test.dart | example.com/t.me/mailto | Unit test fixtures | internal | Test-only configured-link fixtures; not normal UI or production default URLs. | none |
 
 ## Verification Log
 - [x] `dart format --page-width 120 <changed files>`
@@ -85,3 +88,4 @@ Every audit hit from the required `rg` command must be recorded here before a ph
 - [ ] Manual smoke: Windows Login/Home/Nodes/Membership/tray.
 - [x] Diff audit: no server/XBoard API/node backend/core protocol/connection state-machine changes unless separately requested.
 - [x] Customer-service source audit: Membership/Login/Home/Nodes/tray contain no hardcoded service URLs; only sanitizer regex literals contain URL patterns.
+- [x] Customer-service URI unit test: backend-provided http/https/tg/mailto/plain email accepted; blank/unsupported schemes rejected.
