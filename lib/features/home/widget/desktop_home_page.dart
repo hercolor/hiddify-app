@@ -8,8 +8,6 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
-import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
-import 'package:hiddify/utils/number_formatters.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class DesktopHomePage extends HookConsumerWidget {
@@ -38,8 +36,6 @@ class DesktopHomePage extends HookConsumerWidget {
           Expanded(child: _ConnectionCard(state: state)),
           const Gap(14),
           _HomeInfoCard(node: selectedNode, nodeName: nodeName),
-          const Gap(12),
-          _TodayTrafficCard(connected: state.phase == ClientConnectionPhase.connected),
         ],
       ),
     );
@@ -185,51 +181,57 @@ class _HomeInfoCard extends StatelessWidget {
         : delay > 65000
         ? '不可用'
         : '$delay ms';
-    return DesktopMetricTile(
-      icon: Icons.hub_rounded,
-      label: '当前节点',
-      value: nodeName,
-      accent: _delayColor(delay),
-    ).withBadge(context, delayText, _delayColor(delay));
-  }
-}
-
-class _TodayTrafficCard extends ConsumerWidget {
-  const _TodayTrafficCard({required this.connected});
-
-  final bool connected;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stats = connected ? ref.watch(statsNotifierProvider).valueOrNull : null;
-    final usedBytes = connected ? ((stats?.uplinkTotal.toInt() ?? 0) + (stats?.downlinkTotal.toInt() ?? 0)) : 0;
-    return DesktopMetricTile(
-      icon: Icons.data_usage_rounded,
-      label: '今日流量',
-      value: usedBytes.sizeGB(),
-      accent: BrandDesktopColors.accent,
+    final delayColor = _delayColor(delay);
+    return DesktopCard(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      child: Row(
+        children: [
+          _DesktopNodeFlag(nodeName: nodeName),
+          const Gap(16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nodeName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
+                ),
+                const Gap(4),
+                Text(
+                  '智能路由推荐',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const Gap(12),
+          DesktopStatusPill(label: delayText, color: delayColor, icon: Icons.speed_rounded),
+        ],
+      ),
     );
   }
 }
 
-extension _MetricBadgeX on DesktopMetricTile {
-  Widget withBadge(BuildContext context, String label, Color color) {
-    return Stack(
-      children: [
-        this,
-        Positioned(
-          right: 16,
-          top: 14,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(999)),
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w800),
-            ),
-          ),
-        ),
-      ],
+class _DesktopNodeFlag extends StatelessWidget {
+  const _DesktopNodeFlag({required this.nodeName});
+
+  final String nodeName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: BrandDesktopColors.panelAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BrandDesktopColors.border),
+      ),
+      child: Center(child: Text(_nodeFlagFor(nodeName), style: const TextStyle(fontSize: 20))),
     );
   }
 }
@@ -270,6 +272,19 @@ Color _delayColor(int? delay) {
   if (delay < 800) return BrandDesktopColors.success;
   if (delay < 1500) return BrandDesktopColors.warning;
   return BrandDesktopColors.error;
+}
+
+String _nodeFlagFor(String name) {
+  if (name.contains('香港')) return '🇭🇰';
+  if (name.contains('台湾') || name.contains('台灣')) return '🇹🇼';
+  if (name.contains('日本') || name.contains('东京') || name.contains('東京')) return '🇯🇵';
+  if (name.contains('新加坡')) return '🇸🇬';
+  if (name.contains('美国') || name.contains('美國') || name.contains('洛杉矶') || name.contains('洛杉磯')) return '🇺🇸';
+  if (name.contains('英国') || name.contains('英國') || name.contains('伦敦') || name.contains('倫敦')) return '🇬🇧';
+  if (name.contains('韩国') || name.contains('韓國') || name.contains('首尔') || name.contains('首爾')) return '🇰🇷';
+  if (name.contains('德国') || name.contains('德國')) return '🇩🇪';
+  if (name.contains('法国') || name.contains('法國')) return '🇫🇷';
+  return '🌐';
 }
 
 class _StatusInfo {

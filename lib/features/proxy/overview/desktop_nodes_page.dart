@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
@@ -24,6 +25,7 @@ class DesktopNodesPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final search = ref.watch(desktopNodeSearchProvider).trim().toLowerCase();
     final proxies = ref.watch(proxiesOverviewNotifierProvider);
+    _useAutoLatencyRefresh(ref, proxies.valueOrNull?.tag);
     return DesktopPageScaffold(
       title: '选择节点',
       child: Column(
@@ -45,6 +47,29 @@ class DesktopNodesPage extends HookConsumerWidget {
       ),
     );
   }
+}
+
+void _useAutoLatencyRefresh(WidgetRef ref, String? groupTag) {
+  useEffect(() {
+    if (groupTag == null || groupTag.isEmpty) return null;
+
+    var disposed = false;
+    Future<void> refresh() async {
+      if (disposed) return;
+      try {
+        await ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(groupTag, withHaptic: false);
+      } catch (_) {
+        // Keep desktop node browsing responsive; manual operations still show their own errors.
+      }
+    }
+
+    unawaited(Future<void>.microtask(refresh));
+    final timer = Timer.periodic(const Duration(seconds: 10), (_) => unawaited(refresh()));
+    return () {
+      disposed = true;
+      timer.cancel();
+    };
+  }, [groupTag]);
 }
 
 class _LiveDesktopNodes extends ConsumerWidget {

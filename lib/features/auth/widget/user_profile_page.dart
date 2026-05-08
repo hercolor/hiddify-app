@@ -328,10 +328,27 @@ class _MemberCenter extends StatelessWidget {
       children: [
         _HeroMemberCard(session: session, subscription: subscription),
         const Gap(14),
-        _TrafficCard(subscription: subscription),
-        const Gap(14),
+        const _SectionLabel('其他功能'),
+        const Gap(8),
         _SupportCard(subscription: subscription),
       ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: BrandColors.muted, fontWeight: FontWeight.w900),
+      ),
     );
   }
 }
@@ -393,6 +410,8 @@ class _HeroMemberCard extends HookConsumerWidget {
               ),
             ],
           ),
+          const Gap(18),
+          _MemberField(label: '设备数量', value: _formatDeviceLimit(subscription), dark: true),
         ],
       ),
     );
@@ -475,86 +494,6 @@ String _maskAccount(String value) {
   final at = trimmed.indexOf('@');
   if (at <= 1) return '${trimmed.substring(0, 1)}***';
   return '${trimmed.substring(0, 1)}***${trimmed.substring(at)}';
-}
-
-class _TrafficCard extends StatelessWidget {
-  const _TrafficCard({required this.subscription});
-
-  final UserSubscription? subscription;
-
-  @override
-  Widget build(BuildContext context) {
-    final used = subscription?.usedTraffic;
-    final remaining = subscription?.remainingTraffic;
-    return Row(
-      children: [
-        Expanded(
-          child: _MetricMiniCard(
-            icon: Icons.data_usage_rounded,
-            title: '已用流量',
-            value: used == null ? '--' : _formatTrafficGb(used),
-            color: BrandColors.signalBlue,
-          ),
-        ),
-        const Gap(8),
-        Expanded(
-          child: _MetricMiniCard(
-            icon: Icons.battery_5_bar_rounded,
-            title: '剩余流量',
-            value: remaining == null ? '--' : _formatTrafficGb(remaining),
-            color: BrandColors.success,
-          ),
-        ),
-        const Gap(8),
-        Expanded(
-          child: _MetricMiniCard(
-            icon: Icons.devices_rounded,
-            title: '设备数量',
-            value: _formatDeviceLimit(subscription),
-            color: BrandColors.iceCyan,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MetricMiniCard extends StatelessWidget {
-  const _MetricMiniCard({required this.icon, required this.title, required this.value, required this.color});
-
-  final IconData icon;
-  final String title;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-      decoration: BoxDecoration(
-        color: BrandColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BrandColors.border),
-        boxShadow: BrandShadows.card,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          BrandIcon(size: 34, icon: icon),
-          const Gap(8),
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
-          const Gap(4),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelLarge?.copyWith(color: color, fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SupportCard extends HookConsumerWidget {
@@ -675,12 +614,6 @@ class _ActionTile extends StatelessWidget {
 String _formatExpiredAt(DateTime? expiredAt) {
   if (expiredAt == null) return '--';
   return DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
-}
-
-String _formatTrafficGb(int bytes) {
-  final gb = bytes / 1024 / 1024 / 1024;
-  final digits = gb >= 10 ? 1 : 2;
-  return '${gb.toStringAsFixed(digits)} GB';
 }
 
 Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {

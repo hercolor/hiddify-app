@@ -9,8 +9,6 @@ import 'package:hiddify/features/home/widget/desktop_home_page.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
-import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
-import 'package:hiddify/utils/number_formatters.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -46,8 +44,6 @@ class HomePage extends HookConsumerWidget {
                     _HomeHeader(connected: connected),
                     Expanded(child: _ConnectionFocus(state: clientState)),
                     _NodeCard(nodeName: nodeName, delay: delay),
-                    const Gap(12),
-                    _TodayTrafficCard(connected: clientState.phase == ClientConnectionPhase.connected),
                   ],
                 ),
               ),
@@ -140,16 +136,17 @@ class _ConnectionFocus extends StatelessWidget {
 }
 
 class _DemoNodeIcon extends StatelessWidget {
-  const _DemoNodeIcon({this.icon = Icons.hub_rounded});
+  const _DemoNodeIcon({required this.nodeName});
 
-  final IconData icon;
+  final String nodeName;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      width: 42,
+      height: 42,
       decoration: BoxDecoration(color: BrandColors.mist, borderRadius: BorderRadius.circular(12)),
-      child: Icon(icon, color: BrandColors.signalBlue, size: 22),
+      child: Center(child: Text(_nodeFlagFor(nodeName), style: const TextStyle(fontSize: 20))),
     );
   }
 }
@@ -215,7 +212,7 @@ class _NodeCard extends StatelessWidget {
     return _DemoCard(
       child: Row(
         children: [
-          const _DemoNodeIcon(),
+          _DemoNodeIcon(nodeName: nodeName),
           const Gap(16),
           Expanded(
             child: Column(
@@ -228,38 +225,26 @@ class _NodeCard extends StatelessWidget {
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const Gap(4),
-                Text('当前节点', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
+                Text('智能路由推荐', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
               ],
             ),
           ),
           _DemoDelayPill(label: delayText, color: delayColor),
-          const Gap(8),
-          const Icon(Icons.chevron_right_rounded, color: BrandColors.subtle),
         ],
       ),
     );
   }
 }
 
-class _TodayTrafficCard extends ConsumerWidget {
-  const _TodayTrafficCard({required this.connected});
-
-  final bool connected;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stats = connected ? ref.watch(statsNotifierProvider).valueOrNull : null;
-    final usedBytes = connected ? ((stats?.uplinkTotal.toInt() ?? 0) + (stats?.downlinkTotal.toInt() ?? 0)) : 0;
-    final used = usedBytes.sizeGB();
-    return _DemoCard(
-      child: Row(
-        children: [
-          const _DemoNodeIcon(icon: Icons.data_usage_rounded),
-          const Gap(16),
-          Expanded(child: Text('今日流量', style: Theme.of(context).textTheme.bodyMedium)),
-          Text(used, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
-        ],
-      ),
-    );
-  }
+String _nodeFlagFor(String name) {
+  if (name.contains('香港')) return '🇭🇰';
+  if (name.contains('台湾') || name.contains('台灣')) return '🇹🇼';
+  if (name.contains('日本') || name.contains('东京') || name.contains('東京')) return '🇯🇵';
+  if (name.contains('新加坡')) return '🇸🇬';
+  if (name.contains('美国') || name.contains('美國') || name.contains('洛杉矶') || name.contains('洛杉磯')) return '🇺🇸';
+  if (name.contains('英国') || name.contains('英國') || name.contains('伦敦') || name.contains('倫敦')) return '🇬🇧';
+  if (name.contains('韩国') || name.contains('韓國') || name.contains('首尔') || name.contains('首爾')) return '🇰🇷';
+  if (name.contains('德国') || name.contains('德國')) return '🇩🇪';
+  if (name.contains('法国') || name.contains('法國')) return '🇫🇷';
+  return '🌐';
 }

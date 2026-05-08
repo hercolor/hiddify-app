@@ -237,31 +237,18 @@ class _DesktopMemberCenter extends HookConsumerWidget {
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 980;
           final plan = _PlanCard(session: session, subscription: subscription);
-          final traffic = _TrafficAndDeviceGrid(subscription: subscription);
           final actions = _MemberActions(
             subscription: subscription,
             version: appInfo.valueOrNull?.presentVersion,
             onVersionTap: openDiagnostics,
           );
           if (narrow) {
-            return ListView(
-              padding: const EdgeInsets.only(bottom: 16),
-              children: [plan, const Gap(12), traffic, const Gap(12), actions],
-            );
+            return ListView(padding: const EdgeInsets.only(bottom: 16), children: [plan, const Gap(12), actions]);
           }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                flex: 6,
-                child: Column(
-                  children: [
-                    Expanded(child: plan),
-                    const Gap(16),
-                    traffic,
-                  ],
-                ),
-              ),
+              Expanded(flex: 6, child: plan),
               const Gap(18),
               Expanded(flex: 4, child: actions),
             ],
@@ -327,6 +314,8 @@ class _PlanCard extends ConsumerWidget {
               ),
             ],
           ),
+          const Gap(18),
+          _PlanField(label: '设备数量', value: _formatDeviceLimit(subscription), dark: true),
         ],
       ),
     );
@@ -387,88 +376,6 @@ class _SmallPlanButton extends StatelessWidget {
     return filled
         ? FilledButton(onPressed: onPressed, style: style, child: child)
         : OutlinedButton(onPressed: onPressed, style: style, child: child);
-  }
-}
-
-class _TrafficAndDeviceGrid extends StatelessWidget {
-  const _TrafficAndDeviceGrid({required this.subscription});
-
-  final UserSubscription? subscription;
-
-  @override
-  Widget build(BuildContext context) {
-    final used = subscription?.usedTraffic;
-    final remaining = subscription?.remainingTraffic;
-    return Row(
-      children: [
-        Expanded(
-          child: _CompactMetricTile(
-            icon: Icons.data_usage_rounded,
-            label: '已用流量',
-            value: used == null ? '--' : _formatTrafficGb(used),
-            accent: BrandDesktopColors.accent,
-          ),
-        ),
-        const Gap(8),
-        Expanded(
-          child: _CompactMetricTile(
-            icon: Icons.battery_5_bar_rounded,
-            label: '剩余流量',
-            value: remaining == null ? '--' : _formatTrafficGb(remaining),
-            accent: BrandDesktopColors.success,
-          ),
-        ),
-        const Gap(8),
-        Expanded(
-          child: _CompactMetricTile(
-            icon: Icons.devices_rounded,
-            label: '设备数量',
-            value: _formatDeviceLimit(subscription),
-            accent: BrandDesktopColors.cyan,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CompactMetricTile extends StatelessWidget {
-  const _CompactMetricTile({required this.icon, required this.label, required this.value, required this.accent});
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return DesktopCard(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          DesktopIconBox(icon: icon, color: accent, size: 30),
-          const Gap(7),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: BrandDesktopColors.textMuted),
-          ),
-          const Gap(3),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: BrandDesktopColors.textPrimary,
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -610,12 +517,6 @@ String _displayText(String? value) {
 String _formatExpiredAt(DateTime? expiredAt) {
   if (expiredAt == null) return '--';
   return DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
-}
-
-String _formatTrafficGb(int bytes) {
-  final gb = bytes / 1024 / 1024 / 1024;
-  final digits = gb >= 10 ? 1 : 2;
-  return '${gb.toStringAsFixed(digits)} GB';
 }
 
 String _maskUser(String value) {

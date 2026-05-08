@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
@@ -22,6 +25,7 @@ class ProxiesOverviewPage extends HookConsumerWidget {
 
     final proxies = ref.watch(proxiesOverviewNotifierProvider);
     final search = ref.watch(_nodeSearchProvider).trim().toLowerCase();
+    _useAutoLatencyRefresh(ref, proxies.valueOrNull?.tag);
 
     return Scaffold(
       extendBody: true,
@@ -84,6 +88,29 @@ class ProxiesOverviewPage extends HookConsumerWidget {
       ),
     );
   }
+}
+
+void _useAutoLatencyRefresh(WidgetRef ref, String? groupTag) {
+  useEffect(() {
+    if (groupTag == null || groupTag.isEmpty) return null;
+
+    var disposed = false;
+    Future<void> refresh() async {
+      if (disposed) return;
+      try {
+        await ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(groupTag, withHaptic: false);
+      } catch (_) {
+        // Keep the node page responsive; manual pull-to-refresh still surfaces failures.
+      }
+    }
+
+    unawaited(Future<void>.microtask(refresh));
+    final timer = Timer.periodic(const Duration(seconds: 10), (_) => unawaited(refresh()));
+    return () {
+      disposed = true;
+      timer.cancel();
+    };
+  }, [groupTag]);
 }
 
 class _CachedNodesList extends ConsumerWidget {
