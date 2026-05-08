@@ -48,6 +48,7 @@ Record any hit from the required `git diff --name-only` guard. Category must be 
 | Phase 1 | task-owned diff | allowed-test-doc-only | Phase 1 task-owned files did not include core/API/native/connection state-machine paths; full diff guard still reports pre-existing dirty tree from Phase 0. | Commit only Phase 1 UI/helper/test files. |
 | Phase 2 | task-owned diff | allowed-test-doc-only | Phase 2 only aligns logged-out Login/Membership helper text with demo/product copy and updates this checklist. | Commit only Phase 2 UI text and checklist files. |
 | Phase 3 | task-owned diff | allowed-test-doc-only | Phase 3 centralizes customer-service URI parsing for Membership renewal/upgrade/support actions and adds unit coverage. | Commit only helper, Membership imports, helper test, and checklist. |
+| Phase 4 | existing dirty tree | blocker-needs-separate-approval | Final diff guard still reports the same broad pre-existing dirty tree under native/core/profile/connection/windows-runner paths, plus unrelated normal-UI files from earlier work. | Do not stage unrelated dirty files; final phase commits checklist evidence only. |
 
 ## Phase Commit Evidence
 
@@ -57,7 +58,7 @@ Record any hit from the required `git diff --name-only` guard. Category must be 
 | Phase 1 | 2f66e2b6 (+ checklist evidence commit) | Node label safety + route guard | Constraint/Rejected/Directive/Tested/Not-tested recorded | dart format; flutter test safe_node_display_name_test; dart analyze changed files; flutter pub get && flutter analyze; helper/raw-name/no-op/forbidden/URL/diff audits | pass-with-existing-dirty-tree-noted | Code commit 2f66e2b6. Existing unrelated diff-guard hits remain pre-existing and were not staged. |
 | Phase 2 | ff9f0f1e | UI parity pages | Constraint/Rejected/Directive/Tested/Not-tested recorded | dart format; dart analyze changed files; flutter pub get && flutter analyze; flutter build apk --debug -t lib/main.dart; flutter build windows --release -t lib/main.dart | pass-with-android-env-blocker | Login helper copy now matches demo/product wording. Android debug build blocked by local Java 8 vs Gradle Java 11 requirement; Windows release build passed and produced `build\\windows\\x64\\runner\\Release\\4376.exe`. |
 | Phase 3 | 30bf5059 | Safe business action mapping | Constraint/Rejected/Directive/Tested/Not-tested recorded | dart format; flutter test customer_service_uri_test; dart analyze changed files; flutter analyze | pass | Renewal/upgrade/support now reuse backend-provided `customer_service` only and allow only http/https/tg/mailto/plain email; no fake invite/feedback/website actions implemented. |
-| Phase 4 | pending | Final audit/release sweep | pending | pending | pending | Builds + forbidden-string classification. |
+| Phase 4 | pending | Final audit/release sweep | pending | forbidden-string audit; hardcoded URL audit; diff guard; flutter pub get; flutter analyze; flutter build windows --release -t lib/main.dart; java -version; flutter build apk --debug -t lib/main.dart | pass-with-android-env-blocker | Windows release build passed: `build\\windows\\x64\\runner\\Release\\4376.exe`. Android debug build blocked by local Java 8 while Gradle requires Java 11. Existing dirty tree remains pre-existing and unstaged. |
 
 ## Forbidden-String Audit Classification
 
@@ -76,13 +77,18 @@ Every audit hit from the required `rg` command must be recorded here before a ph
 | Phase 1 | lib/features/system_tray/notifier/system_tray_notifier.dart | current node sanitized | Tray current-node surface | internal | Tray now uses `safeNodeDisplayName(..., fallback: 暂无可用节点)`. | none |
 | Phase 3 | lib/features/auth/widget/customer_service_uri.dart | http/https/tg/mailto | Customer-service URI parser | internal | Allowed URI schemes for backend-provided `customer_service`; not hardcoded support destination. | none |
 | Phase 3 | test/features/auth/widget/customer_service_uri_test.dart | example.com/t.me/mailto | Unit test fixtures | internal | Test-only configured-link fixtures; not normal UI or production default URLs. | none |
+| Phase 4 | lib/features/auth/widget/* | 登录后将自动同步节点 | Login helper copy | internal | Informational product copy required by demo/product login UX; it is not an import/copy/refresh/sync button or subscription URL entry. | none |
+| Phase 4 | lib/core/router/go_router/routing_config_notifier.dart / connection_button.dart / desktop_home_page.dart | settings | Internal route compatibility | internal | Legacy route name/path still renders Membership/Login wrapper; no visible Settings tab/page. | none |
+| Phase 4 | lib/core/router/dialog/widgets/proxy_info_dialog.dart | host/port/IP | Existing technical dialog | diagnostics | Pre-existing diagnostics/technical dialog; not introduced by this rollout and not part of normal Home/Nodes/Membership pages. | none |
+| Phase 4 | lib/features/proxy/widget/safe_node_display_name.dart | server/address/domain/port/cipher/http/tg/mailto | Sanitizer implementation | internal | Regex literals and masking rules only; not rendered as normal UI content. | none |
+| Phase 4 | android/app/src/main/res/xml/network_security_config.xml / shortcuts.xml | domain/hiddify package path | Android resource | internal | Network resource/package target class, not normal UI label. | none |
 
 ## Verification Log
 - [x] `dart format --page-width 120 <changed files>`
 - [x] `dart analyze <changed files>`
 - [x] `flutter pub get && flutter analyze`
-- [ ] `flutter build apk --debug -t lib/main.dart`
-- [ ] Windows-capable runner: `flutter build windows --release -t lib/main.dart`
+- [ ] `flutter build apk --debug -t lib/main.dart` (blocked in this environment: Java 8 runtime, Gradle dependency requires Java 11)
+- [x] Windows-capable runner: `flutter build windows --release -t lib/main.dart`
 - [x] Forbidden-string audit with allowlist classification.
 - [ ] Manual smoke: Android Login/Home/Nodes/Membership.
 - [ ] Manual smoke: Windows Login/Home/Nodes/Membership/tray.
