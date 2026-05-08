@@ -320,13 +320,15 @@ class _MemberCenter extends StatelessWidget {
   Widget build(BuildContext context) {
     final subscription = session.subscription;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 104),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 104),
       children: [
         _HeroMemberCard(session: session, subscription: subscription),
-        const Gap(14),
+        const Gap(24),
         const _SectionLabel('其他功能'),
         const Gap(8),
         _SupportCard(subscription: subscription),
+        const Gap(24),
+        _LogoutButton(),
       ],
     );
   }
@@ -357,25 +359,73 @@ class _HeroMemberCard extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final planName = _displayText(subscription?.planName);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(BrandRadii.lg),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: BrandColors.slate.withOpacity(.26), blurRadius: 22, offset: const Offset(0, 12))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: _MemberField(label: '账号', value: _maskAccount(session.email), dark: true),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
+                      child: const Icon(Icons.person_rounded, color: Colors.white),
+                    ),
+                    const Gap(16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _maskAccount(session.email),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const Gap(4),
+                          Text(
+                            '设备：${_formatDeviceLimit(subscription)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const Gap(12),
+              _PlanBadge(label: planName),
+            ],
+          ),
+          const Gap(32),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _MemberField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
+              ),
+              const Gap(12),
               _SmallLightButton(
                 label: '续费',
                 onTap: () => _openCustomerService(context, ref, subscription?.customerService),
@@ -387,25 +437,39 @@ class _HeroMemberCard extends HookConsumerWidget {
               ),
             ],
           ),
-          const Gap(18),
-          Row(
-            children: [
-              Expanded(
-                child: _MemberField(
-                  label: '当前套餐',
-                  value: _displayText(subscription?.planName),
-                  prominent: true,
-                  dark: true,
-                ),
-              ),
-              const Gap(14),
-              Expanded(
-                child: _MemberField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanBadge extends StatelessWidget {
+  const _PlanBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          const Gap(4),
+          Text(
+            label == '--' ? '4376 Pro' : label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF5C4000), fontSize: 13, fontWeight: FontWeight.w900),
           ),
-          const Gap(18),
-          _MemberField(label: '设备数量', value: _formatDeviceLimit(subscription), dark: true),
         ],
       ),
     );
@@ -413,11 +477,10 @@ class _HeroMemberCard extends HookConsumerWidget {
 }
 
 class _MemberField extends StatelessWidget {
-  const _MemberField({required this.label, required this.value, this.prominent = false, this.dark = false});
+  const _MemberField({required this.label, required this.value, this.dark = false});
 
   final String label;
   final String value;
-  final bool prominent;
   final bool dark;
 
   @override
@@ -432,7 +495,7 @@ class _MemberField extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: (prominent ? theme.textTheme.titleLarge : theme.textTheme.titleSmall)?.copyWith(
+          style: theme.textTheme.titleSmall?.copyWith(
             color: dark ? Colors.white : BrandColors.slate,
             fontWeight: FontWeight.w900,
           ),
@@ -497,7 +560,6 @@ class _SupportCard extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(authNotifierProvider).isLoading;
     final appInfo = ref.watch(appInfoProvider);
     final versionTapCount = useState(0);
 
@@ -514,41 +576,58 @@ class _SupportCard extends HookConsumerWidget {
         _ActionTile(
           icon: Icons.support_agent_rounded,
           title: '联系客服',
+          subtitle: '获取套餐与线路支持',
+          iconColor: const Color(0xFF007AFF),
           trailing: Icons.open_in_new_rounded,
           onTap: () => _openCustomerService(context, ref, subscription?.customerService),
         ),
-        const Divider(),
-        _ActionTile(icon: Icons.privacy_tip_outlined, title: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
-        const Divider(),
-        _ActionTile(icon: Icons.article_outlined, title: '用户协议', onTap: () => context.pushNamed('termsOfService')),
-        const Divider(),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.privacy_tip_outlined,
+          title: '隐私政策',
+          iconColor: const Color(0xFF34C759),
+          onTap: () => context.pushNamed('privacyPolicy'),
+        ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.article_outlined,
+          title: '用户协议',
+          iconColor: const Color(0xFFFF9500),
+          onTap: () => context.pushNamed('termsOfService'),
+        ),
+        const _ActionDivider(),
         appInfo.when(
           data: (info) => _ActionTile(
             icon: Icons.info_outline_rounded,
             title: 'App 版本',
             subtitle: info.presentVersion,
+            iconColor: const Color(0xFF6B7280),
             onTap: openDiagnostics,
-            showChevron: false,
           ),
-          error: (_, _) =>
-              const _ActionTile(icon: Icons.info_outline_rounded, title: 'App 版本', subtitle: '未获取', showChevron: false),
+          error: (_, _) => const _ActionTile(
+            icon: Icons.info_outline_rounded,
+            title: 'App 版本',
+            subtitle: '未获取',
+            iconColor: Color(0xFF6B7280),
+          ),
           loading: () => const _ActionTile(
             icon: Icons.info_outline_rounded,
             title: 'App 版本',
             subtitle: '读取中...',
-            showChevron: false,
+            iconColor: Color(0xFF6B7280),
           ),
-        ),
-        const Divider(),
-        _ActionTile(
-          icon: Icons.logout_rounded,
-          title: '退出登录',
-          titleColor: BrandColors.error,
-          showChevron: false,
-          onTap: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
         ),
       ],
     );
+  }
+}
+
+class _ActionDivider extends StatelessWidget {
+  const _ActionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(height: 1, indent: 56, endIndent: 24, color: Color(0xFFF5F7FA));
   }
 }
 
@@ -562,9 +641,8 @@ class _PremiumCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: BrandColors.card,
-        borderRadius: BorderRadius.circular(BrandRadii.lg),
-        border: Border.all(color: BrandColors.border),
-        boxShadow: BrandShadows.card,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.02), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(children: children),
     );
@@ -575,32 +653,56 @@ class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.icon,
     required this.title,
+    required this.iconColor,
     this.subtitle,
     this.onTap,
     this.trailing,
-    this.titleColor,
-    this.showChevron = true,
   });
 
   final IconData icon;
   final String title;
+  final Color iconColor;
   final String? subtitle;
   final VoidCallback? onTap;
   final IconData? trailing;
-  final Color? titleColor;
-  final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return ListTile(
-      leading: BrandIcon(size: 40, icon: icon),
-      title: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: titleColor ?? BrandColors.slate)),
-      subtitle: subtitle == null ? null : Text(subtitle!),
-      trailing: showChevron || trailing != null
-          ? Icon(trailing ?? Icons.chevron_right_rounded, color: BrandColors.subtle)
-          : null,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: iconColor.withOpacity(.10), borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, color: iconColor, size: 20),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF111827)),
+      ),
+      subtitle: subtitle == null
+          ? null
+          : Text(subtitle!, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+      trailing: Icon(trailing ?? Icons.chevron_right_rounded, color: BrandColors.subtle),
       onTap: onTap,
+    );
+  }
+}
+
+class _LogoutButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(authNotifierProvider).isLoading;
+    return TextButton(
+      onPressed: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: BrandColors.error.withOpacity(.10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: const Text(
+        '退出登录',
+        style: TextStyle(color: BrandColors.error, fontSize: 16, fontWeight: FontWeight.w800),
+      ),
     );
   }
 }

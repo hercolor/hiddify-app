@@ -239,17 +239,51 @@ class _DesktopMemberCenter extends HookConsumerWidget {
             onVersionTap: openDiagnostics,
           );
           if (narrow) {
-            return ListView(padding: const EdgeInsets.only(bottom: 16), children: [plan, const Gap(12), actions]);
+            return ListView(
+              padding: const EdgeInsets.only(bottom: 16),
+              children: [
+                plan,
+                const Gap(22),
+                const _DesktopSectionLabel('其他功能'),
+                const Gap(8),
+                actions,
+                const Gap(24),
+                const _DesktopLogoutButton(),
+              ],
+            );
           }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          return ListView(
+            padding: const EdgeInsets.only(bottom: 16),
             children: [
-              Expanded(flex: 6, child: plan),
-              const Gap(18),
-              Expanded(flex: 4, child: actions),
+              plan,
+              const Gap(22),
+              const _DesktopSectionLabel('其他功能'),
+              const Gap(8),
+              actions,
+              const Gap(24),
+              const _DesktopLogoutButton(),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _DesktopSectionLabel extends StatelessWidget {
+  const _DesktopSectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: BrandDesktopColors.textSecondary, fontWeight: FontWeight.w900),
       ),
     );
   }
@@ -263,6 +297,7 @@ class _PlanCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final planName = _displayText(subscription?.planName);
     return DesktopCard(
       gradient: const LinearGradient(
         colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
@@ -275,43 +310,99 @@ class _PlanCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: _PlanField(label: '账号', value: _maskUser(session.email), dark: true),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
+                      child: const Icon(Icons.person_rounded, color: Colors.white),
+                    ),
+                    const Gap(16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _maskUser(session.email),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w900),
+                          ),
+                          const Gap(4),
+                          Text(
+                            '设备：${_formatDeviceLimit(subscription)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const Gap(8),
+              const Gap(12),
+              _DesktopPlanBadge(label: planName),
+            ],
+          ),
+          const Gap(32),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _PlanField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
+              ),
+              const Gap(12),
               _SmallPlanButton(
                 label: '续费',
                 onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
               ),
-              const Gap(6),
+              const Gap(8),
               _SmallPlanButton(
                 label: '升级',
-                filled: true,
                 onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
               ),
             ],
           ),
-          const Gap(18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _PlanField(
-                  label: '当前套餐',
-                  value: _displayText(subscription?.planName),
-                  prominent: true,
-                  dark: true,
-                ),
-              ),
-              const Gap(16),
-              Expanded(
-                child: _PlanField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopPlanBadge extends StatelessWidget {
+  const _DesktopPlanBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          const Gap(4),
+          Text(
+            label == '--' ? '4376 Pro' : label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF5C4000), fontSize: 13, fontWeight: FontWeight.w900),
           ),
-          const Gap(18),
-          _PlanField(label: '设备数量', value: _formatDeviceLimit(subscription), dark: true),
         ],
       ),
     );
@@ -319,11 +410,10 @@ class _PlanCard extends ConsumerWidget {
 }
 
 class _PlanField extends StatelessWidget {
-  const _PlanField({required this.label, required this.value, this.prominent = false, this.dark = false});
+  const _PlanField({required this.label, required this.value, this.dark = false});
 
   final String label;
   final String value;
-  final bool prominent;
   final bool dark;
 
   @override
@@ -343,8 +433,10 @@ class _PlanField extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: (prominent ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.titleSmall)
-              ?.copyWith(color: dark ? Colors.white : BrandDesktopColors.textPrimary, fontWeight: FontWeight.w900),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: dark ? Colors.white : BrandDesktopColors.textPrimary,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ],
     );
@@ -352,11 +444,10 @@ class _PlanField extends StatelessWidget {
 }
 
 class _SmallPlanButton extends StatelessWidget {
-  const _SmallPlanButton({required this.label, required this.onPressed, this.filled = false});
+  const _SmallPlanButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
-  final bool filled;
 
   @override
   Widget build(BuildContext context) {
@@ -365,13 +456,11 @@ class _SmallPlanButton extends StatelessWidget {
       padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
       foregroundColor: const WidgetStatePropertyAll(Color(0xFFFFD700)),
       backgroundColor: WidgetStatePropertyAll(Colors.white.withOpacity(.10)),
-      side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withOpacity(filled ? .20 : .12))),
+      side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withOpacity(.12))),
       shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
     );
     final child = Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800));
-    return filled
-        ? FilledButton(onPressed: onPressed, style: style, child: child)
-        : OutlinedButton(onPressed: onPressed, style: style, child: child);
+    return OutlinedButton(onPressed: onPressed, style: style, child: child);
   }
 }
 
@@ -384,114 +473,117 @@ class _MemberActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(authNotifierProvider).isLoading;
     return DesktopCard(
       padding: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ActionRow(
-              icon: Icons.support_agent_rounded,
-              title: '联系客服',
-              subtitle: '获取套餐与线路支持',
-              onTap: () => _openCustomerService(context, ref, subscription?.customerService),
-            ),
-            _ActionRow(
-              icon: Icons.privacy_tip_outlined,
-              title: '隐私政策',
-              subtitle: '本地显示',
-              onTap: () => context.pushNamed('privacyPolicy'),
-            ),
-            _ActionRow(
-              icon: Icons.article_outlined,
-              title: '用户协议',
-              subtitle: '本地显示',
-              onTap: () => context.pushNamed('termsOfService'),
-            ),
-            _ActionRow(
-              icon: Icons.info_outline_rounded,
-              title: 'App 版本',
-              subtitle: version == null || version!.isBlank ? '--' : version!,
-              onTap: onVersionTap,
-              showChevron: false,
-            ),
-            _ActionRow(
-              icon: Icons.logout_rounded,
-              title: '退出登录',
-              subtitle: '清除本机登录状态',
-              danger: true,
-              showChevron: false,
-              onTap: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
-            ),
-          ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ActionRow(
+            icon: Icons.support_agent_rounded,
+            title: '联系客服',
+            subtitle: '获取套餐与线路支持',
+            iconColor: const Color(0xFF007AFF),
+            onTap: () => _openCustomerService(context, ref, subscription?.customerService),
+          ),
+          const _DesktopActionDivider(),
+          _ActionRow(
+            icon: Icons.privacy_tip_outlined,
+            title: '隐私政策',
+            iconColor: const Color(0xFF34C759),
+            onTap: () => context.pushNamed('privacyPolicy'),
+          ),
+          const _DesktopActionDivider(),
+          _ActionRow(
+            icon: Icons.article_outlined,
+            title: '用户协议',
+            iconColor: const Color(0xFFFF9500),
+            onTap: () => context.pushNamed('termsOfService'),
+          ),
+          const _DesktopActionDivider(),
+          _ActionRow(
+            icon: Icons.info_outline_rounded,
+            title: 'App 版本',
+            subtitle: version == null || version!.isBlank ? '--' : version!,
+            iconColor: const Color(0xFF6B7280),
+            onTap: onVersionTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopActionDivider extends StatelessWidget {
+  const _DesktopActionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(height: 1, indent: 56, endIndent: 24, color: Color(0xFFF5F7FA));
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.icon, required this.title, required this.iconColor, this.subtitle, this.onTap});
+
+  final IconData icon;
+  final String title;
+  final Color iconColor;
+  final String? subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: iconColor.withOpacity(.10), borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const Gap(14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    if (subtitle != null) ...[
+                      const Gap(4),
+                      Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: BrandDesktopColors.textMuted),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.onTap,
-    this.danger = false,
-    this.showChevron = true,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final VoidCallback? onTap;
-  final bool danger;
-  final bool showChevron;
+class _DesktopLogoutButton extends ConsumerWidget {
+  const _DesktopLogoutButton();
 
   @override
-  Widget build(BuildContext context) {
-    final color = danger ? BrandDesktopColors.error : BrandDesktopColors.accent;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: BrandDesktopColors.cardElevated.withOpacity(.46),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: BrandDesktopColors.border),
-            ),
-            child: Row(
-              children: [
-                DesktopIconBox(icon: icon, color: color),
-                const Gap(14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: danger ? BrandDesktopColors.error : BrandDesktopColors.textPrimary,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const Gap(4),
-                        Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
-                      ],
-                    ],
-                  ),
-                ),
-                if (showChevron) const Icon(Icons.chevron_right_rounded, color: BrandDesktopColors.textMuted),
-              ],
-            ),
-          ),
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(authNotifierProvider).isLoading;
+    return TextButton(
+      onPressed: isLoading ? null : () => ref.read(authNotifierProvider.notifier).logout(),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: BrandDesktopColors.error.withOpacity(.10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: const Text(
+        '退出登录',
+        style: TextStyle(color: BrandDesktopColors.error, fontSize: 16, fontWeight: FontWeight.w800),
       ),
     );
   }
