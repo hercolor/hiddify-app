@@ -1,3 +1,4 @@
+import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -12,12 +13,10 @@ import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
-import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/auth/widget/desktop_membership_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/platform_utils.dart';
-import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -332,6 +331,8 @@ class _MemberCenter extends StatelessWidget {
         const _SectionLabel('其他功能'),
         const Gap(8),
         _SupportCard(subscription: subscription),
+        const Gap(16),
+        _MobileLegalFooter(),
         const Gap(24),
         _LogoutButton(),
       ],
@@ -598,28 +599,8 @@ class _SupportCard extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appInfo = ref.watch(appInfoProvider);
-    final versionTapCount = useState(0);
-
-    void openDiagnostics() {
-      versionTapCount.value += 1;
-      if (versionTapCount.value >= 7) {
-        versionTapCount.value = 0;
-        context.pushNamed('diagnostics');
-      }
-    }
-
     return _PremiumCard(
       children: [
-        _ActionTile(
-          icon: Icons.support_agent_rounded,
-          title: '联系客服',
-          subtitle: '获取套餐与线路支持',
-          iconColor: const Color(0xFF007AFF),
-          trailing: Icons.open_in_new_rounded,
-          onTap: () => _openCustomerService(context, ref, subscription?.customerService),
-        ),
-        const _ActionDivider(),
         _ActionTile(
           icon: Icons.card_giftcard_rounded,
           title: '邀请有礼',
@@ -645,47 +626,68 @@ class _SupportCard extends HookConsumerWidget {
         _ActionTile(
           icon: Icons.settings_outlined,
           title: '高级设置',
-          subtitle: '全局/智能路由模式',
           iconColor: const Color(0xFF64748B),
           onTap: () => context.pushNamed('premiumPreferences'),
         ),
-        const _ActionDivider(),
-        _ActionTile(
-          icon: Icons.privacy_tip_outlined,
-          title: '隐私政策',
-          iconColor: const Color(0xFF34C759),
-          onTap: () => context.pushNamed('privacyPolicy'),
+      ],
+    );
+  }
+}
+
+class _MobileLegalFooter extends HookConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appInfo = ref.watch(appInfoProvider);
+    final versionTapCount = useState(0);
+
+    void openDiagnostics() {
+      versionTapCount.value += 1;
+      if (versionTapCount.value >= 7) {
+        versionTapCount.value = 0;
+        context.pushNamed('diagnostics');
+      }
+    }
+
+    final version = appInfo.valueOrNull?.presentVersion;
+    return Column(
+      children: [
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 14,
+          runSpacing: 8,
+          children: [
+            _FooterLink(label: '联系客服', onTap: () => context.pushNamed('premiumWebsite')),
+            _FooterLink(label: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
+            _FooterLink(label: '用户协议', onTap: () => context.pushNamed('termsOfService')),
+          ],
         ),
-        const _ActionDivider(),
-        _ActionTile(
-          icon: Icons.article_outlined,
-          title: '用户协议',
-          iconColor: const Color(0xFFFF9500),
-          onTap: () => context.pushNamed('termsOfService'),
-        ),
-        const _ActionDivider(),
-        appInfo.when(
-          data: (info) => _ActionTile(
-            icon: Icons.info_outline_rounded,
-            title: 'App 版本',
-            subtitle: info.presentVersion,
-            iconColor: const Color(0xFF6B7280),
-            onTap: openDiagnostics,
-          ),
-          error: (_, _) => const _ActionTile(
-            icon: Icons.info_outline_rounded,
-            title: 'App 版本',
-            subtitle: '未获取',
-            iconColor: Color(0xFF6B7280),
-          ),
-          loading: () => const _ActionTile(
-            icon: Icons.info_outline_rounded,
-            title: 'App 版本',
-            subtitle: '读取中...',
-            iconColor: Color(0xFF6B7280),
+        const Gap(8),
+        GestureDetector(
+          onTap: openDiagnostics,
+          child: Text(
+            '版本 ${version == null || version.isBlank ? '--' : version}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandColors.muted),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  const _FooterLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandColors.muted, fontWeight: FontWeight.w700),
+      ),
     );
   }
 }
@@ -718,21 +720,13 @@ class _PremiumCard extends StatelessWidget {
 }
 
 class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.iconColor,
-    this.subtitle,
-    this.onTap,
-    this.trailing,
-  });
+  const _ActionTile({required this.icon, required this.title, required this.iconColor, this.subtitle, this.onTap});
 
   final IconData icon;
   final String title;
   final Color iconColor;
   final String? subtitle;
   final VoidCallback? onTap;
-  final IconData? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -750,7 +744,7 @@ class _ActionTile extends StatelessWidget {
       subtitle: subtitle == null
           ? null
           : Text(subtitle!, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-      trailing: Icon(trailing ?? Icons.chevron_right_rounded, color: BrandColors.subtle),
+      trailing: const Icon(Icons.chevron_right_rounded, color: BrandColors.subtle),
       onTap: onTap,
     );
   }
@@ -778,16 +772,4 @@ class _LogoutButton extends ConsumerWidget {
 String _formatExpiredAt(DateTime? expiredAt) {
   if (expiredAt == null) return '--';
   return DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
-}
-
-Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
-  final notification = ref.read(inAppNotificationControllerProvider);
-  final uri = customerServiceUri(customerService);
-  if (uri == null) {
-    notification.showInfoToast('客服暂未配置');
-    return;
-  }
-
-  final launched = await UriUtils.tryLaunch(uri);
-  if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
 }

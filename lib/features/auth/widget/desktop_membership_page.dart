@@ -4,17 +4,14 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
-import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
-import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -252,6 +249,8 @@ class _DesktopMemberCenter extends HookConsumerWidget {
                 const _DesktopSectionLabel('其他功能'),
                 const Gap(8),
                 actions,
+                const Gap(16),
+                _DesktopLegalFooter(version: appInfo.valueOrNull?.presentVersion, onVersionTap: openDiagnostics),
                 const Gap(24),
                 const _DesktopLogoutButton(),
               ],
@@ -269,6 +268,8 @@ class _DesktopMemberCenter extends HookConsumerWidget {
               const _DesktopSectionLabel('其他功能'),
               const Gap(8),
               actions,
+              const Gap(16),
+              _DesktopLegalFooter(version: appInfo.valueOrNull?.presentVersion, onVersionTap: openDiagnostics),
               const Gap(24),
               const _DesktopLogoutButton(),
             ],
@@ -522,14 +523,6 @@ class _MemberActions extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _ActionRow(
-            icon: Icons.support_agent_rounded,
-            title: '联系客服',
-            subtitle: '获取套餐与线路支持',
-            iconColor: const Color(0xFF007AFF),
-            onTap: () => _openCustomerService(context, ref, subscription?.customerService),
-          ),
-          const _DesktopActionDivider(),
-          _ActionRow(
             icon: Icons.card_giftcard_rounded,
             title: '邀请有礼',
             subtitle: '邀请好友了解 4376',
@@ -554,33 +547,61 @@ class _MemberActions extends ConsumerWidget {
           _ActionRow(
             icon: Icons.settings_outlined,
             title: '高级设置',
-            subtitle: '全局/智能路由模式',
             iconColor: const Color(0xFF64748B),
             onTap: () => context.pushNamed('premiumPreferences'),
           ),
-          const _DesktopActionDivider(),
-          _ActionRow(
-            icon: Icons.privacy_tip_outlined,
-            title: '隐私政策',
-            iconColor: const Color(0xFF34C759),
-            onTap: () => context.pushNamed('privacyPolicy'),
-          ),
-          const _DesktopActionDivider(),
-          _ActionRow(
-            icon: Icons.article_outlined,
-            title: '用户协议',
-            iconColor: const Color(0xFFFF9500),
-            onTap: () => context.pushNamed('termsOfService'),
-          ),
-          const _DesktopActionDivider(),
-          _ActionRow(
-            icon: Icons.info_outline_rounded,
-            title: 'App 版本',
-            subtitle: version == null || version!.isBlank ? '--' : version!,
-            iconColor: const Color(0xFF6B7280),
-            onTap: onVersionTap,
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _DesktopLegalFooter extends StatelessWidget {
+  const _DesktopLegalFooter({required this.version, required this.onVersionTap});
+
+  final String? version;
+  final VoidCallback onVersionTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary);
+    return Column(
+      children: [
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 14,
+          runSpacing: 8,
+          children: [
+            _FooterLink(label: '联系客服', onTap: () => context.pushNamed('premiumWebsite')),
+            _FooterLink(label: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
+            _FooterLink(label: '用户协议', onTap: () => context.pushNamed('termsOfService')),
+          ],
+        ),
+        const Gap(8),
+        GestureDetector(
+          onTap: onVersionTap,
+          child: Text('版本 ${version == null || version!.isBlank ? '--' : version!}', style: textStyle),
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  const _FooterLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -685,15 +706,4 @@ String _maskUser(String value) {
   if (!trimmed.contains('@')) return trimmed.length <= 2 ? '***' : '${trimmed.substring(0, 1)}***';
   final parts = trimmed.split('@');
   return '${parts.first.substring(0, 1)}***@${parts.last}';
-}
-
-Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
-  final notification = ref.read(inAppNotificationControllerProvider);
-  final uri = customerServiceUri(customerService);
-  if (uri == null) {
-    notification.showInfoToast('客服暂未配置');
-    return;
-  }
-  final launched = await UriUtils.tryLaunch(uri);
-  if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
 }
