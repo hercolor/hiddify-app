@@ -99,11 +99,11 @@ Every audit hit from the required `rg` command must be recorded here before a ph
 - [x] `dart format --page-width 120 <changed files>`
 - [x] `dart analyze <changed files>`
 - [x] `flutter pub get && flutter analyze`
-- [ ] `flutter build apk --debug -t lib/main.dart` (blocked in this environment: Java 8 runtime, Gradle dependency requires Java 11)
+- [x] `flutter build apk --debug -t lib/main.dart` (passed with JDK 17 and `GRADLE_USER_HOME=E:\gradle-cache-4376`)
 - [x] Windows-capable runner: `flutter build windows --release -t lib/main.dart`
 - [x] Forbidden-string audit with allowlist classification.
-- [ ] Manual smoke: Android Login/Home/Nodes/Membership.
-- [ ] Manual smoke: Windows Login/Home/Nodes/Membership/tray.
+- [ ] Manual smoke: Android Login/Home/Nodes/Membership (requires device/emulator; build artifact produced).
+- [ ] Manual smoke: Windows Login/Home/Nodes/Membership/tray (requires launching app; release exe produced).
 - [x] Diff audit: no server/XBoard API/node backend/core protocol/connection state-machine changes unless separately requested.
 - [x] Customer-service source audit: Membership/Login/Home/Nodes/tray contain no hardcoded service URLs; only sanitizer regex literals contain URL patterns.
 - [x] Customer-service URI unit test: backend-provided http/https/tg/mailto/plain email accepted; blank/unsupported schemes rejected.
