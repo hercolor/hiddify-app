@@ -17,6 +17,13 @@ Source demo: `docs/flutter_ui_demo.dart`
 | WebsiteScreen | Proposal only | Requires trusted configured official URL | No hardcoded `4376.net`. |
 | SettingsScreen | Forbidden in normal UI | None | No advanced settings/Kill Switch/DNS/fake-ip/IPv6/route/protocol controls. |
 
+
+## Blocking Audit Helper Contract
+- [x] `scripts/verify_forbidden_audit_classified.py` exists and supports `--self-test`.
+- [x] Phase completion must run raw `rg` collection into `.omx/logs/phase-N-*-audit.txt`, then run the helper as the blocking gate.
+- [x] Required tests and helper self-test must not use fallback `|| true`; only raw exploratory collection may use `|| true` before the blocking classifier.
+- [x] Forbidden regex includes: `全局代理|智能分流|路由设置|代理模式|所有流量|VPN意外断开|断网保护|4376 VPN`.
+
 ## Required Safety Tasks
 - [x] Add/reuse one centralized UI-only `safeNodeDisplayName` helper at `lib/features/proxy/widget/safe_node_display_name.dart`.
 - [x] Add/run `test/features/proxy/widget/safe_node_display_name_test.dart` for URL, IPv4, IPv6, domain/domain:port, protocol-like prefix, raw fragment, blank/overlong, and normal names.
@@ -62,7 +69,7 @@ Record any hit from the required `git diff --name-only` guard. Category must be 
 
 ## Forbidden-String Audit Classification
 
-Every audit hit from the required `rg` command must be recorded here before a phase is complete. Category must be exactly one of: `forbidden`, `internal`, `diagnostics`, `legal`, `generated`, `icon`.
+Every audit hit from the required `rg` command must be recorded here before a phase is complete. Category must be exactly one of: `normal-ui-blocker`, `internal`, `diagnostics`, `legal`, `generated`, `icon/constant` (legacy `forbidden`/`icon` rows are treated as blocking/constant by `scripts/verify_forbidden_audit_classified.py`). The blocking audit helper must fail on unclassified hits and on `normal-ui-blocker`/`forbidden` classifications.
 
 | Phase | file:line | Matched string | Surface | Category | Rationale | Action/blocker |
 | --- | --- | --- | --- | --- | --- | --- |
