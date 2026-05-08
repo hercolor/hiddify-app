@@ -7,6 +7,7 @@ import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
+import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/utils/number_formatters.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -20,8 +21,9 @@ class DesktopHomePage extends HookConsumerWidget {
     final nodeSelection = ref.watch(clientNodeSelectionProvider);
     final selectedNode = nodeSelection.valueOrNull?.selectedNode;
     final nodeName = nodeSelection.when(
-      data: (selection) => _safeNodeName(
-        selection.selectedNode?.name ?? (selection.nodes.isNotEmpty ? selection.nodes.first.name : '暂无可用节点'),
+      data: (selection) => safeNodeDisplayName(
+        selection.selectedNode?.name ?? (selection.nodes.isNotEmpty ? selection.nodes.first.name : null),
+        fallback: '暂无可用节点',
       ),
       error: (_, _) => '暂无可用节点',
       loading: () => '读取线路中',
@@ -268,14 +270,6 @@ Color _delayColor(int? delay) {
   if (delay < 800) return BrandDesktopColors.success;
   if (delay < 1500) return BrandDesktopColors.warning;
   return BrandDesktopColors.error;
-}
-
-String _safeNodeName(String value) {
-  final sanitized = value
-      .replaceAll(RegExp(r'https?://[^\s]+'), '***')
-      .replaceAll(RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '***')
-      .replaceAll(RegExp(r'\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:\d+)?\b'), '***');
-  return sanitized.trim().isEmpty ? '暂无可用节点' : sanitized;
 }
 
 class _StatusInfo {

@@ -8,6 +8,7 @@ import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
+import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/features/window/notifier/window_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -48,7 +49,11 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
       MenuItem(key: 'status', label: '状态：${state.trayStatusLabel}', disabled: true),
       MenuItem(key: 'dashboard', label: '打开应用'),
       MenuItem.separator(),
-      MenuItem(key: 'current-node', label: '当前节点：${_safeTrayText(selectedNodeName)}', disabled: true),
+      MenuItem(
+        key: 'current-node',
+        label: '当前节点：${safeNodeDisplayName(selectedNodeName, fallback: '暂无可用节点')}',
+        disabled: true,
+      ),
       MenuItem.separator(),
       MenuItem(key: 'connection', label: state.trayActionLabel(t), disabled: state.isTrayActionDisabled),
       MenuItem.separator(),
@@ -84,14 +89,7 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
     if (Platform.isMacOS) {
       windowManager.setBadgeLabel(state.phase == ClientConnectionPhase.connected ? 'ON' : '');
     }
-    return '${Constants.appName} - ${state.trayStatusLabel} - ${_safeTrayText(selectedNodeName)}';
-  }
-
-  String _safeTrayText(String value) {
-    final sanitized = value
-        .replaceAll(RegExp(r'https?://[^\s]+'), '***')
-        .replaceAll(RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '***');
-    return sanitized.length > 48 ? '${sanitized.substring(0, 48)}…' : sanitized;
+    return '${Constants.appName} - ${state.trayStatusLabel} - ${safeNodeDisplayName(selectedNodeName, fallback: '暂无可用节点')}';
   }
 
   @override

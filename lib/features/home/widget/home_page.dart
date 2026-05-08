@@ -8,6 +8,7 @@ import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/home/widget/desktop_home_page.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
+import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/utils/number_formatters.dart';
 import 'package:hiddify/utils/platform_utils.dart';
@@ -24,7 +25,7 @@ class HomePage extends HookConsumerWidget {
     final nodeSelection = ref.watch(clientNodeSelectionProvider);
     final selectedNode = nodeSelection.valueOrNull?.selectedNode;
     final nodeName = nodeSelection.when(
-      data: (selection) => selection.selectedNode?.name ?? '暂无可用节点',
+      data: (selection) => safeNodeDisplayName(selection.selectedNode?.name, fallback: '暂无可用节点'),
       error: (_, _) => '暂无可用节点',
       loading: () => '读取线路中',
     );

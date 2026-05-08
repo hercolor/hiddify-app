@@ -160,12 +160,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                         if (_passwordError != null) setState(() => _passwordError = null);
                       },
                     ),
-                    const Gap(12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(onPressed: () {}, child: const Text('忘记密码')),
-                    ),
-                    const Gap(12),
+                    const Gap(24),
                     SizedBox(
                       width: double.infinity,
                       height: 56,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
+import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/gen/fonts.gen.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/platform_utils.dart';
@@ -17,6 +18,7 @@ class ProxyTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final delay = proxy.urlTestDelay;
+    final displayName = safeNodeDisplayName(proxy.tagDisplay.isNotEmpty ? proxy.tagDisplay : proxy.tag);
     final delayText = delay == 0
         ? '测速中'
         : delay > 65000
@@ -45,7 +47,7 @@ class ProxyTile extends HookConsumerWidget {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    proxy.tagDisplay,
+                    displayName,
                     overflow: TextOverflow.ellipsis,
                     style: (theme.textTheme.titleMedium ?? const TextStyle()).copyWith(
                       fontFamily: PlatformUtils.isWindows ? FontFamily.emoji : null,

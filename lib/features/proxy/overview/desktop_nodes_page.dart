@@ -11,6 +11,7 @@ import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
+import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -58,7 +59,9 @@ class _LiveDesktopNodes extends ConsumerWidget {
         .where(ClientNodeParser.isUserVisibleOutbound)
         .where((item) {
           if (search.isEmpty) return true;
-          return _safeNodeName(item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag).toLowerCase().contains(search);
+          return safeNodeDisplayName(
+            item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag,
+          ).toLowerCase().contains(search);
         })
         .toList(growable: false);
 
@@ -67,7 +70,7 @@ class _LiveDesktopNodes extends ConsumerWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        final name = _safeNodeName(item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag);
+        final name = safeNodeDisplayName(item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag);
         return _DesktopNodeTile(
           name: name,
           delay: item.urlTestDelay == 0 ? null : item.urlTestDelay,
@@ -92,7 +95,7 @@ class _CachedDesktopNodes extends ConsumerWidget {
         final nodes = state.nodes
             .where((node) {
               if (search.isEmpty) return true;
-              return _safeNodeName(node.name).toLowerCase().contains(search);
+              return safeNodeDisplayName(node.name).toLowerCase().contains(search);
             })
             .toList(growable: false);
         if (nodes.isEmpty) return const _EmptyNodesPanel();
@@ -101,7 +104,7 @@ class _CachedDesktopNodes extends ConsumerWidget {
           itemBuilder: (context, index) {
             final node = nodes[index];
             return _DesktopNodeTile(
-              name: _safeNodeName(node.name),
+              name: safeNodeDisplayName(node.name),
               delay: node.delay,
               selected: state.effectiveSelectedNodeId == node.id,
               onTap: () => ref.read(clientNodeSelectionProvider.notifier).selectNode(node.id),
@@ -261,12 +264,4 @@ Color _delayColor(int? delay) {
   if (delay < 800) return BrandDesktopColors.success;
   if (delay < 1500) return BrandDesktopColors.warning;
   return BrandDesktopColors.error;
-}
-
-String _safeNodeName(String value) {
-  final sanitized = value
-      .replaceAll(RegExp(r'https?://[^\s]+'), '***')
-      .replaceAll(RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '***')
-      .replaceAll(RegExp(r'\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:\d+)?\b'), '***');
-  return sanitized.trim().isEmpty ? '未命名节点' : sanitized;
 }

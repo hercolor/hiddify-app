@@ -7,6 +7,7 @@ import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/overview/desktop_nodes_page.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/proxy/widget/proxy_tile.dart';
+import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -43,7 +44,13 @@ class ProxiesOverviewPage extends HookConsumerWidget {
                     final allItems = (group?.items ?? []).where(ClientNodeParser.isUserVisibleOutbound).toList();
                     final items = search.isEmpty
                         ? allItems
-                        : allItems.where((item) => item.tagDisplay.toLowerCase().contains(search)).toList();
+                        : allItems
+                              .where(
+                                (item) => safeNodeDisplayName(
+                                  item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag,
+                                ).toLowerCase().contains(search),
+                              )
+                              .toList();
                     if (group == null || allItems.isEmpty) {
                       return _CachedNodesList(search: search);
                     }
@@ -94,7 +101,9 @@ class _CachedNodesList extends ConsumerWidget {
       data: (state) {
         final items = search.isEmpty
             ? state.nodes
-            : state.nodes.where((node) => node.name.toLowerCase().contains(search)).toList(growable: false);
+            : state.nodes
+                  .where((node) => safeNodeDisplayName(node.name).toLowerCase().contains(search))
+                  .toList(growable: false);
         if (items.isEmpty) return const _EmptyNodes();
         return ListView.builder(
           padding: const EdgeInsets.only(bottom: 112),
@@ -163,7 +172,7 @@ class _CachedNodeTile extends StatelessWidget {
                 const Gap(14),
                 Expanded(
                   child: Text(
-                    node.name,
+                    safeNodeDisplayName(node.name),
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                   ),
