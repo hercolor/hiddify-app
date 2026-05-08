@@ -54,13 +54,13 @@ abstract final class BrandGradients {
 
 abstract final class BrandShadows {
   static List<BoxShadow> card = [
-    BoxShadow(color: BrandColors.signalBlue.withValues(alpha: .08), blurRadius: 28, offset: const Offset(0, 12)),
-    BoxShadow(color: Colors.white.withValues(alpha: .85), blurRadius: 1, offset: const Offset(0, 1)),
+    BoxShadow(color: BrandColors.signalBlue.withOpacity(.08), blurRadius: 28, offset: const Offset(0, 12)),
+    BoxShadow(color: Colors.white.withOpacity(.85), blurRadius: 1, offset: const Offset(0, 1)),
   ];
 
   static List<BoxShadow> glow(Color color, {double alpha = .22}) => [
-    BoxShadow(color: color.withValues(alpha: alpha), blurRadius: 36, spreadRadius: 2),
-    BoxShadow(color: color.withValues(alpha: alpha / 2), blurRadius: 72, spreadRadius: 8),
+    BoxShadow(color: color.withOpacity(alpha), blurRadius: 36, spreadRadius: 2),
+    BoxShadow(color: color.withOpacity(alpha / 2), blurRadius: 72, spreadRadius: 8),
   ];
 }
 
@@ -128,12 +128,12 @@ abstract final class BrandDesktopGradients {
 
 abstract final class BrandDesktopShadows {
   static List<BoxShadow> card = [
-    BoxShadow(color: BrandDesktopColors.accent.withValues(alpha: .08), blurRadius: 28, offset: const Offset(0, 12)),
-    BoxShadow(color: Colors.white.withValues(alpha: .9), blurRadius: 1, offset: const Offset(0, 1)),
+    BoxShadow(color: BrandDesktopColors.accent.withOpacity(.08), blurRadius: 28, offset: const Offset(0, 12)),
+    BoxShadow(color: Colors.white.withOpacity(.9), blurRadius: 1, offset: const Offset(0, 1)),
   ];
 
   static List<BoxShadow> glow(Color color, {double alpha = .22}) => [
-    BoxShadow(color: color.withValues(alpha: alpha), blurRadius: 34, spreadRadius: 1),
-    BoxShadow(color: color.withValues(alpha: alpha / 2), blurRadius: 72, spreadRadius: 6),
+    BoxShadow(color: color.withOpacity(alpha), blurRadius: 34, spreadRadius: 1),
+    BoxShadow(color: color.withOpacity(alpha / 2), blurRadius: 72, spreadRadius: 6),
   ];
 }

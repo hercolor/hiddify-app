@@ -366,7 +366,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 //       );
 
 //     final backgroundPaint = Paint()
-//       ..color = Colors.black.withValues(alpha: .5)
+//       ..color = Colors.black.withOpacity( .5)
 //       ..style = PaintingStyle.fill
 //       ..blendMode = BlendMode.dstOut;
 

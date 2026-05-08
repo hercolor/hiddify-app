@@ -184,7 +184,7 @@ class _CachedNodeTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected ? BrandColors.mistBlue : BrandColors.card,
               borderRadius: BorderRadius.circular(BrandRadii.lg),
-              border: Border.all(color: selected ? BrandColors.signalBlue.withValues(alpha: .35) : BrandColors.border),
+              border: Border.all(color: selected ? BrandColors.signalBlue.withOpacity(.35) : BrandColors.border),
               boxShadow: selected ? BrandShadows.glow(BrandColors.signalBlue, alpha: .10) : BrandShadows.card,
             ),
             child: Row(
@@ -202,7 +202,7 @@ class _CachedNodeTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: delayColor.withValues(alpha: .10),
+                    color: delayColor.withOpacity(.10),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(

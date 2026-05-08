@@ -89,12 +89,12 @@ class _ConnectionButton extends StatelessWidget {
             color: connected ? BrandColors.signalBlue : BrandColors.card,
             boxShadow: [
               BoxShadow(
-                color: connected ? BrandColors.signalBlue.withValues(alpha: .30) : Colors.black.withValues(alpha: .05),
+                color: connected ? BrandColors.signalBlue.withOpacity(.30) : Colors.black.withOpacity(.05),
                 blurRadius: connected ? 40 : 20,
                 spreadRadius: connected ? 10 : 5,
                 offset: const Offset(0, 10),
               ),
-              if (busy) BoxShadow(color: accentColor.withValues(alpha: .18), blurRadius: 44, spreadRadius: 10),
+              if (busy) BoxShadow(color: accentColor.withOpacity(.18), blurRadius: 44, spreadRadius: 10),
             ],
           ),
           child: Material(

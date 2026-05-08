@@ -54,7 +54,7 @@ class AppTheme {
         color: BrandColors.card,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shadowColor: BrandColors.signalBlue.withValues(alpha: .08),
+        shadowColor: BrandColors.signalBlue.withOpacity(.08),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BrandRadii.lg)),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -103,7 +103,7 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         height: 72,
         elevation: 0,
-        backgroundColor: BrandColors.card.withValues(alpha: .96),
+        backgroundColor: BrandColors.card.withOpacity(.96),
         indicatorColor: BrandColors.mistBlue,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(

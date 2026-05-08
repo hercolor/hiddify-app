@@ -67,7 +67,7 @@ class _ConnectionCard extends StatelessWidget {
     return DesktopCard(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
       gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFF5F7FA)]),
-      borderColor: connected ? BrandDesktopColors.success.withValues(alpha: .28) : BrandDesktopColors.border,
+      borderColor: connected ? BrandDesktopColors.success.withOpacity(.28) : BrandDesktopColors.border,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -140,14 +140,12 @@ class _DesktopPowerButton extends ConsumerWidget {
                 border: Border.all(color: connected ? Colors.transparent : BrandDesktopColors.border),
                 boxShadow: [
                   BoxShadow(
-                    color: connected
-                        ? BrandDesktopColors.accent.withValues(alpha: .30)
-                        : Colors.black.withValues(alpha: .05),
+                    color: connected ? BrandDesktopColors.accent.withOpacity(.30) : Colors.black.withOpacity(.05),
                     blurRadius: connected ? 40 : 20,
                     spreadRadius: connected ? 10 : 5,
                     offset: const Offset(0, 10),
                   ),
-                  if (busy) BoxShadow(color: color.withValues(alpha: .18), blurRadius: 40, spreadRadius: 8),
+                  if (busy) BoxShadow(color: color.withOpacity(.18), blurRadius: 40, spreadRadius: 8),
                 ],
               ),
               child: Center(

@@ -76,7 +76,7 @@ class ProfileTileMain extends HookConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+                      color: theme.colorScheme.primaryContainer.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(FluentIcons.arrow_sync_24_filled, color: theme.colorScheme.primary, size: 20),
@@ -298,7 +298,7 @@ class _InfoItem extends StatelessWidget {
                 Text(
                   label,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
                   ),
                 ),
                 Text(value, style: theme.textTheme.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),

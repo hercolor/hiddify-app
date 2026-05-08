@@ -161,7 +161,7 @@ class _DemoDelayPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: color.withOpacity(.10), borderRadius: BorderRadius.circular(8)),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w900),
@@ -183,10 +183,10 @@ class _DemoCard extends StatelessWidget {
         color: BrandColors.card,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: .03), blurRadius: 10, offset: const Offset(0, 4)),
-          BoxShadow(color: BrandColors.signalBlue.withValues(alpha: .04), blurRadius: 24, offset: const Offset(0, 10)),
+          BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: BrandColors.signalBlue.withOpacity(.04), blurRadius: 24, offset: const Offset(0, 10)),
         ],
-        border: Border.all(color: BrandColors.border.withValues(alpha: .72)),
+        border: Border.all(color: BrandColors.border.withOpacity(.72)),
       ),
       child: child,
     );

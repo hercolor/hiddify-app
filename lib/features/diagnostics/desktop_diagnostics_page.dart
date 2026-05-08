@@ -198,7 +198,7 @@ class _LogPanel extends StatelessWidget {
             padding: EdgeInsets.all(20),
             child: _SectionHeader(icon: Icons.description_outlined, title: '最近 100 行脱敏日志'),
           ),
-          Divider(color: BrandDesktopColors.border.withValues(alpha: .8), height: 1),
+          Divider(color: BrandDesktopColors.border.withOpacity(.8), height: 1),
           Expanded(
             child: logs.when(
               data: (items) {
@@ -212,8 +212,7 @@ class _LogPanel extends StatelessWidget {
                   reverse: true,
                   padding: const EdgeInsets.all(16),
                   itemCount: latest.length,
-                  separatorBuilder: (_, _) =>
-                      Divider(color: BrandDesktopColors.border.withValues(alpha: .45), height: 14),
+                  separatorBuilder: (_, _) => Divider(color: BrandDesktopColors.border.withOpacity(.45), height: 14),
                   itemBuilder: (context, index) => SelectableText(
                     DiagnosticSanitizer.sanitize(latest[index]),
                     style: Theme.of(

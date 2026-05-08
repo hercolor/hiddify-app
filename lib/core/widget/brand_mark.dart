@@ -128,7 +128,7 @@ class _BrandRouteMarkPainter extends CustomPainter {
     canvas.drawPath(path, paint);
 
     final innerPaint = Paint()
-      ..color = (dark ? Colors.white : BrandColors.signalBlue).withValues(alpha: .95)
+      ..color = (dark ? Colors.white : BrandColors.signalBlue).withOpacity(.95)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(size.width * .71, size.height * .37), size.width * .105, innerPaint);
     canvas.drawCircle(

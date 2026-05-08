@@ -272,11 +272,7 @@ class _LoginMark extends StatelessWidget {
           color: BrandColors.card,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-              color: BrandColors.signalBlue.withValues(alpha: .15),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            ),
+            BoxShadow(color: BrandColors.signalBlue.withOpacity(.15), blurRadius: 30, offset: const Offset(0, 10)),
           ],
         ),
         child: const Center(child: Icon(Icons.shield_rounded, size: 52, color: BrandColors.signalBlue)),
@@ -370,9 +366,7 @@ class _HeroMemberCard extends HookConsumerWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(BrandRadii.lg),
-        boxShadow: [
-          BoxShadow(color: BrandColors.slate.withValues(alpha: .26), blurRadius: 22, offset: const Offset(0, 12)),
-        ],
+        boxShadow: [BoxShadow(color: BrandColors.slate.withOpacity(.26), blurRadius: 22, offset: const Offset(0, 12))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,9 +456,9 @@ class _SmallLightButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .10),
+          color: Colors.white.withOpacity(.10),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: .14)),
+          border: Border.all(color: Colors.white.withOpacity(.14)),
         ),
         child: Text(
           label,

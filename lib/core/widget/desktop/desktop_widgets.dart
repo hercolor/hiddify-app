@@ -49,7 +49,7 @@ class DesktopTheme extends StatelessWidget {
           titleTextStyle: TextStyle(color: BrandDesktopColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w800),
           iconTheme: IconThemeData(color: BrandDesktopColors.textPrimary),
         ),
-        dividerTheme: DividerThemeData(color: BrandDesktopColors.border.withValues(alpha: .72), thickness: 1, space: 1),
+        dividerTheme: DividerThemeData(color: BrandDesktopColors.border.withOpacity(.72), thickness: 1, space: 1),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: BrandDesktopColors.input,
@@ -217,7 +217,7 @@ class DesktopIconBox extends StatelessWidget {
         gradient: selected ? BrandDesktopGradients.primary : null,
         color: selected ? null : BrandDesktopColors.cardElevated,
         borderRadius: BorderRadius.circular(size * .34),
-        border: Border.all(color: selected ? Colors.white.withValues(alpha: .10) : BrandDesktopColors.border),
+        border: Border.all(color: selected ? Colors.white.withOpacity(.10) : BrandDesktopColors.border),
         boxShadow: selected ? BrandDesktopShadows.glow(BrandDesktopColors.accent, alpha: .20) : null,
       ),
       child: Icon(icon, color: selected ? Colors.white : resolved, size: size * .48),
@@ -237,9 +237,9 @@ class DesktopStatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
+        color: color.withOpacity(.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: .28)),
+        border: Border.all(color: color.withOpacity(.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

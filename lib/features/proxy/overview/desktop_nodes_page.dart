@@ -185,10 +185,10 @@ class _DesktopNodeTile extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: selected ? BrandDesktopColors.accent.withValues(alpha: .10) : BrandDesktopColors.cardSolid,
+            color: selected ? BrandDesktopColors.accent.withOpacity(.10) : BrandDesktopColors.cardSolid,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: selected ? BrandDesktopColors.accent.withValues(alpha: .38) : BrandDesktopColors.border,
+              color: selected ? BrandDesktopColors.accent.withOpacity(.38) : BrandDesktopColors.border,
             ),
             boxShadow: BrandDesktopShadows.card,
           ),

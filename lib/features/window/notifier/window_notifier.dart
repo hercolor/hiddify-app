@@ -62,9 +62,12 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
         minimumSize: minimumWindowSize,
         maximumSize: BrandDesktopWindow.maximumSize,
         title: '4376',
+        titleBarStyle: Platform.isWindows ? TitleBarStyle.hidden : null,
+        windowButtonVisibility: Platform.isWindows ? false : null,
       ),
     );
     if (Platform.isWindows) {
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: false);
       await windowManager.setAspectRatio(BrandDesktopWindow.aspectRatio);
       await windowManager.setResizable(false);
       await windowManager.setMaximizable(false);

@@ -199,11 +199,7 @@ class _DesktopLoginMark extends StatelessWidget {
           color: BrandDesktopColors.cardSolid,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-              color: BrandDesktopColors.accent.withValues(alpha: .15),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            ),
+            BoxShadow(color: BrandDesktopColors.accent.withOpacity(.15), blurRadius: 30, offset: const Offset(0, 10)),
           ],
         ),
         child: const Center(child: Icon(Icons.shield_rounded, size: 52, color: BrandDesktopColors.accent)),
@@ -368,8 +364,8 @@ class _SmallPlanButton extends StatelessWidget {
       minimumSize: const WidgetStatePropertyAll(Size(52, 34)),
       padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
       foregroundColor: const WidgetStatePropertyAll(Color(0xFFFFD700)),
-      backgroundColor: WidgetStatePropertyAll(Colors.white.withValues(alpha: .10)),
-      side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withValues(alpha: filled ? .20 : .12))),
+      backgroundColor: WidgetStatePropertyAll(Colors.white.withOpacity(.10)),
+      side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withOpacity(filled ? .20 : .12))),
       shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
     );
     final child = Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800));
@@ -466,7 +462,7 @@ class _ActionRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: BrandDesktopColors.cardElevated.withValues(alpha: .46),
+              color: BrandDesktopColors.cardElevated.withOpacity(.46),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: BrandDesktopColors.border),
             ),
