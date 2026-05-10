@@ -13,10 +13,12 @@ import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
+import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/auth/widget/desktop_membership_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/platform_utils.dart';
+import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -604,7 +606,7 @@ class _SupportCard extends HookConsumerWidget {
         _ActionTile(
           icon: Icons.card_giftcard_rounded,
           title: '邀请有礼',
-          subtitle: '邀请好友了解 4376',
+          subtitle: '邀请好友得免费时长',
           iconColor: const Color(0xFFFF9500),
           onTap: () => context.pushNamed('premiumInvite'),
         ),
@@ -638,6 +640,7 @@ class _MobileLegalFooter extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appInfo = ref.watch(appInfoProvider);
+    final subscription = ref.watch(authNotifierProvider).valueOrNull?.session?.subscription;
     final versionTapCount = useState(0);
 
     void openDiagnostics() {
@@ -656,7 +659,10 @@ class _MobileLegalFooter extends HookConsumerWidget {
           spacing: 14,
           runSpacing: 8,
           children: [
-            _FooterLink(label: '联系客服', onTap: () => context.pushNamed('premiumWebsite')),
+            _FooterLink(
+              label: '联系客服',
+              onTap: () => _openMobileCustomerService(context, ref, subscription?.customerService),
+            ),
             _FooterLink(label: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
             _FooterLink(label: '用户协议', onTap: () => context.pushNamed('termsOfService')),
           ],
@@ -672,6 +678,17 @@ class _MobileLegalFooter extends HookConsumerWidget {
       ],
     );
   }
+}
+
+Future<void> _openMobileCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
+  final notification = ref.read(inAppNotificationControllerProvider);
+  final uri = customerServiceUri(customerService);
+  if (uri == null) {
+    notification.showInfoToast('客服暂未配置');
+    return;
+  }
+  final launched = await UriUtils.tryLaunch(uri);
+  if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
 }
 
 class _FooterLink extends StatelessWidget {

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
-import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
@@ -21,7 +19,6 @@ class DesktopHomePage extends HookConsumerWidget {
     final state = ref.watch(clientConnectionStateProvider);
     final nodeSelection = ref.watch(clientNodeSelectionProvider);
     final stats = ref.watch(statsNotifierProvider).asData?.value ?? SystemInfo.create();
-    final selectedNode = nodeSelection.valueOrNull?.selectedNode;
     final nodeName = nodeSelection.when(
       data: (selection) => safeNodeDisplayName(
         selection.selectedNode?.name ?? (selection.nodes.isNotEmpty ? selection.nodes.first.name : null),
@@ -86,7 +83,7 @@ class DesktopHomePage extends HookConsumerWidget {
                   const Gap(48),
                   _ConnectionHero(state: state),
                   const Gap(64),
-                  _HomeNodeCard(node: selectedNode, nodeName: nodeName),
+                  _HomeNodeCard(nodeName: nodeName),
                   const Gap(24),
                   const _RouteModeSegmentedControl(),
                   const Gap(48),
@@ -400,21 +397,12 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
 }
 
 class _HomeNodeCard extends StatelessWidget {
-  const _HomeNodeCard({required this.node, required this.nodeName});
+  const _HomeNodeCard({required this.nodeName});
 
-  final ClientNode? node;
   final String nodeName;
 
   @override
   Widget build(BuildContext context) {
-    final delay = node?.delay;
-    final delayText = delay == null || delay == 0
-        ? '待测速'
-        : delay > 65000
-        ? '不可用'
-        : '$delay ms';
-    final delayColor = _delayColor(delay);
-
     return GestureDetector(
       onTap: () => context.goNamed('proxies'),
       child: Container(
@@ -450,8 +438,6 @@ class _HomeNodeCard extends StatelessWidget {
               ),
             ),
             const Gap(10),
-            DesktopStatusPill(label: delayText, color: delayColor, icon: Icons.speed_rounded),
-            const Gap(6),
             const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
           ],
         ),
@@ -601,13 +587,6 @@ _StatusInfo _statusInfo(ClientConnectionState state) {
     ClientConnectionPhase.initializing => const _StatusInfo('初始化中...', Color(0xFF64748B), Icons.hourglass_top_rounded),
     _ => const _StatusInfo('未连接', Color(0xFF0F172A), Icons.radio_button_unchecked_rounded),
   };
-}
-
-Color _delayColor(int? delay) {
-  if (delay == null || delay == 0) return const Color(0xFF94A3B8);
-  if (delay < 800) return const Color(0xFF10B981);
-  if (delay < 1500) return const Color(0xFFF59E0B);
-  return const Color(0xFFEF4444);
 }
 
 String _nodeFlagFor(String name) {

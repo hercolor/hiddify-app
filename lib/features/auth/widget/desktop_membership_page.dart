@@ -4,14 +4,17 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
+import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
+import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
+import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -250,7 +253,11 @@ class _DesktopMemberCenter extends HookConsumerWidget {
                 const Gap(8),
                 actions,
                 const Gap(16),
-                _DesktopLegalFooter(version: appInfo.valueOrNull?.presentVersion, onVersionTap: openDiagnostics),
+                _DesktopLegalFooter(
+                  subscription: subscription,
+                  version: appInfo.valueOrNull?.presentVersion,
+                  onVersionTap: openDiagnostics,
+                ),
                 const Gap(24),
                 const _DesktopLogoutButton(),
               ],
@@ -269,7 +276,11 @@ class _DesktopMemberCenter extends HookConsumerWidget {
               const Gap(8),
               actions,
               const Gap(16),
-              _DesktopLegalFooter(version: appInfo.valueOrNull?.presentVersion, onVersionTap: openDiagnostics),
+              _DesktopLegalFooter(
+                subscription: subscription,
+                version: appInfo.valueOrNull?.presentVersion,
+                onVersionTap: openDiagnostics,
+              ),
               const Gap(24),
               const _DesktopLogoutButton(),
             ],
@@ -525,7 +536,7 @@ class _MemberActions extends ConsumerWidget {
           _ActionRow(
             icon: Icons.card_giftcard_rounded,
             title: '邀请有礼',
-            subtitle: '邀请好友了解 4376',
+            subtitle: '邀请好友得免费时长',
             iconColor: const Color(0xFFFF9500),
             onTap: () => context.pushNamed('premiumInvite'),
           ),
@@ -556,14 +567,15 @@ class _MemberActions extends ConsumerWidget {
   }
 }
 
-class _DesktopLegalFooter extends StatelessWidget {
-  const _DesktopLegalFooter({required this.version, required this.onVersionTap});
+class _DesktopLegalFooter extends ConsumerWidget {
+  const _DesktopLegalFooter({required this.subscription, required this.version, required this.onVersionTap});
 
+  final UserSubscription? subscription;
   final String? version;
   final VoidCallback onVersionTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary);
     return Column(
       children: [
@@ -572,7 +584,7 @@ class _DesktopLegalFooter extends StatelessWidget {
           spacing: 14,
           runSpacing: 8,
           children: [
-            _FooterLink(label: '联系客服', onTap: () => context.pushNamed('premiumWebsite')),
+            _FooterLink(label: '联系客服', onTap: () => _openCustomerService(context, ref, subscription?.customerService)),
             _FooterLink(label: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
             _FooterLink(label: '用户协议', onTap: () => context.pushNamed('termsOfService')),
           ],
@@ -585,6 +597,17 @@ class _DesktopLegalFooter extends StatelessWidget {
       ],
     );
   }
+}
+
+Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
+  final notification = ref.read(inAppNotificationControllerProvider);
+  final uri = customerServiceUri(customerService);
+  if (uri == null) {
+    notification.showInfoToast('客服暂未配置');
+    return;
+  }
+  final launched = await UriUtils.tryLaunch(uri);
+  if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
 }
 
 class _FooterLink extends StatelessWidget {

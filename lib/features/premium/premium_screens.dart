@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
+import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
+import 'package:hiddify/core/widget/desktop/desktop_window_chrome.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -275,10 +278,14 @@ class _PremiumScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(title: Text(title), centerTitle: false, backgroundColor: const Color(0xFFF8FAFC), elevation: 0),
       body: child,
+    );
+    if (!PlatformUtils.isWindows) return scaffold;
+    return DesktopTheme(
+      child: DesktopWindowChrome(backgroundColor: const Color(0xFFF8FAFC), child: scaffold),
     );
   }
 }
