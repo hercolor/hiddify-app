@@ -280,12 +280,40 @@ class _PremiumScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaffold = Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(title: Text(title), centerTitle: false, backgroundColor: const Color(0xFFF8FAFC), elevation: 0),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const _PremiumBackButton(),
+        title: Text(title),
+        centerTitle: false,
+        backgroundColor: const Color(0xFFF8FAFC),
+        elevation: 0,
+        titleTextStyle: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.w600),
+      ),
       body: child,
     );
     if (!PlatformUtils.isWindows) return scaffold;
     return DesktopTheme(
       child: DesktopWindowChrome(backgroundColor: const Color(0xFFF8FAFC), child: scaffold),
+    );
+  }
+}
+
+class _PremiumBackButton extends StatelessWidget {
+  const _PremiumBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    if (PlatformUtils.isWindows) return const DesktopBackButton();
+    return IconButton(
+      tooltip: '返回',
+      onPressed: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.goNamed('home');
+        }
+      },
+      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
     );
   }
 }

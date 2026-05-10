@@ -34,7 +34,7 @@ class DesktopHomePage extends HookConsumerWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 10.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -42,8 +42,8 @@ class DesktopHomePage extends HookConsumerWidget {
                   const Text(
                     '4376 VPN',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                       color: Color(0xFF0F172A),
                       letterSpacing: 0.5,
                     ),
@@ -57,10 +57,10 @@ class DesktopHomePage extends HookConsumerWidget {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 22.0),
+                physics: const ClampingScrollPhysics(),
                 children: [
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Expanded(
@@ -70,7 +70,7 @@ class DesktopHomePage extends HookConsumerWidget {
                           icon: Icons.arrow_downward_rounded,
                         ),
                       ),
-                      const Gap(16),
+                      const Gap(12),
                       Expanded(
                         child: _SpeedCard(
                           label: '上传速率',
@@ -80,13 +80,13 @@ class DesktopHomePage extends HookConsumerWidget {
                       ),
                     ],
                   ),
-                  const Gap(48),
+                  const Gap(22),
                   _ConnectionHero(state: state),
-                  const Gap(64),
+                  const Gap(22),
                   _HomeNodeCard(nodeName: nodeName),
-                  const Gap(24),
+                  const Gap(14),
                   const _RouteModeSegmentedControl(),
-                  const Gap(48),
+                  const Gap(18),
                 ],
               ),
             ),
@@ -108,8 +108,8 @@ class _TopRoundIcon extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
@@ -118,7 +118,7 @@ class _TopRoundIcon extends StatelessWidget {
             BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
           ],
         ),
-        child: Icon(icon, color: const Color(0xFF0F172A), size: 22),
+        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
       ),
     );
   }
@@ -134,7 +134,7 @@ class _SpeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -148,23 +148,23 @@ class _SpeedCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: const Color(0xFF94A3B8)),
-              const Gap(6),
+              Icon(icon, size: 14, color: const Color(0xFF94A3B8)),
+              const Gap(5),
               Text(
                 label,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
               ),
             ],
           ),
-          const Gap(12),
+          const Gap(6),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 18,
               color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: -.4,
             ),
           ),
@@ -187,7 +187,7 @@ class _ConnectionHero extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(32)),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -196,13 +196,13 @@ class _ConnectionHero extends StatelessWidget {
             status.label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 36,
+              fontSize: 26,
               color: connected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2.0,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .4,
             ),
           ),
-          const Gap(12),
+          const Gap(8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
@@ -220,21 +220,21 @@ class _ConnectionHero extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: connected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          const Gap(48),
+          const Gap(18),
           _DesktopPowerButton(state: state),
-          const Gap(48),
+          const Gap(14),
           Text(
             connected ? '点击停止加速' : state.buttonLabel,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: connected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -318,8 +318,8 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
           animation: _pulseAnimation,
           builder: (context, child) {
             return SizedBox(
-              width: 240,
-              height: 240,
+              width: 176,
+              height: 176,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -337,8 +337,8 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                   Transform.scale(
                     scale: busy ? _pulseAnimation.value * 1.1 : 1.0,
                     child: Container(
-                      width: 200,
-                      height: 200,
+                      width: 148,
+                      height: 148,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: connected
@@ -349,8 +349,8 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                   ),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    width: 150,
-                    height: 150,
+                    width: 112,
+                    height: 112,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: connected
@@ -370,9 +370,9 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                           color: connected
                               ? const Color(0xFF1D4ED8).withOpacity(.4)
                               : const Color(0xFF0F172A).withOpacity(.08),
-                          blurRadius: connected ? 30 : 20,
-                          spreadRadius: connected ? 8 : 0,
-                          offset: const Offset(0, 10),
+                          blurRadius: connected ? 24 : 16,
+                          spreadRadius: connected ? 4 : 0,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -382,7 +382,7 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                           : Icon(
                               connected ? Icons.shield_rounded : Icons.power_settings_new_rounded,
                               color: connected ? Colors.white : color,
-                              size: 56,
+                              size: 42,
                             ),
                     ),
                   ),
@@ -406,7 +406,7 @@ class _HomeNodeCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.goNamed('proxies'),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -418,21 +418,21 @@ class _HomeNodeCard extends StatelessWidget {
         child: Row(
           children: [
             _DesktopNodeFlag(nodeName: nodeName),
-            const Gap(16),
+            const Gap(12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     '当前节点',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
                   ),
                   const Gap(4),
                   Text(
                     nodeName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
                   ),
                 ],
               ),
@@ -454,8 +454,8 @@ class _DesktopNodeFlag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 52,
-      height: 52,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
@@ -464,7 +464,7 @@ class _DesktopNodeFlag extends StatelessWidget {
       child: Center(
         child: Text(
           _nodeFlagFor(nodeName),
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
         ),
       ),
     );
@@ -481,7 +481,7 @@ class _RouteModeSegmentedControl extends ConsumerWidget {
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
@@ -532,7 +532,7 @@ class _RouteModeChoice extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: selected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -544,13 +544,13 @@ class _RouteModeChoice extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 24),
-            const Gap(8),
+            Icon(icon, color: color, size: 20),
+            const Gap(5),
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
                 color: selected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
               ),
             ),
@@ -558,7 +558,7 @@ class _RouteModeChoice extends StatelessWidget {
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: selected ? const Color(0xFF2563EB).withOpacity(.80) : const Color(0xFF94A3B8),
               ),

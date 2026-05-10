@@ -29,6 +29,7 @@ class DesktopNodesPage extends HookConsumerWidget {
     return DesktopPageScaffold(
       title: '选择节点',
       subtitle: '只显示线路名称与延迟',
+      leading: const DesktopBackButton(),
       child: Column(
         children: [
           DesktopCard(

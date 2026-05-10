@@ -31,6 +31,7 @@ class DesktopMembershipPage extends StatelessWidget {
       return const DesktopPageScaffold(
         title: '会员中心',
         subtitle: '正在恢复账号状态',
+        leading: DesktopBackButton(),
         child: Center(child: CircularProgressIndicator()),
       );
     }
@@ -230,6 +231,7 @@ class _DesktopMemberCenter extends HookConsumerWidget {
 
     return DesktopPageScaffold(
       title: '我的账号',
+      leading: const DesktopBackButton(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 980;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 
 class DesktopTheme extends StatelessWidget {
@@ -108,6 +109,7 @@ class DesktopPageScaffold extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.leading,
     this.actions,
     required this.child,
     this.padding,
@@ -115,6 +117,7 @@ class DesktopPageScaffold extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+  final Widget? leading;
   final List<Widget>? actions;
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -130,27 +133,30 @@ class DesktopPageScaffold extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  runSpacing: 14,
+                Row(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          style: theme.textTheme.headlineSmall?.copyWith(color: BrandDesktopColors.textPrimary),
-                        ),
-                        if (subtitle != null) ...[
-                          const Gap(6),
+                    if (leading != null) ...[leading!, const Gap(10)],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Text(
-                            subtitle!,
-                            style: theme.textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.textSecondary),
+                            title,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: BrandDesktopColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
+                          if (subtitle != null) ...[
+                            const Gap(4),
+                            Text(
+                              subtitle!,
+                              style: theme.textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                     if (actions != null && actions!.isNotEmpty) Wrap(spacing: 10, runSpacing: 10, children: actions!),
                   ],
@@ -161,6 +167,36 @@ class DesktopPageScaffold extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class DesktopBackButton extends StatelessWidget {
+  const DesktopBackButton({super.key, this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: '返回',
+      onPressed:
+          onPressed ??
+          () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed('home');
+            }
+          },
+      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+      style: IconButton.styleFrom(
+        fixedSize: const Size(38, 38),
+        backgroundColor: BrandDesktopColors.card,
+        foregroundColor: BrandDesktopColors.textPrimary,
+        shape: const CircleBorder(),
+        side: const BorderSide(color: BrandDesktopColors.border),
       ),
     );
   }
