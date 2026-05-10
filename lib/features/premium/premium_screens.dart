@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
+import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/core/widget/desktop/desktop_window_chrome.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
@@ -30,12 +31,9 @@ class PremiumRenewalPage extends ConsumerWidget {
                   child: ListView(
                     padding: const EdgeInsets.all(24),
                     children: [
-                      const Text(
-                        '选择您的订阅方案',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                      ),
-                      const Gap(8),
-                      const Text('解锁高速专线与稳定连接体验', style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
+                      const Text('选择您的订阅方案', style: BrandDesktopText.sectionTitle),
+                      const Gap(6),
+                      const Text('解锁高速专线与稳定连接体验', style: BrandDesktopText.bodySecondary),
                       const Gap(26),
                       _CurrentPlanCard(session: session, subscription: subscription),
                       const Gap(16),
@@ -71,17 +69,14 @@ class PremiumInvitePage extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.card_giftcard_rounded, size: 80, color: Color(0xFFFF9500)),
-              const Gap(24),
-              const Text(
-                '邀请好友，共享极速',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-              ),
-              const Gap(8),
+              const Icon(Icons.card_giftcard_rounded, size: 64, color: Color(0xFFFF9500)),
+              const Gap(18),
+              const Text('邀请好友，共享极速', style: BrandDesktopText.sectionTitle),
+              const Gap(6),
               Text(
                 session == null ? '登录后可查看您的邀请权益。' : '邀请权益请以客服确认的活动规则为准。',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                style: BrandDesktopText.bodySecondary,
               ),
               const Gap(36),
               const _SoftInfoBox(
@@ -143,11 +138,11 @@ class _PremiumFeedbackPageState extends ConsumerState<PremiumFeedbackPage> {
             child: TextField(
               controller: _messageController,
               maxLines: 6,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '请详细描述您遇到的问题或建议...',
-                hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                hintStyle: BrandDesktopText.bodySecondary.copyWith(color: const Color(0xFF94A3B8)),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.all(16),
+                contentPadding: const EdgeInsets.all(16),
               ),
             ),
           ),
@@ -157,11 +152,11 @@ class _PremiumFeedbackPageState extends ConsumerState<PremiumFeedbackPage> {
           _InputCard(
             child: TextField(
               controller: _contactController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '留下您的邮箱或联系方式，方便我们联系您',
-                hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                hintStyle: BrandDesktopText.bodySecondary.copyWith(color: const Color(0xFF94A3B8)),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
           ),
@@ -195,18 +190,11 @@ class PremiumWebsitePage extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.language_rounded, size: 80, color: Color(0xFF10B981)),
-              const Gap(24),
-              const Text(
-                '访问 4376 官方支持',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-              ),
-              const Gap(8),
-              const Text(
-                '获取最新客户端、使用帮助及服务支持。',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-              ),
+              const Icon(Icons.language_rounded, size: 64, color: Color(0xFF10B981)),
+              const Gap(18),
+              const Text('访问 4376 官方支持', style: BrandDesktopText.sectionTitle),
+              const Gap(6),
+              const Text('获取最新客户端、使用帮助及服务支持。', textAlign: TextAlign.center, style: BrandDesktopText.bodySecondary),
               const Gap(36),
               const _SoftInfoBox(icon: Icons.public_rounded, title: '4376', subtitle: '官方入口以客服返回的信息为准'),
               const Gap(24),
@@ -243,14 +231,8 @@ class PremiumPreferencesPage extends ConsumerWidget {
           _InputCard(
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              title: const Text(
-                '全局代理模式',
-                style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-              ),
-              subtitle: Text(
-                isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
+              title: const Text('全局代理模式', style: BrandDesktopText.sectionTitle),
+              subtitle: Text(isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量', style: BrandDesktopText.caption),
               activeThumbColor: const Color(0xFF2563EB),
               value: isGlobalMode,
               onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
@@ -278,23 +260,86 @@ class _PremiumScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scaffold = Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const _PremiumBackButton(),
-        title: Text(title),
-        centerTitle: false,
+    final isDesktop = PlatformUtils.isWindows;
+    if (!isDesktop) {
+      return Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
-        elevation: 0,
-        titleTextStyle: const TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.w600),
-      ),
-      body: child,
-    );
-    if (!PlatformUtils.isWindows) return scaffold;
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: const _PremiumBackButton(),
+          title: Text(title),
+          centerTitle: false,
+          backgroundColor: const Color(0xFFF8FAFC),
+          elevation: 0,
+          titleTextStyle: BrandText.pageTitle,
+          toolbarHeight: 72,
+        ),
+        body: child,
+      );
+    }
     return DesktopTheme(
-      child: DesktopWindowChrome(backgroundColor: const Color(0xFFF8FAFC), child: scaffold),
+      child: DesktopWindowChrome(
+        backgroundColor: const Color(0xFFF8FAFC),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22.0),
+              child: Column(
+                children: [
+                  const Gap(10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => _goBack(context)),
+                      Text(title, style: BrandDesktopText.pageTitle),
+                      const SizedBox(width: 38, height: 38),
+                    ],
+                  ),
+                  const Gap(12),
+                  Expanded(child: child),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
+  }
+}
+
+class _TopRoundIcon extends StatelessWidget {
+  const _TopRoundIcon({required this.icon, this.onTap});
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
+      ),
+    );
+  }
+}
+
+void _goBack(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.goNamed('home');
   }
 }
 
@@ -306,13 +351,7 @@ class _PremiumBackButton extends StatelessWidget {
     if (PlatformUtils.isWindows) return const DesktopBackButton();
     return IconButton(
       tooltip: '返回',
-      onPressed: () {
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.goNamed('home');
-        }
-      },
+      onPressed: () => _goBack(context),
       icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
     );
   }
@@ -329,14 +368,11 @@ class _LoginRequiredPanel extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.person_outline_rounded, size: 72, color: Color(0xFF2563EB)),
-            const Gap(18),
-            const Text(
-              '请先登录',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-            ),
-            const Gap(8),
-            const Text('登录后可查看会员权益与续费入口', style: TextStyle(color: Color(0xFF64748B))),
+            const Icon(Icons.person_outline_rounded, size: 56, color: Color(0xFF2563EB)),
+            const Gap(14),
+            const Text('请先登录', style: BrandDesktopText.sectionTitle),
+            const Gap(6),
+            const Text('登录后可查看会员权益与续费入口', style: BrandDesktopText.bodySecondary),
             const Gap(24),
             SizedBox(
               width: double.infinity,
@@ -392,10 +428,10 @@ class _CurrentPlanCard extends StatelessWidget {
                   _displayText(subscription?.planName, fallback: '4376 Pro'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+                  style: BrandDesktopText.sectionTitle.copyWith(color: Colors.white, fontSize: 17),
                 ),
                 const Gap(4),
-                Text('账号 ${_maskUser(session.email)}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                Text('账号 ${_maskUser(session.email)}', style: BrandDesktopText.caption.copyWith(color: Colors.white60)),
               ],
             ),
           ),
@@ -431,10 +467,7 @@ class _PlanOptionCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                    ),
+                    Text(title, style: BrandDesktopText.sectionTitle),
                     const Gap(8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -447,22 +480,23 @@ class _PlanOptionCard extends StatelessWidget {
                       ),
                       child: Text(
                         tag,
-                        style: const TextStyle(fontSize: 10, color: Color(0xFF5C4000), fontWeight: FontWeight.w900),
+                        style: BrandDesktopText.caption.copyWith(
+                          color: const Color(0xFF5C4000),
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const Gap(4),
-                Text(description, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                Text(description, style: BrandDesktopText.bodySecondary),
               ],
             ),
           ),
           Text(
             '咨询',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: selected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
+            style: BrandDesktopText.sectionTitle.copyWith(
+              color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
             ),
           ),
         ],
@@ -525,12 +559,9 @@ class _SoftInfoBox extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                ),
-                const Gap(4),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                Text(title, style: BrandDesktopText.sectionTitle),
+                const Gap(3),
+                Text(subtitle, style: BrandDesktopText.bodySecondary),
               ],
             ),
           ),
@@ -567,23 +598,14 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 8),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF64748B)),
-      ),
+      child: Text(label, style: BrandDesktopText.bodySecondary.copyWith(fontWeight: FontWeight.w900)),
     );
   }
 }
 
-ButtonStyle _primaryButtonStyle() {
-  return ElevatedButton.styleFrom(
-    backgroundColor: const Color(0xFF2563EB),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    elevation: 0,
-  );
-}
+ButtonStyle _primaryButtonStyle() => BrandDesktopButtons.primary(height: 48);
 
-const _buttonTextStyle = TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white);
+const _buttonTextStyle = BrandDesktopText.buttonLabel;
 
 String _displayText(String? value, {String fallback = '--'}) {
   final trimmed = value?.trim();

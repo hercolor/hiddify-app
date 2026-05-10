@@ -48,7 +48,15 @@ class UserProfilePage extends HookConsumerWidget {
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: showingLogin,
-      appBar: showingLogin ? null : AppBar(toolbarHeight: 72, title: const Text('我的账号')),
+      appBar: showingLogin
+          ? null
+          : AppBar(
+              automaticallyImplyLeading: false,
+              leading: const _MobileProfileBackButton(),
+              toolbarHeight: 72,
+              title: const Text('我的账号'),
+              titleTextStyle: BrandText.pageTitle,
+            ),
       body: BrandScaffoldBackground(
         showHalos: !showingLogin,
         child: Center(
@@ -58,6 +66,25 @@ class UserProfilePage extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MobileProfileBackButton extends StatelessWidget {
+  const _MobileProfileBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: '返回',
+      onPressed: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.goNamed('home');
+        }
+      },
+      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
     );
   }
 }
@@ -183,15 +210,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                   const SizedBox(height: 42),
                   const _LoginMark(),
                   const Gap(24),
-                  const Text(
-                    '4376',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: BrandColors.signalBlue,
-                      letterSpacing: 2,
-                    ),
-                  ),
+                  const Text('4376', style: BrandText.brandTitle),
                   const Gap(8),
                   Text('安全、极速、无界', style: theme.textTheme.bodyMedium),
                   const Gap(48),
@@ -351,10 +370,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 8),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: BrandColors.muted, fontWeight: FontWeight.w900),
-      ),
+      child: Text(label, style: BrandText.label),
     );
   }
 }
@@ -404,10 +420,7 @@ class _HeroMemberCard extends HookConsumerWidget {
                             _maskAccount(session.email),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                            ),
+                            style: BrandText.sectionTitle.copyWith(color: Colors.white, fontSize: 17),
                           ),
                           const Gap(4),
                           Text(
@@ -470,7 +483,7 @@ class _PlanBadge extends StatelessWidget {
             label == '--' ? '4376 Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF5C4000), fontSize: 13, fontWeight: FontWeight.w900),
+            style: BrandText.caption.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -497,10 +510,7 @@ class _MemberField extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: dark ? Colors.white : BrandColors.slate,
-            fontWeight: FontWeight.w900,
-          ),
+          style: BrandText.sectionTitle.copyWith(color: dark ? Colors.white : BrandColors.slate),
         ),
       ],
     );
@@ -525,10 +535,7 @@ class _SmallLightButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: Colors.white.withOpacity(.14)),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w800, fontSize: 13),
-        ),
+        child: Text(label, style: BrandText.smallButton.copyWith(color: const Color(0xFFFFD700))),
       ),
     );
   }
@@ -565,14 +572,8 @@ class _MobileRouteModeCard extends ConsumerWidget {
       children: [
         SwitchListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          title: const Text(
-            '全局代理模式',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF111827)),
-          ),
-          subtitle: Text(
-            isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量',
-            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-          ),
+          title: const Text('全局代理模式', style: BrandText.sectionTitle),
+          subtitle: Text(isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量', style: BrandText.caption),
           activeThumbColor: BrandColors.signalBlue,
           value: isGlobalMode,
           onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
@@ -701,10 +702,7 @@ class _FooterLink extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandColors.muted, fontWeight: FontWeight.w700),
-      ),
+      child: Text(label, style: BrandText.bodySecondary.copyWith(fontWeight: FontWeight.w700)),
     );
   }
 }
@@ -754,13 +752,8 @@ class _ActionTile extends StatelessWidget {
         decoration: BoxDecoration(color: iconColor.withOpacity(.10), borderRadius: BorderRadius.circular(10)),
         child: Icon(icon, color: iconColor, size: 20),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF111827)),
-      ),
-      subtitle: subtitle == null
-          ? null
-          : Text(subtitle!, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+      title: Text(title, style: BrandText.sectionTitle),
+      subtitle: subtitle == null ? null : Text(subtitle!, style: BrandText.caption),
       trailing: const Icon(Icons.chevron_right_rounded, color: BrandColors.subtle),
       onTap: onTap,
     );
@@ -778,10 +771,7 @@ class _LogoutButton extends ConsumerWidget {
         backgroundColor: BrandColors.error.withOpacity(.10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      child: const Text(
-        '退出登录',
-        style: TextStyle(color: BrandColors.error, fontSize: 16, fontWeight: FontWeight.w800),
-      ),
+      child: Text('退出登录', style: BrandText.buttonLabel.copyWith(color: BrandColors.error)),
     );
   }
 }

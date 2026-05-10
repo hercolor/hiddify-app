@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
@@ -29,7 +30,13 @@ class ProxiesOverviewPage extends HookConsumerWidget {
 
     return Scaffold(
       extendBody: true,
-      appBar: AppBar(toolbarHeight: 72, title: const Text('选择节点')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const _MobileBackButton(),
+        toolbarHeight: 72,
+        title: const Text('选择节点'),
+        titleTextStyle: BrandText.pageTitle,
+      ),
       body: BrandScaffoldBackground(
         child: SafeArea(
           top: false,
@@ -86,6 +93,25 @@ class ProxiesOverviewPage extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MobileBackButton extends StatelessWidget {
+  const _MobileBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: '返回',
+      onPressed: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.goNamed('home');
+        }
+      },
+      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
     );
   }
 }
@@ -157,7 +183,6 @@ class _CachedNodeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final delay = node.delay;
     final delayText = delay == null || delay == 0
         ? '待测速'
@@ -195,7 +220,7 @@ class _CachedNodeTile extends StatelessWidget {
                   child: Text(
                     safeNodeDisplayName(node.name),
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    style: BrandText.bodyPrimary,
                   ),
                 ),
                 const Gap(10),
@@ -207,7 +232,7 @@ class _CachedNodeTile extends StatelessWidget {
                   ),
                   child: Text(
                     delayText,
-                    style: theme.textTheme.labelMedium?.copyWith(color: delayColor, fontWeight: FontWeight.w800),
+                    style: BrandText.caption.copyWith(color: delayColor, fontWeight: FontWeight.w600),
                   ),
                 ),
                 const Gap(10),

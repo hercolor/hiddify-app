@@ -16,7 +16,6 @@ class ProxyTile extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final delay = proxy.urlTestDelay;
     final displayName = safeNodeDisplayName(proxy.tagDisplay.isNotEmpty ? proxy.tagDisplay : proxy.tag);
     final delayText = delay == 0
@@ -49,10 +48,8 @@ class ProxyTile extends HookConsumerWidget {
                   child: Text(
                     displayName,
                     overflow: TextOverflow.ellipsis,
-                    style: (theme.textTheme.titleMedium ?? const TextStyle()).copyWith(
+                    style: BrandText.bodyPrimary.copyWith(
                       fontFamily: PlatformUtils.isWindows ? FontFamily.emoji : null,
-                      fontWeight: FontWeight.w800,
-                      color: BrandColors.slate,
                     ),
                   ),
                 ),
@@ -92,7 +89,7 @@ class _DelayPill extends StatelessWidget {
       decoration: BoxDecoration(color: color.withOpacity(.10), borderRadius: BorderRadius.circular(999)),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w800),
+        style: BrandText.caption.copyWith(color: color, fontWeight: FontWeight.w600),
       ),
     );
   }

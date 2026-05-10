@@ -17,14 +17,10 @@ class DesktopShell extends HookConsumerWidget {
       child: Material(
         color: BrandDesktopColors.background,
         child: DesktopWindowChrome(
-          reserveTop: false,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: BrandDesktopWindow.contentMaxWidth),
-              child: Padding(
-                padding: const EdgeInsets.only(top: DesktopWindowChrome.height),
-                child: navigationShell,
-              ),
+              child: navigationShell,
             ),
           ),
         ),

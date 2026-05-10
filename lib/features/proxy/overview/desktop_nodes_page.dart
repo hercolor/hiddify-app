@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
@@ -18,6 +19,33 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final desktopNodeSearchProvider = StateProvider.autoDispose<String>((ref) => '');
 
+class _TopRoundIcon extends StatelessWidget {
+  const _TopRoundIcon({required this.icon, this.onTap});
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
+      ),
+    );
+  }
+}
+
 class DesktopNodesPage extends HookConsumerWidget {
   const DesktopNodesPage({super.key});
 
@@ -26,36 +54,51 @@ class DesktopNodesPage extends HookConsumerWidget {
     final search = ref.watch(desktopNodeSearchProvider).trim().toLowerCase();
     final proxies = ref.watch(proxiesOverviewNotifierProvider);
     _useAutoLatencyRefresh(ref, proxies.valueOrNull?.tag);
-    return DesktopPageScaffold(
-      title: '选择节点',
-      subtitle: '只显示线路名称与延迟',
-      leading: const DesktopBackButton(),
-      child: Column(
-        children: [
-          DesktopCard(
-            padding: EdgeInsets.zero,
-            borderColor: const Color(0xFFE2E8F0),
-            child: TextField(
-              onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
-              decoration: const InputDecoration(
-                hintText: '搜索国家或地区...',
-                prefixIcon: Icon(Icons.search_rounded),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
+    return DesktopTheme(
+      child: DesktopBackdrop(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22.0),
+            child: Column(
+              children: [
+                const Gap(10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.goNamed('home')),
+                    const Text('选择节点', style: BrandDesktopText.pageTitle),
+                    const SizedBox(width: 38, height: 38),
+                  ],
+                ),
+                const Gap(12),
+                DesktopCard(
+                  padding: EdgeInsets.zero,
+                  borderColor: const Color(0xFFE2E8F0),
+                  child: TextField(
+                    onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
+                    decoration: const InputDecoration(
+                      hintText: '搜索国家或地区...',
+                      prefixIcon: Icon(Icons.search_rounded),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                  ),
+                ),
+                const Gap(16),
+                Expanded(
+                  child: proxies.when(
+                    data: (group) => group == null
+                        ? _CachedDesktopNodes(search: search)
+                        : _LiveDesktopNodes(group: group, search: search),
+                    error: (_, _) => _CachedDesktopNodes(search: search),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+              ],
             ),
           ),
-          const Gap(16),
-          Expanded(
-            child: proxies.when(
-              data: (group) =>
-                  group == null ? _CachedDesktopNodes(search: search) : _LiveDesktopNodes(group: group, search: search),
-              error: (_, _) => _CachedDesktopNodes(search: search),
-              loading: () => const Center(child: CircularProgressIndicator()),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -192,63 +235,48 @@ class _DesktopNodeTile extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2563EB).withOpacity(.05) : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9), width: 2),
+          color: selected ? BrandDesktopColors.accent.withOpacity(.05) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? BrandDesktopColors.accent : const Color(0xFFF1F5F9), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: selected ? const Color(0xFF2563EB).withOpacity(.1) : const Color(0xFF0F172A).withOpacity(.03),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              color: selected ? BrandDesktopColors.accent.withOpacity(.1) : const Color(0xFF0F172A).withOpacity(.03),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
             _NodeFlag(name: name, selected: selected),
-            const Gap(16),
+            const Gap(12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: selected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const Gap(4),
-                  Text(
-                    '智能路由推荐',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? const Color(0xFF2563EB).withOpacity(.8) : const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: BrandDesktopText.bodyPrimary.copyWith(
+                  color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            const Gap(12),
+            const Gap(10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(color: delayColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
               child: Text(
                 delayText,
-                style: TextStyle(color: delayColor, fontWeight: FontWeight.bold, fontSize: 12),
+                style: BrandDesktopText.caption.copyWith(color: delayColor, fontWeight: FontWeight.w700),
               ),
             ),
-            const Gap(12),
+            const Gap(10),
             Icon(
               selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
-              color: selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+              color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
+              size: 20,
             ),
           ],
         ),
@@ -266,20 +294,19 @@ class _NodeFlag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 52,
-      height: 52,
+      width: 42,
+      height: 42,
       decoration: BoxDecoration(
-        color: selected ? const Color(0xFF2563EB).withOpacity(0.1) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: selected ? const Color(0xFF2563EB).withOpacity(0.3) : const Color(0xFFE2E8F0)),
+        color: selected ? BrandDesktopColors.accent.withOpacity(0.1) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: selected ? BrandDesktopColors.accent.withOpacity(0.3) : const Color(0xFFE2E8F0)),
       ),
       child: Center(
         child: Text(
           _nodeFlagFor(name),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: selected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
+          style: BrandDesktopText.bodyPrimary.copyWith(
+            fontWeight: FontWeight.w700,
+            color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
           ),
         ),
       ),
