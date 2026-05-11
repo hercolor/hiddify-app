@@ -152,6 +152,16 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const PremiumWebsitePage()),
         ),
         GoRoute(
+          name: 'premiumContact',
+          path: '/premium/contact',
+          pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const PremiumContactPage()),
+        ),
+        GoRoute(
+          name: 'premiumAbout',
+          path: '/premium/about',
+          pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const PremiumAboutPage()),
+        ),
+        GoRoute(
           name: 'premiumPreferences',
           path: '/premium/preferences',
           pageBuilder: (_, state) =>

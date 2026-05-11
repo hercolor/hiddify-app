@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
@@ -211,6 +212,139 @@ class PremiumWebsitePage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class PremiumContactPage extends ConsumerWidget {
+  const PremiumContactPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final customerService = ref.watch(authNotifierProvider).valueOrNull?.session?.subscription?.customerService;
+    final hasCustomerService = customerService?.trim().isNotEmpty == true;
+    return _PremiumScaffold(
+      title: '联系客服',
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.support_agent_rounded, size: 64, color: Color(0xFF2563EB)),
+              const Gap(18),
+              const Text('4376 客服支持', style: BrandDesktopText.sectionTitle),
+              const Gap(6),
+              Text(
+                hasCustomerService ? '如需续费、套餐、节点或账号帮助，请通过客服入口联系。' : '客服入口暂未配置，请稍后重试。',
+                textAlign: TextAlign.center,
+                style: BrandDesktopText.bodySecondary,
+              ),
+              const Gap(36),
+              _SoftInfoBox(
+                icon: Icons.privacy_tip_outlined,
+                title: '隐私提示',
+                subtitle: hasCustomerService ? '联系客服不会展示订阅链接、节点地址或账号密钥。' : '未获取到客服配置，请确认账号套餐信息已同步。',
+              ),
+              const Gap(24),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: hasCustomerService ? () => _openCustomerService(context, ref, customerService) : null,
+                  style: _primaryButtonStyle(),
+                  child: Text(hasCustomerService ? '打开客服' : '客服暂未配置', style: _buttonTextStyle),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PremiumAboutPage extends ConsumerStatefulWidget {
+  const PremiumAboutPage({super.key});
+
+  @override
+  ConsumerState<PremiumAboutPage> createState() => _PremiumAboutPageState();
+}
+
+class _PremiumAboutPageState extends ConsumerState<PremiumAboutPage> {
+  int _versionTapCount = 0;
+
+  void _openDiagnostics() {
+    _versionTapCount += 1;
+    if (_versionTapCount >= 7) {
+      _versionTapCount = 0;
+      context.pushNamed('diagnostics');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final version = ref.watch(appInfoProvider).valueOrNull?.presentVersion;
+    final versionText = version == null || version.trim().isEmpty ? '--' : version;
+    return _PremiumScaffold(
+      title: '关于 4376',
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const Icon(Icons.bolt_rounded, size: 64, color: Color(0xFF2563EB)),
+          const Gap(16),
+          const Center(child: Text('4376', style: BrandDesktopText.heroStatus)),
+          const Gap(6),
+          const Center(child: Text('安全、极速、无界', style: BrandDesktopText.bodySecondary)),
+          const Gap(28),
+          _InputCard(
+            child: Column(
+              children: [
+                _AboutRow(
+                  icon: Icons.privacy_tip_outlined,
+                  title: '隐私政策',
+                  onTap: () => context.pushNamed('privacyPolicy'),
+                ),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                _AboutRow(
+                  icon: Icons.description_outlined,
+                  title: '用户协议',
+                  onTap: () => context.pushNamed('termsOfService'),
+                ),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                _AboutRow(
+                  icon: Icons.info_outline_rounded,
+                  title: '软件版本',
+                  trailing: 'v$versionText',
+                  onTap: _openDiagnostics,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutRow extends StatelessWidget {
+  const _AboutRow({required this.icon, required this.title, this.trailing, this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Icon(icon, color: BrandDesktopColors.accent, size: 22),
+      title: Text(title, style: BrandDesktopText.bodyPrimary),
+      trailing: trailing == null
+          ? const Icon(Icons.chevron_right_rounded, color: BrandDesktopColors.textMuted)
+          : Text(trailing!, style: BrandDesktopText.bodySecondary),
+      onTap: onTap,
     );
   }
 }

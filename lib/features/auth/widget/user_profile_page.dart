@@ -1,9 +1,6 @@
-import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
@@ -13,12 +10,9 @@ import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
-import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/auth/widget/desktop_membership_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/platform_utils.dart';
-import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -340,23 +334,37 @@ class _MemberCenter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subscription = session.subscription;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 104),
-      children: [
-        _HeroMemberCard(session: session, subscription: subscription),
-        const Gap(24),
-        const _SectionLabel('路由设置'),
-        const Gap(8),
-        const _MobileRouteModeCard(),
-        const Gap(24),
-        const _SectionLabel('其他功能'),
-        const Gap(8),
-        _SupportCard(subscription: subscription),
-        const Gap(16),
-        _MobileLegalFooter(),
-        const Gap(24),
-        _LogoutButton(),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
+        final contentWidth = (width - 48).clamp(280.0, 680.0);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: contentWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _HeroMemberCard(session: session, subscription: subscription),
+                    const Gap(18),
+                    const _SectionLabel('其他功能'),
+                    const Gap(8),
+                    _SupportCard(subscription: subscription),
+                    const Gap(16),
+                    _LogoutButton(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -562,39 +570,6 @@ String _maskAccount(String value) {
   return '${trimmed.substring(0, 1)}***${trimmed.substring(at)}';
 }
 
-class _MobileRouteModeCard extends ConsumerWidget {
-  const _MobileRouteModeCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isGlobalMode = ref.watch(ConfigOptions.globalRouteMode);
-    return _PremiumCard(
-      children: [
-        SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          title: const Text('全局代理模式', style: BrandText.sectionTitle),
-          subtitle: Text(isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量', style: BrandText.caption),
-          activeThumbColor: BrandColors.signalBlue,
-          value: isGlobalMode,
-          onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
-          secondary: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isGlobalMode ? BrandColors.signalBlue.withOpacity(.10) : BrandColors.mist,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              isGlobalMode ? Icons.public_rounded : Icons.alt_route_rounded,
-              color: isGlobalMode ? BrandColors.signalBlue : BrandColors.subtle,
-              size: 20,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _SupportCard extends HookConsumerWidget {
   const _SupportCard({required this.subscription});
 
@@ -604,6 +579,13 @@ class _SupportCard extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _PremiumCard(
       children: [
+        _ActionTile(
+          icon: Icons.support_agent_rounded,
+          title: '联系客服',
+          iconColor: const Color(0xFF2563EB),
+          onTap: () => context.pushNamed('premiumContact'),
+        ),
+        const _ActionDivider(),
         _ActionTile(
           icon: Icons.card_giftcard_rounded,
           title: '邀请有礼',
@@ -620,89 +602,19 @@ class _SupportCard extends HookConsumerWidget {
         ),
         const _ActionDivider(),
         _ActionTile(
-          icon: Icons.language_rounded,
-          title: '官网链接',
-          iconColor: const Color(0xFF10B981),
-          onTap: () => context.pushNamed('premiumWebsite'),
-        ),
-        const _ActionDivider(),
-        _ActionTile(
           icon: Icons.settings_outlined,
           title: '高级设置',
           iconColor: const Color(0xFF64748B),
           onTap: () => context.pushNamed('premiumPreferences'),
         ),
-      ],
-    );
-  }
-}
-
-class _MobileLegalFooter extends HookConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final appInfo = ref.watch(appInfoProvider);
-    final subscription = ref.watch(authNotifierProvider).valueOrNull?.session?.subscription;
-    final versionTapCount = useState(0);
-
-    void openDiagnostics() {
-      versionTapCount.value += 1;
-      if (versionTapCount.value >= 7) {
-        versionTapCount.value = 0;
-        context.pushNamed('diagnostics');
-      }
-    }
-
-    final version = appInfo.valueOrNull?.presentVersion;
-    return Column(
-      children: [
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 14,
-          runSpacing: 8,
-          children: [
-            _FooterLink(
-              label: '联系客服',
-              onTap: () => _openMobileCustomerService(context, ref, subscription?.customerService),
-            ),
-            _FooterLink(label: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
-            _FooterLink(label: '用户协议', onTap: () => context.pushNamed('termsOfService')),
-          ],
-        ),
-        const Gap(8),
-        GestureDetector(
-          onTap: openDiagnostics,
-          child: Text(
-            '版本 ${version == null || version.isBlank ? '--' : version}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandColors.muted),
-          ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.info_outline_rounded,
+          title: '关于 4376',
+          iconColor: const Color(0xFF64748B),
+          onTap: () => context.pushNamed('premiumAbout'),
         ),
       ],
-    );
-  }
-}
-
-Future<void> _openMobileCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
-  final notification = ref.read(inAppNotificationControllerProvider);
-  final uri = customerServiceUri(customerService);
-  if (uri == null) {
-    notification.showInfoToast('客服暂未配置');
-    return;
-  }
-  final launched = await UriUtils.tryLaunch(uri);
-  if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
-}
-
-class _FooterLink extends StatelessWidget {
-  const _FooterLink({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Text(label, style: BrandText.bodySecondary.copyWith(fontWeight: FontWeight.w700)),
     );
   }
 }
