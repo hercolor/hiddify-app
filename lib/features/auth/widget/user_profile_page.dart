@@ -353,8 +353,6 @@ class _MemberCenter extends StatelessWidget {
                   children: [
                     _HeroMemberCard(session: session, subscription: subscription),
                     const Gap(18),
-                    const _SectionLabel('其他功能'),
-                    const Gap(8),
                     _SupportCard(subscription: subscription),
                     const Gap(16),
                     _LogoutButton(),
@@ -365,20 +363,6 @@ class _MemberCenter extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: Text(label, style: BrandText.label),
     );
   }
 }

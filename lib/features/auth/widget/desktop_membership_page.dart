@@ -1,20 +1,13 @@
-import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hiddify/core/app_info/app_info_provider.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
-import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
-import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -111,14 +104,9 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                   children: [
                     const _DesktopLoginMark(),
                     const Gap(24),
-                    const Text(
+                    Text(
                       '4376',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: BrandDesktopColors.accent,
-                        letterSpacing: 2,
-                      ),
+                      style: BrandDesktopText.heroStatus.copyWith(color: BrandDesktopColors.accent, letterSpacing: 2),
                     ),
                     const Gap(8),
                     Text('安全、极速、无界', style: Theme.of(context).textTheme.bodyMedium),
@@ -210,122 +198,57 @@ class _DesktopLoginMark extends StatelessWidget {
   }
 }
 
-class _DesktopMemberCenter extends HookConsumerWidget {
+class _DesktopMemberCenter extends StatelessWidget {
   const _DesktopMemberCenter({required this.session});
 
   final AuthSession session;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final subscription = session.subscription;
-    final appInfo = ref.watch(appInfoProvider);
-    final versionTapCount = useState(0);
+    final plan = _PlanCard(session: session, subscription: subscription);
+    const actions = _MemberActions();
 
-    void openDiagnostics() {
-      versionTapCount.value += 1;
-      if (versionTapCount.value >= 7) {
-        versionTapCount.value = 0;
-        context.pushNamed('diagnostics');
-      }
-    }
-
-    return DesktopPageScaffold(
-      title: '我的账号',
-      leading: const DesktopBackButton(),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final narrow = constraints.maxWidth < 980;
-          final plan = _PlanCard(session: session, subscription: subscription);
-          final actions = _MemberActions(
-            subscription: subscription,
-            version: appInfo.valueOrNull?.presentVersion,
-            onVersionTap: openDiagnostics,
-          );
-          if (narrow) {
-            return ListView(
-              padding: const EdgeInsets.only(bottom: 16),
+    return DesktopTheme(
+      child: DesktopBackdrop(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22.0),
+            child: Column(
               children: [
-                plan,
-                const Gap(22),
-                const _DesktopSectionLabel('路由设置'),
-                const Gap(8),
-                const _RouteModeSwitchCard(),
-                const Gap(22),
-                const _DesktopSectionLabel('其他功能'),
-                const Gap(8),
-                actions,
-                const Gap(16),
-                _DesktopLegalFooter(
-                  subscription: subscription,
-                  version: appInfo.valueOrNull?.presentVersion,
-                  onVersionTap: openDiagnostics,
+                const Gap(10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.pop()),
+                    const Text('我的账号', style: BrandDesktopText.pageTitle),
+                    const SizedBox(width: 38, height: 38),
+                  ],
                 ),
-                const Gap(24),
-                const _DesktopLogoutButton(),
+                const Gap(12),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.topCenter,
+                          child: SizedBox(
+                            width: constraints.maxWidth,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [plan, const Gap(18), actions, const Gap(16), const _DesktopLogoutButton()],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
-            );
-          }
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 16),
-            children: [
-              plan,
-              const Gap(22),
-              const _DesktopSectionLabel('路由设置'),
-              const Gap(8),
-              const _RouteModeSwitchCard(),
-              const Gap(22),
-              const _DesktopSectionLabel('其他功能'),
-              const Gap(8),
-              actions,
-              const Gap(16),
-              _DesktopLegalFooter(
-                subscription: subscription,
-                version: appInfo.valueOrNull?.presentVersion,
-                onVersionTap: openDiagnostics,
-              ),
-              const Gap(24),
-              const _DesktopLogoutButton(),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _RouteModeSwitchCard extends ConsumerWidget {
-  const _RouteModeSwitchCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isGlobalMode = ref.watch(ConfigOptions.globalRouteMode);
-    return DesktopCard(
-      padding: EdgeInsets.zero,
-      child: SwitchListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        title: Text(
-          '全局代理模式',
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(color: BrandDesktopColors.textPrimary, fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(
-          isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary),
-        ),
-        activeThumbColor: BrandDesktopColors.accent,
-        value: isGlobalMode,
-        onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
-        secondary: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isGlobalMode ? BrandDesktopColors.accent.withOpacity(.10) : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            Icons.public_rounded,
-            color: isGlobalMode ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
-            size: 20,
+            ),
           ),
         ),
       ),
@@ -333,20 +256,28 @@ class _RouteModeSwitchCard extends ConsumerWidget {
   }
 }
 
-class _DesktopSectionLabel extends StatelessWidget {
-  const _DesktopSectionLabel(this.label);
+class _TopRoundIcon extends StatelessWidget {
+  const _TopRoundIcon({required this.icon, this.onTap});
 
-  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.labelLarge?.copyWith(color: BrandDesktopColors.textSecondary, fontWeight: FontWeight.w900),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
       ),
     );
   }
@@ -393,9 +324,7 @@ class _PlanCard extends ConsumerWidget {
                             _maskUser(session.email),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w900),
+                            style: BrandDesktopText.sectionTitle.copyWith(color: Colors.white),
                           ),
                           const Gap(4),
                           Text(
@@ -458,7 +387,7 @@ class _DesktopPlanBadge extends StatelessWidget {
             label == '--' ? '4376 Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF5C4000), fontSize: 13, fontWeight: FontWeight.w900),
+            style: BrandDesktopText.bodyPrimary.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -490,10 +419,7 @@ class _PlanField extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: dark ? Colors.white : BrandDesktopColors.textPrimary,
-            fontWeight: FontWeight.w900,
-          ),
+          style: BrandDesktopText.sectionTitle.copyWith(color: dark ? Colors.white : BrandDesktopColors.textPrimary),
         ),
       ],
     );
@@ -516,25 +442,28 @@ class _SmallPlanButton extends StatelessWidget {
       side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withOpacity(.12))),
       shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
     );
-    final child = Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800));
+    final child = Text(label, style: BrandDesktopText.smallButton);
     return OutlinedButton(onPressed: onPressed, style: style, child: child);
   }
 }
 
-class _MemberActions extends ConsumerWidget {
-  const _MemberActions({required this.subscription, required this.version, required this.onVersionTap});
-
-  final UserSubscription? subscription;
-  final String? version;
-  final VoidCallback onVersionTap;
+class _MemberActions extends StatelessWidget {
+  const _MemberActions();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return DesktopCard(
       padding: EdgeInsets.zero,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          _ActionRow(
+            icon: Icons.support_agent_rounded,
+            title: '联系客服',
+            iconColor: const Color(0xFF2563EB),
+            onTap: () => context.pushNamed('premiumContact'),
+          ),
+          const _DesktopActionDivider(),
           _ActionRow(
             icon: Icons.card_giftcard_rounded,
             title: '邀请有礼',
@@ -551,82 +480,19 @@ class _MemberActions extends ConsumerWidget {
           ),
           const _DesktopActionDivider(),
           _ActionRow(
-            icon: Icons.language_rounded,
-            title: '官网链接',
-            iconColor: const Color(0xFF10B981),
-            onTap: () => context.pushNamed('premiumWebsite'),
-          ),
-          const _DesktopActionDivider(),
-          _ActionRow(
             icon: Icons.settings_outlined,
             title: '高级设置',
             iconColor: const Color(0xFF64748B),
             onTap: () => context.pushNamed('premiumPreferences'),
           ),
+          const _DesktopActionDivider(),
+          _ActionRow(
+            icon: Icons.info_outline_rounded,
+            title: '关于 4376',
+            iconColor: const Color(0xFF64748B),
+            onTap: () => context.pushNamed('premiumAbout'),
+          ),
         ],
-      ),
-    );
-  }
-}
-
-class _DesktopLegalFooter extends ConsumerWidget {
-  const _DesktopLegalFooter({required this.subscription, required this.version, required this.onVersionTap});
-
-  final UserSubscription? subscription;
-  final String? version;
-  final VoidCallback onVersionTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary);
-    return Column(
-      children: [
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 14,
-          runSpacing: 8,
-          children: [
-            _FooterLink(label: '联系客服', onTap: () => _openCustomerService(context, ref, subscription?.customerService)),
-            _FooterLink(label: '隐私政策', onTap: () => context.pushNamed('privacyPolicy')),
-            _FooterLink(label: '用户协议', onTap: () => context.pushNamed('termsOfService')),
-          ],
-        ),
-        const Gap(8),
-        GestureDetector(
-          onTap: onVersionTap,
-          child: Text('版本 ${version == null || version!.isBlank ? '--' : version!}', style: textStyle),
-        ),
-      ],
-    );
-  }
-}
-
-Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
-  final notification = ref.read(inAppNotificationControllerProvider);
-  final uri = customerServiceUri(customerService);
-  if (uri == null) {
-    notification.showInfoToast('客服暂未配置');
-    return;
-  }
-  final launched = await UriUtils.tryLaunch(uri);
-  if (!launched) notification.showErrorToast('无法打开客服，请稍后重试');
-}
-
-class _FooterLink extends StatelessWidget {
-  const _FooterLink({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textSecondary, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -670,7 +536,7 @@ class _ActionRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(title, style: BrandDesktopText.sectionTitle),
                     if (subtitle != null) ...[
                       const Gap(4),
                       Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
@@ -702,7 +568,7 @@ class _DesktopLogoutButton extends ConsumerWidget {
       ),
       child: const Text(
         '退出登录',
-        style: TextStyle(color: BrandDesktopColors.error, fontSize: 16, fontWeight: FontWeight.w800),
+        style: TextStyle(color: BrandDesktopColors.error, fontWeight: FontWeight.w700),
       ),
     );
   }

@@ -9,6 +9,7 @@ class DesktopWindowChrome extends StatelessWidget {
     required this.child,
     this.backgroundColor = BrandDesktopColors.background,
     this.reserveTop = false,
+    this.showCloseButton = true,
   });
 
   static const height = 16.0;
@@ -16,6 +17,7 @@ class DesktopWindowChrome extends StatelessWidget {
   final Widget child;
   final Color backgroundColor;
   final bool reserveTop;
+  final bool showCloseButton;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +37,50 @@ class DesktopWindowChrome extends StatelessWidget {
             height: height,
             child: DragToMoveArea(child: SizedBox.expand()),
           ),
+          if (showCloseButton) const Positioned(top: 2, right: 2, child: _DesktopWindowCloseButton()),
         ],
+      ),
+    );
+  }
+}
+
+class _DesktopWindowCloseButton extends StatefulWidget {
+  const _DesktopWindowCloseButton();
+
+  @override
+  State<_DesktopWindowCloseButton> createState() => _DesktopWindowCloseButtonState();
+}
+
+class _DesktopWindowCloseButtonState extends State<_DesktopWindowCloseButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = _hovered ? const Color(0xFFFEE2E2) : Colors.white.withOpacity(.76);
+    final foreground = _hovered ? BrandDesktopColors.error : BrandDesktopColors.textMuted;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Tooltip(
+        message: '关闭',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: windowManager.close,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: background,
+              shape: BoxShape.circle,
+              border: Border.all(color: _hovered ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(color: const Color(0xFF0F172A).withOpacity(.05), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Icon(Icons.close_rounded, size: 12, color: foreground),
+          ),
+        ),
       ),
     );
   }
