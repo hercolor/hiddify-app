@@ -69,4 +69,18 @@ void main() {
     expect(profileTileText, isNot(contains('LinkParser.generateSubShareLink')));
     expect(profileTileText, isNot(contains('share.urlToClipboard')));
   });
+
+  test('mobile branch back handling returns to home without showing close controls', () {
+    final adaptiveLayoutText = _readUtf8('lib/core/router/adaptive_layout/my_adaptive_layout.dart');
+    final routerText = _readUtf8('lib/core/router/go_router/routing_config_notifier.dart');
+    final homeText = _readUtf8('lib/features/home/widget/desktop_home_page.dart');
+
+    expect(adaptiveLayoutText, contains('PopScope('));
+    expect(adaptiveLayoutText, contains('canPop: navigationShell.currentIndex == 0'));
+    expect(adaptiveLayoutText, contains('navigationShell.goBranch(0)'));
+    expect(routerText, isNot(contains('canPop: false')));
+    expect(homeText, contains('if (PlatformUtils.isWindows)'));
+    expect(homeText, contains('Icons.close_rounded'));
+    expect(homeText, contains('const SizedBox(width: 38, height: 38)'));
+  });
 }

@@ -23,7 +23,14 @@ class MyAdaptiveLayout extends HookConsumerWidget {
     if (PlatformUtils.isWindows) {
       return DesktopShell(navigationShell: navigationShell, actions: actions);
     }
-    return Material(child: Scaffold(body: navigationShell));
+    return PopScope(
+      canPop: navigationShell.currentIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || navigationShell.currentIndex == 0) return;
+        navigationShell.goBranch(0);
+      },
+      child: Material(child: Scaffold(body: navigationShell)),
+    );
   }
 
   List<ShellRouteAction> _actions(bool showProfilesAction, bool isMobileBreakpoint) => [

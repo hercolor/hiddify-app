@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
@@ -9,10 +10,95 @@ import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/number_formatters.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:window_manager/window_manager.dart';
 
 class DesktopHomePage extends HookConsumerWidget {
   const DesktopHomePage({super.key});
+
+  Future<void> _handleClose(BuildContext context) async {
+    if (!PlatformUtils.isWindows) return;
+
+    final action = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.power_settings_new_rounded, color: Color(0xFFEF4444), size: 22),
+            ),
+            const Gap(12),
+            const Text('退出 4376 VPN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: const Text('选择退出方式', style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).pop('hide'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                    label: const Text('最小化到托盘', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const Gap(8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).pop('exit'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.logout_rounded, size: 20),
+                    label: const Text('完全退出程序', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const Gap(8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop('cancel'),
+                    style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    child: const Text('取消', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!context.mounted) return;
+
+    if (action == 'hide') {
+      await windowManager.hide();
+    } else if (action == 'exit') {
+      await windowManager.close();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,66 +117,51 @@ class DesktopHomePage extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 10.0),
-              child: Row(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22.0),
+          child: Column(
+            children: [
+              const Gap(10),
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _TopRoundIcon(icon: Icons.settings_outlined, onTap: () => context.pushNamed('settings')),
-                  const Text(
-                    '4376 VPN',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: 0.5,
+                  const Text('4376 VPN', style: BrandDesktopText.pageTitle),
+                  if (PlatformUtils.isWindows)
+                    _TopRoundIcon(icon: Icons.close_rounded, onTap: () => _handleClose(context))
+                  else
+                    const SizedBox(width: 38, height: 38),
+                ],
+              ),
+              const Gap(12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SpeedCard(
+                      label: '下载',
+                      value: stats.downlink.toInt().speed(),
+                      icon: Icons.arrow_downward_rounded,
                     ),
                   ),
-                  _TopRoundIcon(
-                    icon: Icons.workspace_premium_outlined,
-                    onTap: () => context.pushNamed('premiumRenewal'),
+                  const Gap(10),
+                  Expanded(
+                    child: _SpeedCard(
+                      label: '上传',
+                      value: stats.uplink.toInt().speed(),
+                      icon: Icons.arrow_upward_rounded,
+                    ),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 22.0),
-                physics: const ClampingScrollPhysics(),
-                children: [
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SpeedCard(
-                          label: '下载速率',
-                          value: stats.downlink.toInt().speed(),
-                          icon: Icons.arrow_downward_rounded,
-                        ),
-                      ),
-                      const Gap(12),
-                      Expanded(
-                        child: _SpeedCard(
-                          label: '上传速率',
-                          value: stats.uplink.toInt().speed(),
-                          icon: Icons.arrow_upward_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Gap(22),
-                  _ConnectionHero(state: state),
-                  const Gap(22),
-                  _HomeNodeCard(nodeName: nodeName),
-                  const Gap(14),
-                  const _RouteModeSegmentedControl(),
-                  const Gap(18),
-                ],
-              ),
-            ),
-          ],
+              const Spacer(),
+              _ConnectionHero(state: state),
+              const Spacer(),
+              _HomeNodeCard(nodeName: nodeName),
+              const Gap(12),
+              const _RouteModeSegmentedControl(),
+              const Gap(14),
+            ],
+          ),
         ),
       ),
     );
@@ -134,13 +205,13 @@ class _SpeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 24, offset: const Offset(0, 8)),
+          BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 16, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -148,26 +219,13 @@ class _SpeedCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: const Color(0xFF94A3B8)),
-              const Gap(5),
-              Text(
-                label,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
-              ),
+              Icon(icon, size: 12, color: BrandDesktopColors.textMuted),
+              const Gap(4),
+              Text(label, style: BrandDesktopText.caption),
             ],
           ),
-          const Gap(6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 18,
-              color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w700,
-              letterSpacing: -.4,
-            ),
-          ),
+          const Gap(4),
+          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: BrandDesktopText.cardValue),
         ],
       ),
     );
@@ -187,27 +245,23 @@ class _ConnectionHero extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(32)),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             status.label,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 26,
-              color: connected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
-              fontWeight: FontWeight.w700,
-              letterSpacing: .4,
+            style: BrandDesktopText.heroStatus.copyWith(
+              color: connected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
             ),
           ),
-          const Gap(8),
+          const Gap(6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
-              color: connected ? const Color(0xFF2563EB).withOpacity(.08) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(20),
+              color: connected ? BrandDesktopColors.accent.withOpacity(.08) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               connected
@@ -219,22 +273,18 @@ class _ConnectionHero extends StatelessWidget {
                   : '畅享 VIP 高速专线',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: connected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-                fontWeight: FontWeight.w500,
+              style: BrandDesktopText.caption.copyWith(
+                color: connected ? BrandDesktopColors.accent : BrandDesktopColors.textSecondary,
               ),
             ),
           ),
-          const Gap(18),
-          _DesktopPowerButton(state: state),
           const Gap(14),
+          _DesktopPowerButton(state: state),
+          const Gap(10),
           Text(
             connected ? '点击停止加速' : state.buttonLabel,
-            style: TextStyle(
-              fontSize: 13,
-              color: connected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-              fontWeight: FontWeight.w600,
+            style: BrandDesktopText.bodySecondary.copyWith(
+              color: connected ? BrandDesktopColors.accent : BrandDesktopColors.textSecondary,
             ),
           ),
         ],
@@ -318,8 +368,8 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
           animation: _pulseAnimation,
           builder: (context, child) {
             return SizedBox(
-              width: 176,
-              height: 176,
+              width: 150,
+              height: 150,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -329,7 +379,7 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: connected
-                            ? const Color(0xFF2563EB).withOpacity(.08)
+                            ? BrandDesktopColors.accent.withOpacity(.08)
                             : const Color(0xFFE2E8F0).withOpacity(.20),
                       ),
                     ),
@@ -337,20 +387,20 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                   Transform.scale(
                     scale: busy ? _pulseAnimation.value * 1.1 : 1.0,
                     child: Container(
-                      width: 148,
-                      height: 148,
+                      width: 126,
+                      height: 126,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: connected
-                            ? const Color(0xFF2563EB).withOpacity(.15)
+                            ? BrandDesktopColors.accent.withOpacity(.15)
                             : const Color(0xFFE2E8F0).withOpacity(.40),
                       ),
                     ),
                   ),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    width: 112,
-                    height: 112,
+                    width: 96,
+                    height: 96,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: connected
@@ -406,39 +456,31 @@ class _HomeNodeCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.goNamed('proxies'),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
           boxShadow: [
-            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 24, offset: const Offset(0, 8)),
+            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 16, offset: const Offset(0, 4)),
           ],
         ),
         child: Row(
           children: [
             _DesktopNodeFlag(nodeName: nodeName),
-            const Gap(12),
+            const Gap(10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '当前节点',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
-                  ),
-                  const Gap(4),
-                  Text(
-                    nodeName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
-                  ),
+                  const Text('当前节点', style: BrandDesktopText.caption),
+                  const Gap(3),
+                  Text(nodeName, maxLines: 1, overflow: TextOverflow.ellipsis, style: BrandDesktopText.bodyPrimary),
                 ],
               ),
             ),
-            const Gap(10),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
+            const Gap(8),
+            const Icon(Icons.chevron_right_rounded, color: BrandDesktopColors.textMuted, size: 20),
           ],
         ),
       ),
@@ -454,18 +496,15 @@ class _DesktopNodeFlag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
+      width: 38,
+      height: 38,
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Center(
-        child: Text(
-          _nodeFlagFor(nodeName),
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-        ),
+        child: Text(_nodeFlagFor(nodeName), style: BrandDesktopText.bodyPrimary.copyWith(fontWeight: FontWeight.w700)),
       ),
     );
   }
@@ -478,11 +517,14 @@ class _RouteModeSegmentedControl extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isGlobalMode = ref.watch(ConfigOptions.globalRouteMode);
     return Container(
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 3)),
+        ],
       ),
       child: Row(
         children: [
@@ -490,8 +532,7 @@ class _RouteModeSegmentedControl extends ConsumerWidget {
             child: _RouteModeChoice(
               selected: !isGlobalMode,
               icon: Icons.alt_route_rounded,
-              title: '自动',
-              subtitle: '智能路由',
+              title: '智能路由',
               onTap: () => ref.read(ConfigOptions.globalRouteMode.notifier).update(false),
             ),
           ),
@@ -499,8 +540,7 @@ class _RouteModeSegmentedControl extends ConsumerWidget {
             child: _RouteModeChoice(
               selected: isGlobalMode,
               icon: Icons.public_rounded,
-              title: '全局',
-              subtitle: '全部流量',
+              title: '全局代理',
               onTap: () => ref.read(ConfigOptions.globalRouteMode.notifier).update(true),
             ),
           ),
@@ -511,56 +551,50 @@ class _RouteModeSegmentedControl extends ConsumerWidget {
 }
 
 class _RouteModeChoice extends StatelessWidget {
-  const _RouteModeChoice({
-    required this.selected,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+  const _RouteModeChoice({required this.selected, required this.icon, required this.title, required this.onTap});
 
   final bool selected;
   final IconData icon;
   final String title;
-  final String subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: selected
-              ? [BoxShadow(color: const Color(0xFF0F172A).withOpacity(.06), blurRadius: 12, offset: const Offset(0, 4))]
+              ? [
+                  BoxShadow(
+                    color: BrandDesktopColors.accent.withOpacity(.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
               : [],
-          border: Border.all(color: selected ? const Color(0xFF2563EB).withOpacity(.2) : Colors.transparent),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 20),
-            const Gap(5),
+            Icon(icon, color: selected ? Colors.white : BrandDesktopColors.textMuted, size: 18),
+            const Gap(6),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 14,
+              style: BrandDesktopText.bodyPrimary.copyWith(
+                color: selected ? Colors.white : BrandDesktopColors.textSecondary,
                 fontWeight: FontWeight.w600,
-                color: selected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-              ),
-            ),
-            const Gap(2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: selected ? const Color(0xFF2563EB).withOpacity(.80) : const Color(0xFF94A3B8),
               ),
             ),
           ],

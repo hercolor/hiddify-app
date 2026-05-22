@@ -92,7 +92,11 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 GoRoute(
                   name: 'proxies',
                   path: '/proxies',
-                  builder: (_, _) => FocusScope(node: branchesScope['proxies'], child: const ProxiesOverviewPage()),
+                  pageBuilder: (_, state) => customTransition(
+                    TransitionType.slide,
+                    state.pageKey,
+                    FocusScope(node: branchesScope['proxies'], child: const ProxiesOverviewPage()),
+                  ),
                 ),
               ],
             ),
@@ -101,13 +105,10 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                 GoRoute(
                   name: 'settings',
                   path: '/settings',
-                  builder: (context, _) => FocusScope(
-                    node: branchesScope['settings'],
-                    child: PopScope(
-                      canPop: false,
-                      onPopInvokedWithResult: (_, _) => context.goNamed('home'),
-                      child: const SettingsPage(),
-                    ),
+                  pageBuilder: (_, state) => customTransition(
+                    TransitionType.slide,
+                    state.pageKey,
+                    FocusScope(node: branchesScope['settings'], child: const SettingsPage()),
                   ),
                   routes: <GoRoute>[
                     GoRoute(name: 'general', path: '/general', redirect: (_, _) => '/settings'),
