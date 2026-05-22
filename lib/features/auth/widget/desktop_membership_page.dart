@@ -313,11 +313,14 @@ class _PlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final planName = _displayText(subscription?.planName);
-    final expiredAt = subscription?.expiredAt;
-    final isVip = expiredAt != null && expiredAt.isAfter(DateTime.now());
-
     return DesktopCard(
-      padding: const EdgeInsets.all(20),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderColor: Colors.white10,
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -330,22 +333,8 @@ class _PlanCard extends ConsumerWidget {
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: BrandDesktopColors.accent.withOpacity(.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
+                      child: const Icon(Icons.person_rounded, color: Colors.white),
                     ),
                     const Gap(16),
                     Expanded(
@@ -356,14 +345,14 @@ class _PlanCard extends ConsumerWidget {
                             _maskUser(session.email),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: BrandDesktopText.sectionTitle,
+                            style: BrandDesktopText.sectionTitle.copyWith(color: Colors.white),
                           ),
                           const Gap(4),
                           Text(
                             '设备：${_formatDeviceLimit(subscription)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: BrandDesktopText.caption,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
                           ),
                         ],
                       ),
@@ -372,33 +361,22 @@ class _PlanCard extends ConsumerWidget {
                 ),
               ),
               const Gap(12),
-              _DesktopPlanBadge(label: isVip ? planName : '普通用户', isVip: isVip),
+              _DesktopPlanBadge(label: planName),
             ],
           ),
-          const Gap(24),
-          if (isVip)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: _PlanField(label: '到期时间', value: _formatExpiredAt(expiredAt)),
-                ),
-                const Gap(12),
-                _SmallPlanButton(label: '续费', onPressed: () => context.pushNamed('premiumRenewal')),
-                const Gap(8),
-                _SmallPlanButton(label: '升级', onPressed: () => context.pushNamed('premiumRenewal')),
-              ],
-            )
-          else
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: () => context.pushNamed('premiumRenewal'),
-                style: BrandDesktopButtons.primary(),
-                child: const Text('购买会员', style: BrandDesktopText.buttonLabel),
+          const Gap(32),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _PlanField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
               ),
-            ),
+              const Gap(12),
+              _SmallPlanButton(label: '续费', onPressed: () => context.pushNamed('premiumRenewal')),
+              const Gap(8),
+              _SmallPlanButton(label: '升级', onPressed: () => context.pushNamed('premiumRenewal')),
+            ],
+          ),
         ],
       ),
     );
@@ -406,40 +384,31 @@ class _PlanCard extends ConsumerWidget {
 }
 
 class _DesktopPlanBadge extends StatelessWidget {
-  const _DesktopPlanBadge({required this.label, required this.isVip});
+  const _DesktopPlanBadge({required this.label});
 
   final String label;
-  final bool isVip;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: isVip ? const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]) : null,
-        color: isVip ? null : const Color(0xFFF1F5F9),
+        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: isVip
-            ? [BoxShadow(color: const Color(0xFFFFD700).withOpacity(.25), blurRadius: 8, offset: const Offset(0, 2))]
-            : null,
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            isVip ? Icons.workspace_premium_rounded : Icons.person_outline_rounded,
-            size: 16,
-            color: isVip ? const Color(0xFF5C4000) : BrandDesktopColors.textSecondary,
-          ),
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
           const Gap(4),
           Text(
             label == '--' ? '4376 Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandDesktopText.bodyPrimary.copyWith(
-              color: isVip ? const Color(0xFF5C4000) : BrandDesktopColors.textSecondary,
-              fontWeight: FontWeight.w900,
-            ),
+            style: BrandDesktopText.bodyPrimary.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -448,10 +417,11 @@ class _DesktopPlanBadge extends StatelessWidget {
 }
 
 class _PlanField extends StatelessWidget {
-  const _PlanField({required this.label, required this.value});
+  const _PlanField({required this.label, required this.value, this.dark = false});
 
   final String label;
   final String value;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
@@ -459,9 +429,19 @@ class _PlanField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textMuted)),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: dark ? Colors.white60 : BrandDesktopColors.textMuted),
+        ),
         const Gap(5),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: BrandDesktopText.sectionTitle),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: BrandDesktopText.sectionTitle.copyWith(color: dark ? Colors.white : BrandDesktopColors.textPrimary),
+        ),
       ],
     );
   }

@@ -382,16 +382,19 @@ class _HeroMemberCard extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final planName = _displayText(subscription?.planName);
     final expiredAt = subscription?.expiredAt;
-    final isVip = expiredAt != null && expiredAt.isAfter(DateTime.now());
-
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: BrandColors.card,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.04), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: BrandColors.slate.withOpacity(.26), blurRadius: 22, offset: const Offset(0, 12))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,22 +408,8 @@ class _HeroMemberCard extends HookConsumerWidget {
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF007AFF), Color(0xFF38BDF8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: BrandColors.signalBlue.withOpacity(.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
+                      child: const Icon(Icons.person_rounded, color: Colors.white),
                     ),
                     const Gap(16),
                     Expanded(
@@ -431,14 +420,14 @@ class _HeroMemberCard extends HookConsumerWidget {
                             _maskAccount(session.email),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: BrandText.sectionTitle,
+                            style: BrandText.sectionTitle.copyWith(color: Colors.white, fontSize: 17),
                           ),
                           const Gap(4),
                           Text(
                             '设备：${_formatDeviceLimit(subscription)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: BrandText.caption,
+                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
                           ),
                         ],
                       ),
@@ -447,29 +436,22 @@ class _HeroMemberCard extends HookConsumerWidget {
                 ),
               ),
               const Gap(12),
-              _PlanBadge(label: isVip ? planName : '普通用户', isVip: isVip),
+              _PlanBadge(label: planName),
             ],
           ),
-          const Gap(28),
-          if (isVip)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: _MemberField(label: '到期时间', value: _formatExpiredAt(expiredAt)),
-                ),
-                const Gap(12),
-                _SmallLightButton(label: '续费', onTap: () => context.pushNamed('premiumRenewal')),
-                const Gap(8),
-                _SmallLightButton(label: '升级', onTap: () => context.pushNamed('premiumRenewal')),
-              ],
-            )
-          else
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: _GradientButton(onPressed: () => context.pushNamed('premiumRenewal'), label: '购买会员'),
-            ),
+          const Gap(32),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _MemberField(label: '到期时间', value: _formatExpiredAt(expiredAt), dark: true),
+              ),
+              const Gap(12),
+              _SmallLightButton(label: '续费', onTap: () => context.pushNamed('premiumRenewal')),
+              const Gap(8),
+              _SmallLightButton(label: '升级', onTap: () => context.pushNamed('premiumRenewal')),
+            ],
+          ),
         ],
       ),
     );
@@ -477,40 +459,31 @@ class _HeroMemberCard extends HookConsumerWidget {
 }
 
 class _PlanBadge extends StatelessWidget {
-  const _PlanBadge({required this.label, required this.isVip});
+  const _PlanBadge({required this.label});
 
   final String label;
-  final bool isVip;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: isVip ? const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]) : null,
-        color: isVip ? null : const Color(0xFFF1F5F9),
+        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: isVip
-            ? [BoxShadow(color: const Color(0xFFFFD700).withOpacity(.25), blurRadius: 8, offset: const Offset(0, 2))]
-            : null,
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            isVip ? Icons.workspace_premium_rounded : Icons.person_outline_rounded,
-            size: 16,
-            color: isVip ? const Color(0xFF5C4000) : BrandColors.muted,
-          ),
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
           const Gap(4),
           Text(
             label == '--' ? '4376 Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandText.caption.copyWith(
-              color: isVip ? const Color(0xFF5C4000) : BrandColors.muted,
-              fontWeight: FontWeight.w900,
-            ),
+            style: BrandText.caption.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -519,10 +492,11 @@ class _PlanBadge extends StatelessWidget {
 }
 
 class _MemberField extends StatelessWidget {
-  const _MemberField({required this.label, required this.value});
+  const _MemberField({required this.label, required this.value, this.dark = false});
 
   final String label;
   final String value;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
@@ -530,9 +504,14 @@ class _MemberField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted)),
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: dark ? Colors.white60 : BrandColors.muted)),
         const Gap(5),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: BrandText.sectionTitle),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: BrandText.sectionTitle.copyWith(color: dark ? Colors.white : BrandColors.slate),
+        ),
       ],
     );
   }
