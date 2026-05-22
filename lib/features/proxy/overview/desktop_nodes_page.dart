@@ -46,6 +46,53 @@ class _TopRoundIcon extends StatelessWidget {
   }
 }
 
+class _TestSpeedButton extends ConsumerWidget {
+  const _TestSpeedButton({required this.groupTag});
+
+  final String? groupTag;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canTest = groupTag != null && groupTag!.isNotEmpty;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canTest
+            ? () async {
+                try {
+                  await ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(groupTag!);
+                } catch (e) {
+                  if (context.mounted) {
+                    ref.read(inAppNotificationControllerProvider).showErrorToast('测速失败');
+                  }
+                }
+              }
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: canTest ? BrandDesktopColors.accent : BrandDesktopColors.cardElevated,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: canTest
+                ? [
+                    BoxShadow(
+                      color: BrandDesktopColors.accent.withOpacity(.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Icon(Icons.speed_rounded, color: canTest ? Colors.white : BrandDesktopColors.textMuted, size: 20),
+        ),
+      ),
+    );
+  }
+}
+
 class DesktopNodesPage extends HookConsumerWidget {
   const DesktopNodesPage({super.key});
 
@@ -67,23 +114,32 @@ class DesktopNodesPage extends HookConsumerWidget {
                   children: [
                     _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.goNamed('home')),
                     const Text('选择节点', style: BrandDesktopText.pageTitle),
-                    const SizedBox(width: 38, height: 38),
+                    const SizedBox(width: 38),
                   ],
                 ),
                 const Gap(12),
-                DesktopCard(
-                  padding: EdgeInsets.zero,
-                  borderColor: const Color(0xFFE2E8F0),
-                  child: TextField(
-                    onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
-                    decoration: const InputDecoration(
-                      hintText: '搜索国家或地区...',
-                      prefixIcon: Icon(Icons.search_rounded),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
+                Row(
+                  children: [
+                    Expanded(
+                      child: DesktopCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                        borderColor: const Color(0xFFE2E8F0),
+                        child: TextField(
+                          onChanged: (value) => ref.read(desktopNodeSearchProvider.notifier).state = value,
+                          decoration: const InputDecoration(
+                            hintText: '搜索国家或地区...',
+                            prefixIcon: Icon(Icons.search_rounded),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            isDense: true,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const Gap(10),
+                    _TestSpeedButton(groupTag: proxies.valueOrNull?.tag),
+                  ],
                 ),
                 const Gap(16),
                 Expanded(
@@ -235,23 +291,23 @@ class _DesktopNodeTile extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: selected ? BrandDesktopColors.accent.withOpacity(.05) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: selected ? BrandDesktopColors.accent : const Color(0xFFF1F5F9), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: selected ? BrandDesktopColors.accent.withOpacity(.1) : const Color(0xFF0F172A).withOpacity(.03),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           children: [
             _NodeFlag(name: name, selected: selected),
-            const Gap(12),
+            const Gap(10),
             Expanded(
               child: Text(
                 name,
@@ -263,7 +319,7 @@ class _DesktopNodeTile extends StatelessWidget {
                 ),
               ),
             ),
-            const Gap(10),
+            const Gap(8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(color: delayColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
@@ -272,11 +328,11 @@ class _DesktopNodeTile extends StatelessWidget {
                 style: BrandDesktopText.caption.copyWith(color: delayColor, fontWeight: FontWeight.w700),
               ),
             ),
-            const Gap(10),
+            const Gap(8),
             Icon(
               selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
               color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
-              size: 20,
+              size: 16,
             ),
           ],
         ),
@@ -294,11 +350,11 @@ class _NodeFlag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42,
-      height: 42,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
         color: selected ? BrandDesktopColors.accent.withOpacity(0.1) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: selected ? BrandDesktopColors.accent.withOpacity(0.3) : const Color(0xFFE2E8F0)),
       ),
       child: Center(

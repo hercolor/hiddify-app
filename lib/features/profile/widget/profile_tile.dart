@@ -1,20 +1,17 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/core/model/failures.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/widget/adaptive_icon.dart';
 import 'package:hiddify/core/widget/adaptive_menu.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
-import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
 import 'package:hiddify/features/profile/overview/profiles_notifier.dart';
 import 'package:hiddify/gen/fonts.gen.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -45,11 +42,6 @@ class ProfileTile extends HookConsumerWidget {
         if (context.mounted && context.canPop()) context.pop();
       },
     );
-
-    final subInfo = switch (profile) {
-      RemoteProfileEntity(:final subInfo) => subInfo,
-      _ => null,
-    };
 
     final showActionButton = profile is RemoteProfileEntity || !isMain;
 
@@ -158,13 +150,6 @@ class ProfileTile extends HookConsumerWidget {
                                   ? t.pages.profiles.activeProfileName(name: profile.name)
                                   : t.pages.profiles.nonActiveProfileName(name: profile.name),
                             ),
-                          if (subInfo != null) ...[
-                            const Gap(4),
-                            RemainingTrafficIndicator(subInfo.ratio),
-                            const Gap(4),
-                            ProfileSubscriptionInfo(subInfo),
-                            const Gap(4),
-                          ],
                         ],
                       ),
                     ),
@@ -187,28 +172,8 @@ class ProfileActionButton extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final t = ref.watch(translationsProvider).requireValue;
-
     if (profile case RemoteProfileEntity() when !showAllActions) {
-      return Semantics(
-        button: true,
-        enabled: !ref.watch(updateProfileNotifierProvider(profile.id)).isLoading,
-        child: Tooltip(
-          message: t.pages.profiles.update,
-          child: InkWell(
-            borderRadius: ProfileTileConst.startBorderRadius(Directionality.of(context)),
-            onTap: () {
-              if (ref.read(updateProfileNotifierProvider(profile.id)).isLoading) {
-                return;
-              }
-              ref
-                  .read(updateProfileNotifierProvider(profile.id).notifier)
-                  .updateProfile(profile as RemoteProfileEntity);
-            },
-            child: const Icon(Icons.update_rounded),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
     return ProfileActionsMenu(profile, (context, toggleVisibility, _) {
       return Semantics(
@@ -238,48 +203,6 @@ class ProfileActionsMenu extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
 
     final menuItems = [
-      if (profile case RemoteProfileEntity())
-        AdaptiveMenuItem(
-          title: t.common.update,
-          icon: Icons.update_rounded,
-          onTap: () {
-            if (ref.read(updateProfileNotifierProvider(profile.id)).isLoading) {
-              return;
-            }
-            ref.read(updateProfileNotifierProvider(profile.id).notifier).updateProfile(profile as RemoteProfileEntity);
-          },
-        ),
-      AdaptiveMenuItem(
-        title: t.common.share,
-        icon: AdaptiveIcon(context).share,
-        subItems: [
-          if (profile case RemoteProfileEntity(:final url, :final name)) ...[
-            AdaptiveMenuItem(
-              title: t.pages.profiles.share.urlToClipboard,
-              onTap: () async {
-                final link = LinkParser.generateSubShareLink(url, name);
-                if (link.isNotEmpty) {
-                  await Clipboard.setData(ClipboardData(text: link));
-                  if (context.mounted) {
-                    ref
-                        .read(inAppNotificationControllerProvider)
-                        .showSuccessToast(t.common.msg.export.clipboard.success);
-                  }
-                }
-              },
-            ),
-            AdaptiveMenuItem(
-              title: t.pages.profiles.share.showUrlQr,
-              onTap: () async {
-                final link = LinkParser.generateSubShareLink(url, name);
-                if (link.isNotEmpty) {
-                  await ref.read(dialogNotifierProvider.notifier).showQrCode(link, message: name);
-                }
-              },
-            ),
-          ],
-        ],
-      ),
       // if (!profile.active)
       AdaptiveMenuItem(
         icon: Icons.delete_outline_rounded,

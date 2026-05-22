@@ -5,7 +5,6 @@ import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
-import 'package:hiddify/core/widget/desktop/desktop_window_chrome.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
@@ -32,7 +31,7 @@ class PremiumRenewalPage extends ConsumerWidget {
                   child: ListView(
                     padding: const EdgeInsets.all(24),
                     children: [
-                      const Text('选择您的订阅方案', style: BrandDesktopText.sectionTitle),
+                      const Text('选择您的套餐方案', style: BrandDesktopText.sectionTitle),
                       const Gap(6),
                       const Text('解锁高速专线与稳定连接体验', style: BrandDesktopText.bodySecondary),
                       const Gap(26),
@@ -412,8 +411,7 @@ class _PremiumScaffold extends StatelessWidget {
       );
     }
     return DesktopTheme(
-      child: DesktopWindowChrome(
-        backgroundColor: const Color(0xFFF8FAFC),
+      child: DesktopBackdrop(
         child: Scaffold(
           backgroundColor: const Color(0xFFF8FAFC),
           body: SafeArea(
@@ -427,7 +425,7 @@ class _PremiumScaffold extends StatelessWidget {
                     children: [
                       _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => _goBack(context)),
                       Text(title, style: BrandDesktopText.pageTitle),
-                      const SizedBox(width: 38, height: 38),
+                      const SizedBox(width: 38),
                     ],
                   ),
                   const Gap(12),

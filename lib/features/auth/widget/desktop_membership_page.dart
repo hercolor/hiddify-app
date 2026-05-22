@@ -49,6 +49,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
   String? _emailError;
   String? _passwordError;
   bool _isSubmitting = false;
+  bool _showExternalError = true;
 
   @override
   void dispose() {
@@ -89,86 +90,106 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
     return _emailError == null && _passwordError == null;
   }
 
+  void _clearExternalError() {
+    if (_showExternalError) {
+      setState(() => _showExternalError = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DesktopTheme(
       child: DesktopBackdrop(
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 326),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const _DesktopLoginMark(),
-                    const Gap(24),
-                    Text(
-                      '4376',
-                      style: BrandDesktopText.heroStatus.copyWith(color: BrandDesktopColors.accent, letterSpacing: 2),
+          child: Stack(
+            children: [
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 326),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const _DesktopLoginMark(),
+                        const Gap(24),
+                        Text(
+                          '4376',
+                          style: BrandDesktopText.heroStatus.copyWith(
+                            color: BrandDesktopColors.accent,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const Gap(8),
+                        Text('安全、极速、无界', style: Theme.of(context).textTheme.bodyMedium),
+                        const Gap(42),
+                        if (_showExternalError && widget.errorText != null) ...[
+                          Text(
+                            widget.errorText!,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.error),
+                          ),
+                          const Gap(14),
+                        ],
+                        TextField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          decoration: InputDecoration(
+                            hintText: '邮箱账号',
+                            errorText: _emailError,
+                            prefixIcon: const Icon(Icons.mail_outline_rounded),
+                          ),
+                          textInputAction: TextInputAction.next,
+                          onChanged: (_) {
+                            _clearExternalError();
+                            if (_emailError != null) setState(() => _emailError = null);
+                          },
+                        ),
+                        const Gap(16),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          decoration: InputDecoration(
+                            hintText: '密码',
+                            errorText: _passwordError,
+                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          ),
+                          onSubmitted: (_) => _submit(),
+                          onChanged: (_) {
+                            _clearExternalError();
+                            if (_passwordError != null) setState(() => _passwordError = null);
+                          },
+                        ),
+                        const Gap(24),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: DesktopGradientButton(
+                            label: '登 录',
+                            isLoading: _isSubmitting,
+                            onPressed: _isSubmitting ? null : _submit,
+                          ),
+                        ),
+                        const Gap(42),
+                        Text(
+                          '登录后自动完成加速准备',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.accent),
+                        ),
+                      ],
                     ),
-                    const Gap(8),
-                    Text('安全、极速、无界', style: Theme.of(context).textTheme.bodyMedium),
-                    const Gap(42),
-                    if (widget.errorText != null) ...[
-                      Text(
-                        widget.errorText!,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.error),
-                      ),
-                      const Gap(14),
-                    ],
-                    TextField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      decoration: InputDecoration(
-                        hintText: '邮箱账号',
-                        errorText: _emailError,
-                        prefixIcon: const Icon(Icons.mail_outline_rounded),
-                      ),
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) {
-                        if (_emailError != null) setState(() => _emailError = null);
-                      },
-                    ),
-                    const Gap(16),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      decoration: InputDecoration(
-                        hintText: '密码',
-                        errorText: _passwordError,
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                      ),
-                      onSubmitted: (_) => _submit(),
-                      onChanged: (_) {
-                        if (_passwordError != null) setState(() => _passwordError = null);
-                      },
-                    ),
-                    const Gap(24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: DesktopGradientButton(
-                        label: '登 录',
-                        isLoading: _isSubmitting,
-                        onPressed: _isSubmitting ? null : _submit,
-                      ),
-                    ),
-                    const Gap(42),
-                    Text(
-                      '登录后自动完成加速准备',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.accent),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              Positioned(
+                top: 10,
+                left: 22,
+                child: _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.goNamed('home')),
+              ),
+            ],
           ),
         ),
       ),
@@ -292,14 +313,11 @@ class _PlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final planName = _displayText(subscription?.planName);
+    final expiredAt = subscription?.expiredAt;
+    final isVip = expiredAt != null && expiredAt.isAfter(DateTime.now());
+
     return DesktopCard(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderColor: Colors.white10,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -312,8 +330,22 @@ class _PlanCard extends ConsumerWidget {
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
-                      child: const Icon(Icons.person_rounded, color: Colors.white),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: BrandDesktopColors.accent.withOpacity(.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 24),
                     ),
                     const Gap(16),
                     Expanded(
@@ -324,14 +356,14 @@ class _PlanCard extends ConsumerWidget {
                             _maskUser(session.email),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: BrandDesktopText.sectionTitle.copyWith(color: Colors.white),
+                            style: BrandDesktopText.sectionTitle,
                           ),
                           const Gap(4),
                           Text(
                             '设备：${_formatDeviceLimit(subscription)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                            style: BrandDesktopText.caption,
                           ),
                         ],
                       ),
@@ -340,22 +372,33 @@ class _PlanCard extends ConsumerWidget {
                 ),
               ),
               const Gap(12),
-              _DesktopPlanBadge(label: planName),
+              _DesktopPlanBadge(label: isVip ? planName : '普通用户', isVip: isVip),
             ],
           ),
-          const Gap(32),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: _PlanField(label: '到期时间', value: _formatExpiredAt(subscription?.expiredAt), dark: true),
+          const Gap(24),
+          if (isVip)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: _PlanField(label: '到期时间', value: _formatExpiredAt(expiredAt)),
+                ),
+                const Gap(12),
+                _SmallPlanButton(label: '续费', onPressed: () => context.pushNamed('premiumRenewal')),
+                const Gap(8),
+                _SmallPlanButton(label: '升级', onPressed: () => context.pushNamed('premiumRenewal')),
+              ],
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: () => context.pushNamed('premiumRenewal'),
+                style: BrandDesktopButtons.primary(),
+                child: const Text('购买会员', style: BrandDesktopText.buttonLabel),
               ),
-              const Gap(12),
-              _SmallPlanButton(label: '续费', onPressed: () => context.pushNamed('premiumRenewal')),
-              const Gap(8),
-              _SmallPlanButton(label: '升级', onPressed: () => context.pushNamed('premiumRenewal')),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -363,31 +406,40 @@ class _PlanCard extends ConsumerWidget {
 }
 
 class _DesktopPlanBadge extends StatelessWidget {
-  const _DesktopPlanBadge({required this.label});
+  const _DesktopPlanBadge({required this.label, required this.isVip});
 
   final String label;
+  final bool isVip;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        gradient: isVip ? const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]) : null,
+        color: isVip ? null : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
+        boxShadow: isVip
+            ? [BoxShadow(color: const Color(0xFFFFD700).withOpacity(.25), blurRadius: 8, offset: const Offset(0, 2))]
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          Icon(
+            isVip ? Icons.workspace_premium_rounded : Icons.person_outline_rounded,
+            size: 16,
+            color: isVip ? const Color(0xFF5C4000) : BrandDesktopColors.textSecondary,
+          ),
           const Gap(4),
           Text(
             label == '--' ? '4376 Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandDesktopText.bodyPrimary.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
+            style: BrandDesktopText.bodyPrimary.copyWith(
+              color: isVip ? const Color(0xFF5C4000) : BrandDesktopColors.textSecondary,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),
@@ -396,11 +448,10 @@ class _DesktopPlanBadge extends StatelessWidget {
 }
 
 class _PlanField extends StatelessWidget {
-  const _PlanField({required this.label, required this.value, this.dark = false});
+  const _PlanField({required this.label, required this.value});
 
   final String label;
   final String value;
-  final bool dark;
 
   @override
   Widget build(BuildContext context) {
@@ -408,19 +459,9 @@ class _PlanField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: dark ? Colors.white60 : BrandDesktopColors.textMuted),
-        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandDesktopColors.textMuted)),
         const Gap(5),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: BrandDesktopText.sectionTitle.copyWith(color: dark ? Colors.white : BrandDesktopColors.textPrimary),
-        ),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: BrandDesktopText.sectionTitle),
       ],
     );
   }
@@ -477,13 +518,6 @@ class _MemberActions extends StatelessWidget {
             title: '反馈问题',
             iconColor: const Color(0xFF2563EB),
             onTap: () => context.pushNamed('premiumFeedback'),
-          ),
-          const _DesktopActionDivider(),
-          _ActionRow(
-            icon: Icons.settings_outlined,
-            title: '高级设置',
-            iconColor: const Color(0xFF64748B),
-            onTap: () => context.pushNamed('premiumPreferences'),
           ),
           const _DesktopActionDivider(),
           _ActionRow(
@@ -575,10 +609,9 @@ class _DesktopLogoutButton extends ConsumerWidget {
 }
 
 String _formatDeviceLimit(UserSubscription? subscription) {
-  final online = subscription?.onlineDevices;
   final max = subscription?.maxDevices;
-  if (online == null && max == null) return '--';
-  return '${online?.toString() ?? '--'} / ${max?.toString() ?? '--'}';
+  if (max == null || max <= 0) return '--';
+  return '最多 $max 台';
 }
 
 String _displayText(String? value) {

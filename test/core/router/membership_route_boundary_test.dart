@@ -38,4 +38,35 @@ void main() {
       expect(settingsText, isNot(contains(forbidden)), reason: 'legacy settings wrapper must not expose $forbidden');
     }
   });
+
+  test('normal UI hides manual subscription controls and traffic details', () {
+    final mobileMembershipText = _readUtf8('lib/features/auth/widget/user_profile_page.dart');
+    final desktopMembershipText = _readUtf8('lib/features/auth/widget/desktop_membership_page.dart');
+    final premiumText = _readUtf8('lib/features/premium/premium_screens.dart');
+    final profilesPageText = _readUtf8('lib/features/profile/overview/profiles_page.dart');
+    final profilesModalText = _readUtf8('lib/features/profile/overview/profiles_modal.dart');
+    final shortcutText = _readUtf8('lib/features/shortcut/shortcut_wrapper.dart');
+    final emptyProfilesHomeText = _readUtf8('lib/features/home/widget/empty_profiles_home_body.dart');
+    final profileTileText = _readUtf8('lib/features/profile/widget/profile_tile.dart');
+
+    expect(mobileMembershipText, contains(r"return '最多 $max 台';"));
+    expect(desktopMembershipText, contains(r"return '最多 $max 台';"));
+    expect(mobileMembershipText, isNot(contains(" / \${max")));
+    expect(desktopMembershipText, isNot(contains(" / \${max")));
+    expect(premiumText, contains('选择您的套餐方案'));
+    expect(premiumText, isNot(contains('选择您的订阅方案')));
+
+    for (final source in [profilesPageText, profilesModalText]) {
+      expect(source, isNot(contains('foregroundProfilesUpdateNotifierProvider')));
+      expect(source, isNot(contains('updateSubscriptions')));
+    }
+    expect(profilesPageText, isNot(contains('showAddProfile')));
+    expect(shortcutText, isNot(contains('showAddProfile')));
+    expect(shortcutText, isNot(contains('PasteIntent')));
+    expect(emptyProfilesHomeText, isNot(contains('showAddProfile')));
+    expect(profileTileText, isNot(contains('RemainingTrafficIndicator(subInfo.ratio)')));
+    expect(profileTileText, isNot(contains('ProfileSubscriptionInfo(subInfo)')));
+    expect(profileTileText, isNot(contains('LinkParser.generateSubShareLink')));
+    expect(profileTileText, isNot(contains('share.urlToClipboard')));
+  });
 }
