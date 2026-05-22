@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
+import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
+import 'package:hiddify/features/premium/data/premium_api_service.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hiddify/utils/uri_utils.dart';
@@ -55,48 +58,126 @@ class PremiumRenewalPage extends ConsumerWidget {
   }
 }
 
-class PremiumInvitePage extends ConsumerWidget {
+class PremiumInvitePage extends ConsumerStatefulWidget {
   const PremiumInvitePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PremiumInvitePage> createState() => _PremiumInvitePageState();
+}
+
+class _PremiumInvitePageState extends ConsumerState<PremiumInvitePage> {
+  late Future<PremiumInviteOverview> _inviteFuture;
+  late String? _authData;
+  bool _creatingCode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _authData = ref.read(authNotifierProvider).valueOrNull?.session?.authData;
+    _inviteFuture = _loadInvite(_authData);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextAuthData = ref.read(authNotifierProvider).valueOrNull?.session?.authData;
+    if (nextAuthData != _authData) {
+      _authData = nextAuthData;
+      _inviteFuture = _loadInvite(_authData);
+    }
+  }
+
+  Future<PremiumInviteOverview> _loadInvite(String? authData) async {
+    final value = authData?.trim();
+    if (value == null || value.isEmpty) throw const AuthFailure.notLoggedIn();
+    final service = await ref.read(premiumApiServiceProvider.future);
+    return service.fetchInvite(value);
+  }
+
+  void _refresh() {
+    setState(() => _inviteFuture = _loadInvite(_authData));
+  }
+
+  Future<void> _createInviteCode() async {
+    final authData = _authData?.trim();
+    if (authData == null || authData.isEmpty || _creatingCode) return;
+    setState(() => _creatingCode = true);
+    try {
+      final service = await ref.read(premiumApiServiceProvider.future);
+      await service.createInviteCode(authData);
+      if (!mounted) return;
+      ref.read(inAppNotificationControllerProvider).showSuccessToast('邀请码已生成');
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ref.read(inAppNotificationControllerProvider).showErrorToast(_failureMessage(error, fallback: '邀请码生成失败'));
+    } finally {
+      if (mounted) setState(() => _creatingCode = false);
+    }
+  }
+
+  Future<void> _copyInviteCode(String code) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!mounted) return;
+    ref.read(inAppNotificationControllerProvider).showSuccessToast('邀请码已复制');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(authNotifierProvider).valueOrNull?.session;
+    if (session == null) {
+      return const _PremiumScaffold(title: '邀请有礼', child: _LoginRequiredPanel());
+    }
+    if (session.authData != _authData) {
+      _authData = session.authData;
+      _inviteFuture = _loadInvite(_authData);
+    }
     return _PremiumScaffold(
       title: '邀请有礼',
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.card_giftcard_rounded, size: 64, color: Color(0xFFFF9500)),
-              const Gap(18),
-              const Text('邀请好友，共享极速', style: BrandDesktopText.sectionTitle),
-              const Gap(6),
-              Text(
-                session == null ? '登录后可查看您的邀请权益。' : '邀请权益请以客服确认的活动规则为准。',
-                textAlign: TextAlign.center,
-                style: BrandDesktopText.bodySecondary,
-              ),
-              const Gap(36),
-              const _SoftInfoBox(
-                icon: Icons.verified_user_rounded,
-                title: '安全提示',
-                subtitle: '邀请链接和活动规则不会展示订阅链接或节点敏感信息。',
-              ),
-              const Gap(24),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () => _openCustomerService(context, ref, session?.subscription?.customerService),
-                  style: _primaryButtonStyle(),
-                  child: const Text('联系客服了解活动', style: _buttonTextStyle),
+      child: FutureBuilder<PremiumInviteOverview>(
+        future: _inviteFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+          }
+          if (snapshot.hasError) {
+            return _PremiumErrorPanel(
+              message: _failureMessage(snapshot.error, fallback: '邀请信息加载失败'),
+              onRetry: _refresh,
+            );
+          }
+          final overview = snapshot.data;
+          if (overview == null) {
+            return _PremiumErrorPanel(message: '邀请信息为空', onRetry: _refresh);
+          }
+          return RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              children: [
+                const Text('邀请好友，共享权益', style: BrandDesktopText.sectionTitle),
+                const Gap(6),
+                const Text('邀请返利数据来自后台接口，仅展示活动统计与邀请码。', style: BrandDesktopText.bodySecondary),
+                const Gap(22),
+                _InviteStatsGrid(stat: overview.stat),
+                const Gap(18),
+                _InviteCodeSection(
+                  codes: overview.codes,
+                  creatingCode: _creatingCode,
+                  onCreate: _createInviteCode,
+                  onCopy: _copyInviteCode,
                 ),
-              ),
-            ],
-          ),
-        ),
+                const Gap(18),
+                const _SoftInfoBox(
+                  icon: Icons.privacy_tip_outlined,
+                  title: '安全提示',
+                  subtitle: '这里只展示邀请码和佣金统计，不展示订阅链接、节点地址或账号密钥。',
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -112,6 +193,7 @@ class PremiumFeedbackPage extends ConsumerStatefulWidget {
 class _PremiumFeedbackPageState extends ConsumerState<PremiumFeedbackPage> {
   final _messageController = TextEditingController();
   final _contactController = TextEditingController();
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -120,18 +202,53 @@ class _PremiumFeedbackPageState extends ConsumerState<PremiumFeedbackPage> {
     super.dispose();
   }
 
-  void _submit() {
-    ref.read(inAppNotificationControllerProvider).showInfoToast('感谢您的反馈');
-    context.pop();
+  Future<void> _submit() async {
+    final session = ref.read(authNotifierProvider).valueOrNull?.session;
+    if (session == null) {
+      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      return;
+    }
+    final message = _messageController.text.trim();
+    if (message.isEmpty) {
+      ref.read(inAppNotificationControllerProvider).showErrorToast('请填写问题描述');
+      return;
+    }
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final service = await ref.read(premiumApiServiceProvider.future);
+      await service.createTicket(
+        session.authData,
+        subject: _ticketSubject(message),
+        level: 1,
+        message: _ticketMessage(message: message, contact: _contactController.text, email: session.email),
+      );
+      if (!mounted) return;
+      ref.read(inAppNotificationControllerProvider).showSuccessToast('反馈已提交');
+      context.pop();
+    } catch (error) {
+      if (!mounted) return;
+      ref.read(inAppNotificationControllerProvider).showErrorToast(_failureMessage(error, fallback: '反馈提交失败'));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(authNotifierProvider).valueOrNull?.session;
+    if (session == null) {
+      return const _PremiumScaffold(title: '反馈问题', child: _LoginRequiredPanel());
+    }
     return _PremiumScaffold(
       title: '反馈问题',
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          const Text('提交工单支持', style: BrandDesktopText.sectionTitle),
+          const Gap(6),
+          const Text('反馈将通过后台工单系统提交，客服会在后台处理。', style: BrandDesktopText.bodySecondary),
+          const Gap(24),
           const _FieldLabel('问题描述'),
           const Gap(8),
           _InputCard(
@@ -160,14 +277,18 @@ class _PremiumFeedbackPageState extends ConsumerState<PremiumFeedbackPage> {
               ),
             ),
           ),
+          const Gap(18),
+          const _SoftInfoBox(icon: Icons.support_agent_rounded, title: '工单支持', subtitle: '请勿在反馈中填写订阅链接、节点地址或账号密钥。'),
           const Gap(32),
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _submit,
+              onPressed: _submitting ? null : _submit,
               style: _primaryButtonStyle(),
-              child: const Text('提交反馈', style: _buttonTextStyle),
+              child: _submitting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('提交反馈', style: _buttonTextStyle),
             ),
           ),
         ],
@@ -667,6 +788,186 @@ class _BottomAction extends StatelessWidget {
   }
 }
 
+class _InviteStatsGrid extends StatelessWidget {
+  const _InviteStatsGrid({required this.stat});
+
+  final PremiumInviteStat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.45,
+      children: [
+        _InviteStatTile(label: '已邀请', value: '${stat.registeredUserCount}', suffix: '人'),
+        _InviteStatTile(label: '返利比例', value: '${stat.commissionRatePercent}', suffix: '%'),
+        _InviteStatTile(label: '可用佣金', value: _formatMoney(stat.availableCommissionBalanceCents)),
+        _InviteStatTile(label: '确认中', value: _formatMoney(stat.pendingCommissionAmountCents)),
+      ],
+    );
+  }
+}
+
+class _InviteStatTile extends StatelessWidget {
+  const _InviteStatTile({required this.label, required this.value, this.suffix});
+
+  final String label;
+  final String value;
+  final String? suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: BrandDesktopText.caption.copyWith(color: BrandDesktopColors.textMuted)),
+          const Gap(8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: BrandDesktopText.sectionTitle.copyWith(fontSize: 22),
+                ),
+              ),
+              if (suffix != null) ...[
+                const Gap(2),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(suffix!, style: BrandDesktopText.caption),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteCodeSection extends StatelessWidget {
+  const _InviteCodeSection({
+    required this.codes,
+    required this.creatingCode,
+    required this.onCreate,
+    required this.onCopy,
+  });
+
+  final List<PremiumInviteCode> codes;
+  final bool creatingCode;
+  final VoidCallback onCreate;
+  final ValueChanged<String> onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return _InputCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(child: Text('邀请码', style: BrandDesktopText.sectionTitle)),
+                TextButton.icon(
+                  onPressed: creatingCode ? null : onCreate,
+                  icon: creatingCode
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.add_rounded, size: 18),
+                  label: Text(creatingCode ? '生成中' : '生成'),
+                ),
+              ],
+            ),
+            const Gap(8),
+            if (codes.isEmpty)
+              const Text('暂无可用邀请码，请点击生成。', style: BrandDesktopText.bodySecondary)
+            else
+              ...codes.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.confirmation_number_outlined, size: 18, color: BrandDesktopColors.accent),
+                        const Gap(10),
+                        Expanded(
+                          child: Text(
+                            item.code,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: BrandDesktopText.bodyPrimary.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: '复制邀请码',
+                          onPressed: () => onCopy(item.code),
+                          icon: const Icon(Icons.copy_rounded, size: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumErrorPanel extends StatelessWidget {
+  const _PremiumErrorPanel({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, size: 56, color: Color(0xFFEF4444)),
+            const Gap(14),
+            const Text('加载失败', style: BrandDesktopText.sectionTitle),
+            const Gap(6),
+            Text(message, textAlign: TextAlign.center, style: BrandDesktopText.bodySecondary),
+            const Gap(24),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: onRetry,
+                style: _primaryButtonStyle(),
+                child: const Text('重试', style: _buttonTextStyle),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SoftInfoBox extends StatelessWidget {
   const _SoftInfoBox({required this.icon, required this.title, required this.subtitle});
 
@@ -750,6 +1051,36 @@ String _maskUser(String value) {
   if (!trimmed.contains('@')) return trimmed.length <= 2 ? '***' : '${trimmed.substring(0, 1)}***';
   final parts = trimmed.split('@');
   return '${parts.first.substring(0, 1)}***@${parts.last}';
+}
+
+String _formatMoney(int cents) {
+  final amount = cents / 100;
+  if (amount == amount.roundToDouble()) return '¥${amount.toStringAsFixed(0)}';
+  return '¥${amount.toStringAsFixed(2)}';
+}
+
+String _failureMessage(Object? error, {required String fallback}) {
+  if (error is AuthServerMessageFailure) return error.message;
+  if (error is AuthInvalidCredentialsFailure) return error.message ?? '请求参数不正确';
+  if (error is AuthTokenExpiredFailure) return '登录已过期，请重新登录';
+  if (error is AuthNotLoggedInFailure) return '请先登录账号';
+  if (error is AuthNetworkFailure) return error.message ?? '网络连接失败，请稍后重试';
+  if (error is AuthBadResponseFailure) return error.message ?? '服务器返回异常';
+  return fallback;
+}
+
+String _ticketSubject(String message) {
+  final firstLine = message
+      .split('\n')
+      .map((line) => line.trim())
+      .firstWhere((line) => line.isNotEmpty, orElse: () => 'APP 问题反馈');
+  final normalized = firstLine.length > 24 ? '${firstLine.substring(0, 24)}…' : firstLine;
+  return 'APP反馈：$normalized';
+}
+
+String _ticketMessage({required String message, required String contact, required String email}) {
+  final contactText = contact.trim().isEmpty ? '未填写' : contact.trim();
+  return [message.trim(), '', '---', '来源：4376 APP', '账号：${_maskUser(email)}', '联系方式：$contactText'].join('\n');
 }
 
 Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {
