@@ -1,5 +1,6 @@
 import 'package:dartx/dartx.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:hiddify/core/config/client_route_policy.dart';
 import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/core/model/optional_range.dart';
 import 'package:hiddify/core/model/region.dart';
@@ -11,7 +12,6 @@ import 'package:hiddify/features/profile/data/profile_parser.dart';
 import 'package:hiddify/features/settings/model/config_option_failure.dart';
 import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hiddify/singbox/model/singbox_config_option.dart';
-import 'package:hiddify/singbox/model/singbox_rule.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -368,8 +368,8 @@ abstract class ConfigOptions {
 
   static final singboxConfigOptions = Provider<SingboxConfigOption>((ref) {
     final useGlobalRouteMode = ref.watch(globalRouteMode);
+    final rules = ClientRoutePolicy.rulesFor(globalRouteMode: useGlobalRouteMode);
     // final region = ref.watch(Preferences.region);
-    const rules = <SingboxRule>[];
     // final rules = switch (region) {
     //   Region.ir => [
     //       const SingboxRule(
@@ -549,7 +549,7 @@ class ConfigOptionRepository with ExceptionHandler, InfraLogger {
       allowConnectionFromLan: false,
       enableFakeDns: false,
       independentDnsCache: true,
-      rules: <SingboxRule>[],
+      rules: ClientRoutePolicy.lockedRules(options.rules),
       tlsTricks: const SingboxTlsTricks(
         enableFragment: false,
         fragmentSize: OptionalRange(min: 10, max: 30),
