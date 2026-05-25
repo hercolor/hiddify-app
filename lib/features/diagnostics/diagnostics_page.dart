@@ -7,6 +7,7 @@ import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
+import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/diagnostics/desktop_diagnostics_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
@@ -225,7 +226,10 @@ String _vpnPermissionStatus(ClientConnectionState state) {
   return state.message == '需要 VPN 权限才能加速' ? 'denied' : 'not requested / granted';
 }
 
-String _sanitizeCoreStatus(Object status) => DiagnosticSanitizer.sanitize(status.toString());
+String _sanitizeCoreStatus(Object status) {
+  final text = status is ConnectionStatus ? status.format() : status.toString();
+  return DiagnosticSanitizer.sanitize(text);
+}
 
 String _buildDiagnosticText({
   required AsyncValue<AuthState> authState,

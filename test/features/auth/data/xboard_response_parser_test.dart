@@ -59,7 +59,7 @@ void main() {
         },
       });
 
-      expect(subscription.subscribeUrl, 'https://example.com/api/v1/client/subscribe?token=sub-token');
+      expect(subscription.subscribeUrl, 'https://example.com/api/v1/client/subscribe?token=sub-token&flag=hiddify');
       expect(subscription.upload, 1024);
       expect(subscription.download, 2048);
       expect(subscription.transferEnable, 4096);
@@ -72,7 +72,23 @@ void main() {
         'data': {'subscribe_url': '/api/v1/client/subscribe?token=sub-token', 'expired_at': 1893456000},
       }, baseUrl: 'https://api.example.com');
 
-      expect(subscription.subscribeUrl, 'https://api.example.com/api/v1/client/subscribe?token=sub-token');
+      expect(subscription.subscribeUrl, 'https://api.example.com/api/v1/client/subscribe?token=sub-token&flag=hiddify');
+    });
+
+    test('preserves existing subscribe flag when present', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {'subscribe_url': 'https://example.com/api/v1/client/subscribe?token=sub-token&flag=clash'},
+      });
+
+      expect(subscription.subscribeUrl, 'https://example.com/api/v1/client/subscribe?token=sub-token&flag=clash');
+    });
+
+    test('does not add hiddify flag to non-XBoard urls', () {
+      final subscription = XBoardResponseParser.parseSubscription({
+        'data': {'subscribe_url': 'https://example.com/sub?token=sub-token'},
+      });
+
+      expect(subscription.subscribeUrl, 'https://example.com/sub?token=sub-token');
     });
 
     test('uses fallback subscription url from login subscribe token while preserving user fields', () {
@@ -86,7 +102,7 @@ void main() {
         },
       }, fallbackSubscribeUrl: 'https://example.com/api/v1/client/subscribe?token=sub-token');
 
-      expect(subscription.subscribeUrl, 'https://example.com/api/v1/client/subscribe?token=sub-token');
+      expect(subscription.subscribeUrl, 'https://example.com/api/v1/client/subscribe?token=sub-token&flag=hiddify');
       expect(subscription.planName, '商业套餐');
       expect(subscription.usedTraffic, 3072);
       expect(subscription.remainingTraffic, 1024);

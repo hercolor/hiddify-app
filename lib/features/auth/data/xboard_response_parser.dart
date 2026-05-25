@@ -110,15 +110,29 @@ class XBoardResponseParser {
     if (trimmed == null || trimmed.isEmpty) return null;
 
     final uri = Uri.tryParse(trimmed);
-    if (uri != null && uri.hasScheme) return trimmed;
+    if (uri != null && uri.hasScheme) return _ensureHiddifySubscribeFlag(uri).toString();
 
     final base = Uri.tryParse(baseUrl?.trim() ?? '');
     if (base == null || !base.hasScheme) return trimmed;
 
     if (trimmed.startsWith('//')) {
-      return '${base.scheme}:$trimmed';
+      final protocolRelative = Uri.tryParse('${base.scheme}:$trimmed');
+      return protocolRelative == null
+          ? '${base.scheme}:$trimmed'
+          : _ensureHiddifySubscribeFlag(protocolRelative).toString();
     }
-    return base.resolve(trimmed).toString();
+    return _ensureHiddifySubscribeFlag(base.resolve(trimmed)).toString();
+  }
+
+  static Uri _ensureHiddifySubscribeFlag(Uri uri) {
+    if (!_isXBoardSubscribeUri(uri)) return uri;
+    if (uri.queryParameters.keys.any((key) => key.toLowerCase() == 'flag')) return uri;
+    return uri.replace(queryParameters: {...uri.queryParameters, 'flag': 'hiddify'});
+  }
+
+  static bool _isXBoardSubscribeUri(Uri uri) {
+    final path = uri.path.toLowerCase();
+    return path == '/api/v1/client/subscribe' || path.endsWith('/api/v1/client/subscribe');
   }
 
   static String? _findPlanName(Object? data) {

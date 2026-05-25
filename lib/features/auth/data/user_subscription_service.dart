@@ -72,7 +72,7 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
     if (token == null || token.isEmpty) return null;
     return Uri.parse(
       _apiBaseUrl,
-    ).resolve('/api/v1/client/subscribe?token=${Uri.encodeQueryComponent(token)}').toString();
+    ).resolve('/api/v1/client/subscribe?token=${Uri.encodeQueryComponent(token)}&flag=hiddify').toString();
   }
 
   void _logSubscribeUrlSummary(String subscribeUrl) {
