@@ -27,5 +27,15 @@ void main() {
       expect(DiagnosticSanitizer.maskIdentifier('user@example.com'), 'u***@***');
       expect(DiagnosticSanitizer.maskIdentifier('1234567890'), '1234***90');
     });
+
+    test('keeps Dart status labels visible while masking lowercase hosts', () {
+      final sanitized = DiagnosticSanitizer.sanitize(
+        'coreStatus=ConnectionStatus.connected() host=api.example.com status=CONNECTED',
+      );
+
+      expect(sanitized, contains('ConnectionStatus.connected()'));
+      expect(sanitized, contains('status=CONNECTED'));
+      expect(sanitized, isNot(contains('api.example.com')));
+    });
   });
 }

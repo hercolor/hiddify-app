@@ -48,6 +48,6 @@ abstract final class DiagnosticSanitizer {
   static final _emailPattern = RegExp(r'\b([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b');
   static final _ipv4Pattern = RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b');
   static final _ipv6Pattern = RegExp(r'\b(?:[0-9a-fA-F]{0,4}:){2,}[0-9a-fA-F:.%]*\b');
-  static final _hostPattern = RegExp(r'\b(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(:\d{2,5})?\b');
+  static final _hostPattern = RegExp(r'\b(?:[a-z0-9-]+\.)+[a-z]{2,}(:\d{2,5})?\b');
   static final _longSecretPattern = RegExp(r'\b[A-Za-z0-9_-]{32,}\b');
 }
