@@ -285,11 +285,6 @@ class FinalConfigGuard with InfraLogger {
       route['final'] = LockedCoreConfig.routeFinal;
     }
 
-    if (route.containsKey('rule_set')) {
-      route['rule_set'] = <Object?>[];
-      stats.removedGeoRouteRules += 1;
-    }
-
     final rules = _listValue(route['rules']);
     if (rules == null) {
       route['rules'] = <Object?>[];
@@ -301,8 +296,6 @@ class FinalConfigGuard with InfraLogger {
         stats.removedFakeRouteRules += 1;
       } else if (_referencesIpv6Route(rule)) {
         stats.removedIpv6RouteRules += 1;
-      } else if (_referencesGeoRule(rule)) {
-        stats.removedGeoRouteRules += 1;
       } else if (_isDefaultBlockOrDirectRule(rule)) {
         stats.removedCatchAllRules += 1;
       } else {
@@ -400,23 +393,6 @@ class FinalConfigGuard with InfraLogger {
         text.contains('ipv6_only') ||
         text.contains('prefer_ipv6') ||
         _looksLikeIpv6Text(text);
-  }
-
-  static bool _referencesGeoRule(Object? value) {
-    if (value == null) return false;
-    if (value is Map) {
-      for (final entry in value.entries) {
-        final key = _normalizeKey(entry.key.toString());
-        if (key == 'ruleset' || key == 'geosite' || key == 'geoip') return true;
-        if (_referencesGeoRule(entry.value)) return true;
-      }
-      return false;
-    }
-    if (value is Iterable && value is! String) {
-      return value.any(_referencesGeoRule);
-    }
-    final text = value.toString().toLowerCase();
-    return text.contains('geosite:') || text.contains('geoip:');
   }
 
   static bool _isDefaultBlockOrDirectRule(Object? value) {

@@ -1,5 +1,5 @@
 abstract final class LockedCoreConfig {
-  static const int schemaVersion = 3;
+  static const int schemaVersion = 4;
   static const String schemaVersionKey = 'configSchemaVersion';
 
   static const String dnsMode = 'real-ip';

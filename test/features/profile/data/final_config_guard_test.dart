@@ -58,7 +58,7 @@ void main() {
       expect(jsonEncode(sanitized), isNot(contains('198.18.')));
     });
 
-    test('locks DNS to proxy detour, IPv4 only, and removes IPv6/default block rules', () {
+    test('locks DNS to proxy detour, IPv4 only, and keeps smart route rule sets', () {
       final content = jsonEncode({
         'dns': {
           'servers': [
@@ -103,7 +103,7 @@ void main() {
       expect(result.routeFinal, 'proxy');
       expect(result.removedIpv6DnsRules, 1);
       expect(result.removedIpv6RouteRules, 1);
-      expect(result.removedGeoRouteRules, greaterThanOrEqualTo(1));
+      expect(result.removedGeoRouteRules, 0);
       expect(result.removedCatchAllRules, 1);
       expect(result.removedIpv6TunValues, greaterThanOrEqualTo(1));
       expect(result.forcedDnsDetours, 1);
@@ -116,7 +116,10 @@ void main() {
       expect((sanitized['dns'] as Map)['strategy'], 'ipv4_only');
       expect(jsonEncode(sanitized), isNot(contains('::/0')));
       expect(jsonEncode(sanitized), isNot(contains('inet6_address')));
-      expect((sanitized['route'] as Map)['final'], 'proxy');
+      final route = sanitized['route'] as Map;
+      expect(route['final'], 'proxy');
+      expect(route['rule_set'], isNotEmpty);
+      expect(jsonEncode(route['rules']), contains('geosite'));
     });
 
     test('removes inherited Clash fake-ip and IPv6 DNS while keeping real-ip proxy DNS', () {
