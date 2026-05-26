@@ -1,6 +1,15 @@
 abstract final class DiagnosticSanitizer {
   static String sanitize(String input) {
     var output = input;
+    final preservedStructFields = <String, String>{};
+    var preservedIndex = 0;
+
+    output = output.replaceAllMapped(_goStructFieldPattern, (match) {
+      final marker = '§SF${preservedIndex++}§';
+      preservedStructFields[marker] = match.group(2)!;
+      return '${match.group(1)}$marker';
+    });
+
     output = output.replaceAllMapped(_shareLinkPattern, (match) => '${match.group(1)}://***');
     output = output.replaceAllMapped(_urlPattern, (match) {
       final scheme = match.group(0)?.startsWith('http://') == true ? 'http' : 'https';
@@ -17,6 +26,9 @@ abstract final class DiagnosticSanitizer {
     output = output.replaceAll(_ipv6Pattern, '****:****');
     output = output.replaceAllMapped(_hostPattern, (match) => '***${match.group(1) ?? ''}');
     output = output.replaceAll(_longSecretPattern, '***');
+    for (final entry in preservedStructFields.entries) {
+      output = output.replaceAll(entry.key, entry.value);
+    }
     return output;
   }
 
@@ -30,6 +42,9 @@ abstract final class DiagnosticSanitizer {
     return '${input.substring(0, 4)}***${input.substring(input.length - 2)}';
   }
 
+  static final _goStructFieldPattern = RegExp(
+    r'\b(Go struct field |struct field )([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)',
+  );
   static final _shareLinkPattern = RegExp(
     r'\b(vless|vmess|trojan|ss|ssr|hysteria|hysteria2|tuic|socks|socks5)://[^\s\])}>"'
     ']+',

@@ -28,6 +28,16 @@ void main() {
       expect(DiagnosticSanitizer.maskIdentifier('1234567890'), '1234***90');
     });
 
+    test('keeps Go struct field names visible for import diagnostics', () {
+      final sanitized = DiagnosticSanitizer.sanitize(
+        'json: cannot unmarshal string into Go struct field Rule.DomainSuffixes of type []string',
+      );
+
+      expect(sanitized, contains('Go struct field Rule.DomainSuffixes'));
+      expect(sanitized, contains('type []string'));
+      expect(sanitized, isNot(contains('Rule.***')));
+    });
+
     test('keeps Dart status labels visible while masking lowercase hosts', () {
       final sanitized = DiagnosticSanitizer.sanitize(
         'coreStatus=ConnectionStatus.connected() host=api.example.com status=CONNECTED',
