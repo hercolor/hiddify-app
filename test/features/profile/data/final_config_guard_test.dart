@@ -243,11 +243,51 @@ void main() {
       expect(proxy['outbounds'], contains('auto'));
       expect(auto['outbounds'], contains('香港-IPEL'));
       expect(route['final'], LockedCoreConfig.routeFinal);
-      expect((route['rule_set'] as List).single['download_detour'], LockedCoreConfig.outboundTag);
+      final routeRuleSet = (route['rule_set'] as List).single as Map;
+      expect(routeRuleSet['download_detour'], LockedCoreConfig.outboundTag);
       expect(dnsServer['detour'], LockedCoreConfig.outboundTag);
       expect(encoded, isNot(contains('节点选择')));
       expect(encoded, isNot(contains('自动选择')));
       expect(encoded, contains('香港-IPEL'));
+    });
+
+    test('normalizes scalar sing-box rule matchers before core import', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'remote', 'address': 'https://1.1.1.1/dns-query', 'detour': 'proxy'},
+          ],
+          'rules': [
+            {'outbound': 'any', 'query_type': 'A', 'server': 'remote'},
+            {'clash_mode': 'global', 'server': 'remote'},
+          ],
+          'final': 'remote',
+        },
+        'route': {
+          'rules': [
+            {'outbound': 'dns-out', 'protocol': 'dns'},
+            {'domain_suffix': 'cn', 'outbound': 'direct'},
+            {'clash_mode': 'global', 'outbound': 'proxy'},
+          ],
+          'final': 'proxy',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'dns-out', 'type': 'dns'},
+        ],
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final dnsRules = ((sanitized['dns'] as Map)['rules'] as List).cast<Map>();
+      final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+
+      expect(dnsRules.first['outbound'], ['any']);
+      expect(dnsRules.first['query_type'], ['A']);
+      expect(dnsRules[1]['clash_mode'], 'global');
+      expect(routeRules.first['protocol'], ['dns']);
+      expect(routeRules[1]['domain_suffix'], ['cn']);
+      expect(routeRules[2]['clash_mode'], 'global');
     });
 
     test('creates locked DNS and route defaults when final config omits them', () {

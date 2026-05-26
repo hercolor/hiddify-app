@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/db/db.dart';
 import 'package:hiddify/core/http_client/dio_http_client.dart';
+import 'package:hiddify/features/profile/data/final_config_guard.dart';
 import 'package:hiddify/features/profile/data/profile_data_mapper.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/model/profile_failure.dart';
@@ -170,12 +171,22 @@ class ProfileParser {
       cancelToken: cancelToken ?? CancelToken(),
       ref: _ref,
     );
+    await _sanitizeDownloadedJsonProfile(tempFilePath);
     // fixing headers before return
     return rs.headers.map.map((key, value) {
       if (value.length == 1) return MapEntry(key, value.first);
       return MapEntry(key, value);
     });
   }, (err, st) => err is ProfileFailure ? err : ProfileFailure.unexpected(err, st));
+
+  Future<void> _sanitizeDownloadedJsonProfile(String tempFilePath) async {
+    final file = File(tempFilePath);
+    final result = const FinalConfigGuard().inspectAndSanitizeContent(await file.readAsString());
+    if (result.changed && result.sanitizedContent != null) {
+      await file.writeAsString(result.sanitizedContent!);
+    }
+  }
+
   Future<void> expandRemoteLinesInParallel({
     required String tempFilePath,
     required DioHttpClient httpClient,

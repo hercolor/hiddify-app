@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
-import 'package:meta/meta.dart';
 
 class FinalConfigGuardResult {
   const FinalConfigGuardResult({
@@ -71,7 +70,6 @@ class FinalConfigGuard with InfraLogger {
     return result;
   }
 
-  @visibleForTesting
   FinalConfigGuardResult inspectAndSanitizeContent(String content) {
     final fakeIpBefore = _containsFakeIpMarker(content);
 
@@ -134,6 +132,7 @@ class FinalConfigGuard with InfraLogger {
 
     _removeUnsafeKeysDeep(root);
     _normalizeLockedOutboundTags(root);
+    _normalizeSingBoxRuleListFields(root);
     _sanitizeDns(_ensureDns(root, stats), stats);
     _sanitizeRoute(_ensureRoute(root), stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
@@ -283,6 +282,82 @@ class FinalConfigGuard with InfraLogger {
       }
     }
   }
+
+  static void _normalizeSingBoxRuleListFields(Map<String, dynamic> root) {
+    _normalizeRuleListEntries(_mapValue(root['dns'])?['rules'], _dnsRuleListFields);
+    _normalizeRuleListEntries(_mapValue(root['route'])?['rules'], _routeRuleListFields);
+  }
+
+  static void _normalizeRuleListEntries(Object? value, Set<String> listFields) {
+    final rules = _listValue(value);
+    if (rules == null) return;
+    for (final rule in rules) {
+      final map = _mapValue(rule);
+      if (map == null) continue;
+      for (final key in map.keys.toList()) {
+        if (!listFields.contains(_normalizeKey(key))) continue;
+        final child = map[key];
+        if (child == null || child is List || child is Map || child is bool) continue;
+        map[key] = [child];
+      }
+    }
+  }
+
+  static const _sharedRuleListFields = {
+    'inbound',
+    'inbounds',
+    'network',
+    'networks',
+    'authuser',
+    'authusers',
+    'protocol',
+    'protocols',
+    'domain',
+    'domains',
+    'domainsuffix',
+    'domainsuffixes',
+    'domainkeyword',
+    'domainkeywords',
+    'domainregex',
+    'domainregexes',
+    'geosite',
+    'geoip',
+    'sourcegeoip',
+    'ipcidr',
+    'ipcidrs',
+    'sourceipcidr',
+    'sourceipcidrs',
+    'port',
+    'ports',
+    'portrange',
+    'portranges',
+    'sourceport',
+    'sourceports',
+    'sourceportrange',
+    'sourceportranges',
+    'processname',
+    'processnames',
+    'processpath',
+    'processpaths',
+    'processpathregex',
+    'processpathregexes',
+    'packagename',
+    'packagenames',
+    'user',
+    'users',
+    'userid',
+    'userids',
+    'ruleset',
+    'rulesets',
+    'wifissid',
+    'wifissids',
+    'wifibssid',
+    'wifibssids',
+  };
+
+  static const _routeRuleListFields = _sharedRuleListFields;
+
+  static const _dnsRuleListFields = {..._sharedRuleListFields, 'outbound', 'outbounds', 'querytype', 'querytypes'};
 
   static void _sanitizeDns(Object? value, _SanitizeStats stats) {
     final dns = _mapValue(value);
