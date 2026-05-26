@@ -25,6 +25,9 @@ class FinalConfigGuardResult {
     required this.removedIpv6TunValues,
     required this.forcedDnsDetours,
     required this.forcedDnsStrategies,
+    required this.removedClashModeRules,
+    required this.removedGlobalModeRules,
+    required this.forcedSelectorDefaults,
     required this.outboundTags,
     this.sanitizedContent,
   });
@@ -48,6 +51,9 @@ class FinalConfigGuardResult {
   final int removedIpv6TunValues;
   final int forcedDnsDetours;
   final int forcedDnsStrategies;
+  final int removedClashModeRules;
+  final int removedGlobalModeRules;
+  final int forcedSelectorDefaults;
   final List<String> outboundTags;
   final String? sanitizedContent;
 
@@ -59,10 +65,19 @@ class FinalConfigGuard with InfraLogger {
 
   static const residualFakeIpMessage = '最终配置仍包含 fake-ip/198.18.x.x，已阻止启动。';
 
-  Future<FinalConfigGuardResult> inspectAndSanitizeFile(String path, {required String stage}) async {
+  Future<FinalConfigGuardResult> inspectAndSanitizeFile(
+    String path, {
+    required String stage,
+    bool globalRouteMode = false,
+    String? selectedOutboundTag,
+  }) async {
     final file = File(path);
     final content = await file.readAsString();
-    final result = inspectAndSanitizeContent(content);
+    final result = inspectAndSanitizeContent(
+      content,
+      globalRouteMode: globalRouteMode,
+      selectedOutboundTag: selectedOutboundTag,
+    );
     if (result.changed && result.sanitizedContent != null) {
       await file.writeAsString(result.sanitizedContent!);
     }
@@ -70,7 +85,11 @@ class FinalConfigGuard with InfraLogger {
     return result;
   }
 
-  FinalConfigGuardResult inspectAndSanitizeContent(String content) {
+  FinalConfigGuardResult inspectAndSanitizeContent(
+    String content, {
+    bool globalRouteMode = false,
+    String? selectedOutboundTag,
+  }) {
     final fakeIpBefore = _containsFakeIpMarker(content);
 
     Object? decoded;
@@ -97,6 +116,9 @@ class FinalConfigGuard with InfraLogger {
         removedIpv6TunValues: 0,
         forcedDnsDetours: 0,
         forcedDnsStrategies: 0,
+        removedClashModeRules: 0,
+        removedGlobalModeRules: 0,
+        forcedSelectorDefaults: 0,
         outboundTags: const [],
       );
     }
@@ -122,6 +144,9 @@ class FinalConfigGuard with InfraLogger {
         removedIpv6TunValues: 0,
         forcedDnsDetours: 0,
         forcedDnsStrategies: 0,
+        removedClashModeRules: 0,
+        removedGlobalModeRules: 0,
+        forcedSelectorDefaults: 0,
         outboundTags: const [],
       );
     }
@@ -133,8 +158,9 @@ class FinalConfigGuard with InfraLogger {
     _removeUnsafeKeysDeep(root);
     _normalizeLockedOutboundTags(root);
     _normalizeSingBoxRuleListFields(root);
-    _sanitizeDns(_ensureDns(root, stats), stats);
-    _sanitizeRoute(_ensureRoute(root), stats);
+    _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
+    _sanitizeRoute(_ensureRoute(root), stats, globalRouteMode: globalRouteMode);
+    _forceSelectedProxyDefault(root, selectedOutboundTag, stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
 
     final afterJson = jsonEncode(root);
@@ -162,6 +188,9 @@ class FinalConfigGuard with InfraLogger {
       removedIpv6TunValues: stats.removedIpv6TunValues,
       forcedDnsDetours: stats.forcedDnsDetours,
       forcedDnsStrategies: stats.forcedDnsStrategies,
+      removedClashModeRules: stats.removedClashModeRules,
+      removedGlobalModeRules: stats.removedGlobalModeRules,
+      forcedSelectorDefaults: stats.forcedSelectorDefaults,
       outboundTags: _extractOutboundTags(root),
       sanitizedContent: changed ? encoder!.convert(root) : null,
     );
@@ -193,6 +222,9 @@ class FinalConfigGuard with InfraLogger {
       'removedIpv6TunValues=${result.removedIpv6TunValues}, '
       'forcedDnsDetours=${result.forcedDnsDetours}, '
       'forcedDnsStrategies=${result.forcedDnsStrategies}, '
+      'removedClashModeRules=${result.removedClashModeRules}, '
+      'removedGlobalModeRules=${result.removedGlobalModeRules}, '
+      'forcedSelectorDefaults=${result.forcedSelectorDefaults}, '
       'nodeCount=${result.outboundTags.length}, '
       'outboundTags=[$tags], '
       'coreConfigVersion=${LockedCoreConfig.schemaVersion}',
@@ -361,7 +393,7 @@ class FinalConfigGuard with InfraLogger {
 
   static const _dnsRuleListFields = {..._sharedRuleListFields, 'outbound', 'outbounds', 'querytype', 'querytypes'};
 
-  static void _sanitizeDns(Object? value, _SanitizeStats stats) {
+  static void _sanitizeDns(Object? value, _SanitizeStats stats, {required bool globalRouteMode}) {
     final dns = _mapValue(value);
     if (dns == null) return;
 
@@ -414,6 +446,8 @@ class FinalConfigGuard with InfraLogger {
           stats.removedFakeDnsRules += 1;
         } else if (_referencesFakeIp(rule, removedIpv6Tags) || _referencesIpv6Route(rule)) {
           stats.removedIpv6DnsRules += 1;
+        } else if (_hasClashModeRule(rule)) {
+          stats.removedClashModeRules += 1;
         } else {
           keptRules.add(rule);
         }
@@ -436,7 +470,7 @@ class FinalConfigGuard with InfraLogger {
     }
   }
 
-  static void _sanitizeRoute(Object? value, _SanitizeStats stats) {
+  static void _sanitizeRoute(Object? value, _SanitizeStats stats, {required bool globalRouteMode}) {
     final route = _mapValue(value);
     if (route == null) return;
 
@@ -457,12 +491,39 @@ class FinalConfigGuard with InfraLogger {
         stats.removedIpv6RouteRules += 1;
       } else if (_isDefaultBlockOrDirectRule(rule)) {
         stats.removedCatchAllRules += 1;
+      } else if (_hasClashModeRule(rule)) {
+        stats.removedClashModeRules += 1;
+      } else if (globalRouteMode && !_isDnsProtocolRule(rule)) {
+        stats.removedGlobalModeRules += 1;
       } else {
         keptRules.add(rule);
       }
     }
     if (keptRules.length != rules.length) {
       route['rules'] = keptRules;
+    }
+  }
+
+  static void _forceSelectedProxyDefault(Map<String, dynamic> root, String? selectedOutboundTag, _SanitizeStats stats) {
+    final selected = selectedOutboundTag?.trim();
+    if (selected == null || selected.isEmpty) return;
+
+    final outbounds = _listValue(root['outbounds']);
+    if (outbounds == null || outbounds.isEmpty) return;
+    if (!_hasOutboundTag(outbounds, selected)) return;
+
+    final selector =
+        _findOutboundByTag(outbounds, LockedCoreConfig.outboundTag) ??
+        _findOutboundByTag(outbounds, '节点选择') ??
+        _findFirstOutboundByType(outbounds, 'selector');
+    if (selector == null) return;
+
+    final choices = _listValue(selector['outbounds']);
+    if (choices != null && choices.isNotEmpty && !choices.any((item) => item?.toString() == selected)) return;
+
+    if (_stringValue(selector['default']) != selected) {
+      selector['default'] = selected;
+      stats.forcedSelectorDefaults += 1;
     }
   }
 
@@ -554,6 +615,25 @@ class FinalConfigGuard with InfraLogger {
         _looksLikeIpv6Text(text);
   }
 
+  static bool _hasClashModeRule(Object? value) {
+    final map = _mapValue(value);
+    if (map == null) return false;
+    for (final key in map.keys) {
+      if (_normalizeKey(key) == 'clashmode') return true;
+    }
+    return false;
+  }
+
+  static bool _isDnsProtocolRule(Object? value) {
+    final map = _mapValue(value);
+    if (map == null) return false;
+    final protocol = map['protocol'];
+    if (protocol is Iterable && protocol is! String) {
+      return protocol.any((item) => item?.toString().toLowerCase() == 'dns');
+    }
+    return protocol?.toString().toLowerCase() == 'dns';
+  }
+
   static bool _isDefaultBlockOrDirectRule(Object? value) {
     final map = _mapValue(value);
     if (map == null) return false;
@@ -573,6 +653,7 @@ class FinalConfigGuard with InfraLogger {
       'package_name',
       'clash_mode',
       'rule_set',
+      'ip_is_private',
       'geosite',
       'geoip',
     };
@@ -738,4 +819,7 @@ class _SanitizeStats {
   int removedIpv6TunValues = 0;
   int forcedDnsDetours = 0;
   int forcedDnsStrategies = 0;
+  int removedClashModeRules = 0;
+  int removedGlobalModeRules = 0;
+  int forcedSelectorDefaults = 0;
 }

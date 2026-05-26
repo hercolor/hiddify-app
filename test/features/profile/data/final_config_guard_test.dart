@@ -251,6 +251,74 @@ void main() {
       expect(encoded, contains('香港-IPEL'));
     });
 
+    test('pins selector default to the app-selected node before core start', () {
+      final content = jsonEncode({
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'type': 'selector',
+            'default': 'auto',
+            'outbounds': ['auto', '香港-IPEL', '美国-IPEL'],
+          },
+          {
+            'tag': 'auto',
+            'type': 'urltest',
+            'outbounds': ['香港-IPEL', '美国-IPEL'],
+          },
+          {'tag': '香港-IPEL', 'type': 'shadowsocks'},
+          {'tag': '美国-IPEL', 'type': 'shadowsocks'},
+        ],
+        'route': {
+          'rules': [
+            {
+              'outbound': 'dns-out',
+              'protocol': ['dns'],
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, selectedOutboundTag: '香港-IPEL');
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final outbounds = (sanitized['outbounds'] as List).cast<Map>();
+      final proxy = outbounds.firstWhere((item) => item['tag'] == LockedCoreConfig.outboundTag);
+
+      expect(proxy['default'], '香港-IPEL');
+      expect(result.forcedSelectorDefaults, 1);
+    });
+
+    test('global mode removes split route rules but keeps dns routing', () {
+      final content = jsonEncode({
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'dns-out', 'type': 'dns'},
+        ],
+        'route': {
+          'rules': [
+            {
+              'outbound': 'dns-out',
+              'protocol': ['dns'],
+            },
+            {'ip_is_private': true, 'outbound': 'direct'},
+            {
+              'domain_suffix': ['cn'],
+              'outbound': 'direct',
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, globalRouteMode: true);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+
+      expect(routeRules, hasLength(1));
+      expect(routeRules.single['protocol'], ['dns']);
+      expect(result.removedGlobalModeRules, 2);
+    });
+
     test('normalizes scalar sing-box rule matchers before core import', () {
       final content = jsonEncode({
         'dns': {
@@ -282,12 +350,13 @@ void main() {
       final dnsRules = ((sanitized['dns'] as Map)['rules'] as List).cast<Map>();
       final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
 
+      expect(dnsRules, hasLength(1));
       expect(dnsRules.first['outbound'], ['any']);
       expect(dnsRules.first['query_type'], ['A']);
-      expect(dnsRules[1]['clash_mode'], ['global']);
+      expect(routeRules, hasLength(2));
       expect(routeRules.first['protocol'], ['dns']);
       expect(routeRules[1]['domain_suffix'], ['cn']);
-      expect(routeRules[2]['clash_mode'], ['global']);
+      expect(result.removedClashModeRules, 2);
     });
 
     test('creates locked DNS and route defaults when final config omits them', () {

@@ -102,7 +102,11 @@ class ClientNodeSelectionNotifier extends StateNotifier<AsyncValue<ClientNodeSel
   Future<void> cacheFromOutboundGroup(OutboundGroup group) async {
     final nodes = ClientNodeParser.fromOutboundGroup(group);
     if (nodes.isEmpty) return;
-    await cacheNodes(nodes, preferredSelectedNodeId: group.selected.trim().isEmpty ? null : group.selected.trim());
+    // The core group selection can be changed by urltest/selector defaults while
+    // profiles are refreshed or route mode is toggled. Preserve the user-visible
+    // selected node stored by the app; only fall back to the first node when the
+    // previous selection no longer exists.
+    await cacheNodes(nodes);
   }
 
   Future<void> selectNode(String nodeId) async {

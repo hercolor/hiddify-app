@@ -123,9 +123,14 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @visibleForTesting
   TaskEither<ConnectionFailure, Unit> guardFinalConfig(ProfileEntity prof, {required String stage}) =>
       TaskEither.tryCatch(() async {
+        final selection = ref.read(clientNodeSelectionProvider).valueOrNull;
+        final selectedOutboundTag = selection?.selectedNode?.id;
+        final globalRouteMode = ref.read(ConfigOptions.globalRouteMode);
         final result = await finalConfigGuard.inspectAndSanitizeFile(
           profilePathResolver.file(prof.id).path,
           stage: stage,
+          globalRouteMode: globalRouteMode,
+          selectedOutboundTag: selectedOutboundTag,
         );
         if (result.hasResidualFakeIp) {
           throw const ConnectionFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);

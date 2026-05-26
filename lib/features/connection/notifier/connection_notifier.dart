@@ -17,6 +17,7 @@ import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
+import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -76,6 +77,19 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       final shouldReconnect = next == null || previous.id != next.id;
       if (shouldReconnect) {
         await reconnect(next);
+      }
+    });
+
+    ref.listen(ConfigOptions.globalRouteMode, (previous, next) async {
+      if (previous == null || previous == next) return;
+      final profile = await ref.read(activeProfileProvider.future);
+      if (_currentStatus == const Connected() && profile != null) {
+        loggy.info(
+          'route mode changed, reconnecting with selectedNodeName=${_selectedNodeNameSync()} globalRouteMode=$next',
+        );
+        await reconnect(profile);
+      } else {
+        _refreshClientState(reason: 'route mode changed');
       }
     });
     ref.watch(coreRestartSignalProvider);
