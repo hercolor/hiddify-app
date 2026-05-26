@@ -18,6 +18,7 @@ void main() {
       expect(json['ip'], ['10.0.0.0/8', '172.16.0.0/12']);
       expect(json['port'], ['53', '853']);
       expect(json['protocol'], ['dns']);
+      expect(json['network'], 'all');
       expect(json['outbound'], 'bypass');
     });
 
@@ -27,7 +28,7 @@ void main() {
         'ip': ['10.0.0.0/8', '172.16.0.0/12'],
         'port': ['53', '853'],
         'protocol': ['dns'],
-        'network': '',
+        'network': 'all',
         'outbound': 'bypass',
       });
 
@@ -35,6 +36,7 @@ void main() {
       expect(rule.ip, '10.0.0.0/8,172.16.0.0/12');
       expect(rule.port, '53,853');
       expect(rule.protocol, 'dns');
+      expect(rule.network, RuleNetwork.tcpAndUdp);
       expect(rule.outbound, RuleOutbound.bypass);
     });
   });
