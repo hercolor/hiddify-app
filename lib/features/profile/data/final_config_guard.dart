@@ -602,27 +602,58 @@ class FinalConfigGuard with InfraLogger {
     final route = _mapValue(root['route']);
     if (route == null) return;
 
-    final rules = _listValue(route['rules']) ?? <Object?>[];
-    final hasDirectSmartRule = rules.any((rule) {
-      final map = _mapValue(rule);
-      if (map == null || _stringValue(map['outbound']) != 'direct') return false;
-      return map.containsKey('domain_suffix') ||
-          map.containsKey('domain_keyword') ||
-          map.containsKey('ip_is_private') ||
-          map.containsKey('ip_cidr') ||
-          map.containsKey('geoip') ||
-          map.containsKey('geosite') ||
-          map.containsKey('rule_set');
-    });
-    if (hasDirectSmartRule) return;
-
     _ensureDirectOutbound(root);
-    route['rules'] = <Object?>[
-      ...rules,
-      {'ip_is_private': true, 'outbound': 'direct'},
-      {'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes, 'outbound': 'direct'},
-      {'domain_keyword': ClientRoutePolicy.cnBypassDomainKeywords, 'outbound': 'direct'},
-    ];
+    _ensureRuleSetEntries(route);
+
+    final rules = _listValue(route['rules']) ?? <Object?>[];
+    _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct'});
+    _addRouteRuleIfMissing(rules, 'domain_suffix', {
+      'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes,
+      'outbound': 'direct',
+    });
+    _addRouteRuleIfMissing(rules, 'domain_keyword', {
+      'domain_keyword': ClientRoutePolicy.cnBypassDomainKeywords,
+      'outbound': 'direct',
+    });
+    _addRouteRuleIfMissing(rules, 'rule_set', {
+      'rule_set': ['geosite-cn', 'geoip-cn'],
+      'outbound': 'direct',
+    });
+    route['rules'] = rules;
+  }
+
+  static void _ensureRuleSetEntries(Map<String, dynamic> route) {
+    final ruleSets = _listValue(route['rule_set']) ?? <Object?>[];
+    _addRuleSetEntryIfMissing(ruleSets, {
+      'tag': 'geosite-cn',
+      'type': 'remote',
+      'format': 'binary',
+      'url': '${LockedCoreConfig.rulesBaseUrl}/rules/sing-box/geosite-cn.srs',
+      'download_detour': LockedCoreConfig.outboundTag,
+    });
+    _addRuleSetEntryIfMissing(ruleSets, {
+      'tag': 'geoip-cn',
+      'type': 'remote',
+      'format': 'binary',
+      'url': '${LockedCoreConfig.rulesBaseUrl}/rules/sing-box/geoip-cn.srs',
+      'download_detour': LockedCoreConfig.outboundTag,
+    });
+    route['rule_set'] = ruleSets;
+  }
+
+  static void _addRuleSetEntryIfMissing(List<Object?> ruleSets, Map<String, Object> entry) {
+    final tag = entry['tag']?.toString();
+    if (tag == null || tag.isEmpty) return;
+    final exists = ruleSets.any((item) => _stringValue(_mapValue(item)?['tag']) == tag);
+    if (!exists) ruleSets.add(entry);
+  }
+
+  static void _addRouteRuleIfMissing(List<Object?> rules, String matcherKey, Map<String, Object> rule) {
+    final exists = rules.any((item) {
+      final map = _mapValue(item);
+      return map != null && _stringValue(map['outbound']) == 'direct' && map.containsKey(matcherKey);
+    });
+    if (!exists) rules.add(rule);
   }
 
   static void _ensureDirectOutbound(Map<String, dynamic> root) {

@@ -243,8 +243,9 @@ void main() {
       expect(proxy['outbounds'], contains('auto'));
       expect(auto['outbounds'], contains('香港-IPEL'));
       expect(route['final'], LockedCoreConfig.routeFinal);
-      final routeRuleSet = (route['rule_set'] as List).single as Map;
-      expect(routeRuleSet['download_detour'], LockedCoreConfig.outboundTag);
+      final routeRuleSets = (route['rule_set'] as List).cast<Map>();
+      expect(routeRuleSets.map((item) => item['tag']), containsAll(['geosite-cn', 'geoip-cn']));
+      expect(routeRuleSets.map((item) => item['download_detour']), everyElement(LockedCoreConfig.outboundTag));
       expect(dnsServer['detour'], LockedCoreConfig.outboundTag);
       expect(encoded, isNot(contains('节点选择')));
       expect(encoded, isNot(contains('自动选择')));
@@ -342,15 +343,15 @@ void main() {
       final dnsServer = ((sanitized['dns'] as Map)['servers'] as List).single as Map;
       final route = sanitized['route'] as Map;
       final routeRules = (route['rules'] as List).cast<Map>();
-      final routeRuleSet = (route['rule_set'] as List).single as Map;
+      final routeRuleSets = (route['rule_set'] as List).cast<Map>();
 
       expect(proxy['default'], '香港-IPEL');
       expect(dnsServer['detour'], '香港-IPEL');
       expect(route['final'], '香港-IPEL');
       expect(routeRules[1]['outbound'], '香港-IPEL');
-      expect(routeRuleSet['download_detour'], '香港-IPEL');
+      expect(routeRuleSets.map((item) => item['download_detour']), everyElement('香港-IPEL'));
       expect(result.forcedSelectorDefaults, 1);
-      expect(result.forcedSelectedOutboundReferences, 4);
+      expect(result.forcedSelectedOutboundReferences, 5);
     });
 
     test('global mode removes split route rules but keeps dns routing', () {
@@ -418,9 +419,12 @@ void main() {
       expect(dnsRules, hasLength(1));
       expect(dnsRules.first['outbound'], ['any']);
       expect(dnsRules.first['query_type'], ['A']);
-      expect(routeRules, hasLength(2));
+      expect(routeRules, hasLength(5));
       expect(routeRules.first['protocol'], ['dns']);
       expect(routeRules[1]['domain_suffix'], ['cn']);
+      expect(routeRules.any((rule) => rule['ip_is_private'] == true), isTrue);
+      expect(routeRules.any((rule) => rule['domain_keyword'] is List), isTrue);
+      expect(routeRules.any((rule) => rule['rule_set'] is List), isTrue);
       expect(result.removedClashModeRules, 2);
     });
 
@@ -445,11 +449,13 @@ void main() {
       final outbounds = (sanitized['outbounds'] as List).cast<Map>();
 
       expect(route['final'], 'proxy');
-      expect(routeRules, hasLength(3));
+      expect(routeRules, hasLength(4));
       expect(routeRules[0]['ip_is_private'], isTrue);
       expect(routeRules[1]['domain_suffix'], contains('baidu.com'));
       expect(routeRules[1]['outbound'], 'direct');
       expect(routeRules[2]['domain_keyword'], contains('baidu'));
+      expect(routeRules[3]['rule_set'], ['geosite-cn', 'geoip-cn']);
+      expect((route['rule_set'] as List).map((item) => item['url']), everyElement(contains('/rules/sing-box/')));
       expect(outbounds.any((item) => item['tag'] == 'direct' && item['type'] == 'direct'), isTrue);
     });
 

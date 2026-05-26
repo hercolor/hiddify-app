@@ -6,6 +6,7 @@ abstract final class LockedCoreConfig {
   static const String dnsStrategy = 'ipv4_only';
   static const String routeFinal = 'proxy';
   static const String outboundTag = 'proxy';
+  static const String rulesBaseUrl = 'https://api.y88.pro';
 
   static const bool fakeIp = false;
   static const bool ipv6 = false;
