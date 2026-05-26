@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:hiddify/core/config/client_route_policy.dart';
 import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
 
@@ -164,6 +165,7 @@ class FinalConfigGuard with InfraLogger {
     _normalizeSingBoxRuleListFields(root);
     _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
     _sanitizeRoute(_ensureRoute(root), stats, globalRouteMode: globalRouteMode);
+    _ensureSmartRouteFallback(root, globalRouteMode: globalRouteMode);
     _lockSelectedOutboundReferences(root, selectedOutboundTag, stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
 
@@ -592,6 +594,42 @@ class FinalConfigGuard with InfraLogger {
         }
       }
     }
+  }
+
+  static void _ensureSmartRouteFallback(Map<String, dynamic> root, {required bool globalRouteMode}) {
+    if (globalRouteMode) return;
+
+    final route = _mapValue(root['route']);
+    if (route == null) return;
+
+    final rules = _listValue(route['rules']) ?? <Object?>[];
+    final hasDirectSmartRule = rules.any((rule) {
+      final map = _mapValue(rule);
+      if (map == null || _stringValue(map['outbound']) != 'direct') return false;
+      return map.containsKey('domain_suffix') ||
+          map.containsKey('domain_keyword') ||
+          map.containsKey('ip_is_private') ||
+          map.containsKey('ip_cidr') ||
+          map.containsKey('geoip') ||
+          map.containsKey('geosite') ||
+          map.containsKey('rule_set');
+    });
+    if (hasDirectSmartRule) return;
+
+    _ensureDirectOutbound(root);
+    route['rules'] = <Object?>[
+      ...rules,
+      {'ip_is_private': true, 'outbound': 'direct'},
+      {'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes, 'outbound': 'direct'},
+      {'domain_keyword': ClientRoutePolicy.cnBypassDomainKeywords, 'outbound': 'direct'},
+    ];
+  }
+
+  static void _ensureDirectOutbound(Map<String, dynamic> root) {
+    final outbounds = _listValue(root['outbounds']);
+    if (outbounds == null) return;
+    if (_hasOutboundTag(outbounds, 'direct')) return;
+    outbounds.add({'tag': 'direct', 'type': 'direct'});
   }
 
   static bool _isProxySelectorReference(Object? value) {

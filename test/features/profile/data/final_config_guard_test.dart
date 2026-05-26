@@ -424,6 +424,50 @@ void main() {
       expect(result.removedClashModeRules, 2);
     });
 
+    test('injects smart direct rules when generated final config has no route rules', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, selectedOutboundTag: '香港-IPEL');
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final route = sanitized['route'] as Map;
+      final routeRules = (route['rules'] as List).cast<Map>();
+      final outbounds = (sanitized['outbounds'] as List).cast<Map>();
+
+      expect(route['final'], 'proxy');
+      expect(routeRules, hasLength(3));
+      expect(routeRules[0]['ip_is_private'], isTrue);
+      expect(routeRules[1]['domain_suffix'], contains('baidu.com'));
+      expect(routeRules[1]['outbound'], 'direct');
+      expect(routeRules[2]['domain_keyword'], contains('baidu'));
+      expect(outbounds.any((item) => item['tag'] == 'direct' && item['type'] == 'direct'), isTrue);
+    });
+
+    test('does not inject smart direct rules in global route mode', () {
+      final content = jsonEncode({
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, globalRouteMode: true);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final route = sanitized['route'] as Map;
+
+      expect(route['rules'], isEmpty);
+    });
+
     test('creates locked DNS and route defaults when final config omits them', () {
       final content = jsonEncode({
         'outbounds': [
@@ -445,7 +489,9 @@ void main() {
       final dnsServer = (dns['servers'] as List).single as Map;
       expect(dnsServer['detour'], LockedCoreConfig.outboundTag);
       expect(route['final'], LockedCoreConfig.routeFinal);
-      expect(route['rules'], isEmpty);
+      expect(route['rules'], isNotEmpty);
+      expect(jsonEncode(route['rules']), contains('domain_suffix'));
+      expect(jsonEncode(route['rules']), contains('baidu.com'));
     });
   });
 }
