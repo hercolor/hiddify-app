@@ -604,6 +604,7 @@ class FinalConfigGuard with InfraLogger {
 
     _ensureDirectOutbound(root);
     _ensureRuleSetEntries(route);
+    _ensureSmartDnsRules(root);
 
     final rules = _listValue(route['rules']) ?? <Object?>[];
     _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct'});
@@ -652,6 +653,50 @@ class FinalConfigGuard with InfraLogger {
     final exists = rules.any((item) {
       final map = _mapValue(item);
       return map != null && _stringValue(map['outbound']) == 'direct' && map.containsKey(matcherKey);
+    });
+    if (!exists) rules.add(rule);
+  }
+
+  static void _ensureSmartDnsRules(Map<String, dynamic> root) {
+    final dns = _mapValue(root['dns']);
+    if (dns == null) return;
+
+    final servers = _listValue(dns['servers']) ?? <Object?>[];
+    _addDnsServerIfMissing(servers, {
+      'tag': 'dns-local',
+      'address': LockedCoreConfig.directDnsAddress,
+      'detour': 'direct',
+      'strategy': LockedCoreConfig.dnsStrategy,
+    });
+    dns['servers'] = servers;
+
+    final rules = _listValue(dns['rules']) ?? <Object?>[];
+    _addDnsRuleIfMissing(rules, 'domain_suffix', {
+      'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes,
+      'server': 'dns-local',
+    });
+    _addDnsRuleIfMissing(rules, 'domain_keyword', {
+      'domain_keyword': ClientRoutePolicy.cnBypassDomainKeywords,
+      'server': 'dns-local',
+    });
+    _addDnsRuleIfMissing(rules, 'rule_set', {
+      'rule_set': ['geosite-cn'],
+      'server': 'dns-local',
+    });
+    dns['rules'] = rules;
+  }
+
+  static void _addDnsServerIfMissing(List<Object?> servers, Map<String, Object> server) {
+    final tag = server['tag']?.toString();
+    if (tag == null || tag.isEmpty) return;
+    final exists = servers.any((item) => _stringValue(_mapValue(item)?['tag']) == tag);
+    if (!exists) servers.add(server);
+  }
+
+  static void _addDnsRuleIfMissing(List<Object?> rules, String matcherKey, Map<String, Object> rule) {
+    final exists = rules.any((item) {
+      final map = _mapValue(item);
+      return map != null && _stringValue(map['server']) == 'dns-local' && map.containsKey(matcherKey);
     });
     if (!exists) rules.add(rule);
   }

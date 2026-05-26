@@ -80,6 +80,8 @@ abstract final class ClientRoutePolicy {
     'zhihu.com',
     'zhimg.com',
     'gitee.com',
+    'ip138.com',
+    'ip.cn',
   ];
 
   static const cnBypassDomainKeywords = [
@@ -150,7 +152,11 @@ abstract final class ClientRoutePolicy {
       'domain:amap.com,'
       'domain:.amap.com,'
       'domain:zhihu.com,'
-      'domain:.zhihu.com';
+      'domain:.zhihu.com,'
+      'domain:ip138.com,'
+      'domain:.ip138.com,'
+      'domain:ip.cn,'
+      'domain:.ip.cn';
 
   static const _privateIpv4CidrsText = '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16';
 

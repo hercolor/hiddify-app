@@ -12,7 +12,7 @@ abstract final class LockedCoreConfig {
   static const bool ipv6 = false;
 
   static const String remoteDnsAddress = 'tcp://8.8.8.8';
-  static const String directDnsAddress = 'udp://1.1.1.1';
+  static const String directDnsAddress = 'https://223.5.5.5/dns-query';
 
   static const int mixedPort = 12334;
   static const int tproxyPort = 12335;
