@@ -310,6 +310,8 @@ class FinalConfigGuard with InfraLogger {
     'networks',
     'authuser',
     'authusers',
+    'clashmode',
+    'clashmodes',
     'protocol',
     'protocols',
     'domain',

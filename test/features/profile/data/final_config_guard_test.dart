@@ -284,10 +284,10 @@ void main() {
 
       expect(dnsRules.first['outbound'], ['any']);
       expect(dnsRules.first['query_type'], ['A']);
-      expect(dnsRules[1]['clash_mode'], 'global');
+      expect(dnsRules[1]['clash_mode'], ['global']);
       expect(routeRules.first['protocol'], ['dns']);
       expect(routeRules[1]['domain_suffix'], ['cn']);
-      expect(routeRules[2]['clash_mode'], 'global');
+      expect(routeRules[2]['clash_mode'], ['global']);
     });
 
     test('creates locked DNS and route defaults when final config omits them', () {
