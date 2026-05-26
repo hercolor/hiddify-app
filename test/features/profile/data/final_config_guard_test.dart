@@ -251,6 +251,49 @@ void main() {
       expect(encoded, contains('香港-IPEL'));
     });
 
+    test('keeps local DNS on direct detour while routing remote DNS through selected node', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'remote', 'address': 'https://1.1.1.1/dns-query', 'detour': 'proxy'},
+            {'tag': 'local', 'address': 'https://223.5.5.5/dns-query', 'detour': 'direct'},
+            {'tag': 'block', 'address': 'rcode://success', 'detour': 'proxy'},
+          ],
+          'rules': [
+            {
+              'domain_suffix': ['cn'],
+              'server': 'local',
+            },
+          ],
+          'final': 'remote',
+        },
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'type': 'selector',
+            'default': 'auto',
+            'outbounds': ['auto', '香港-IPEL'],
+          },
+          {
+            'tag': 'auto',
+            'type': 'urltest',
+            'outbounds': ['香港-IPEL'],
+          },
+          {'tag': 'direct', 'type': 'direct'},
+          {'tag': '香港-IPEL', 'type': 'shadowsocks'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, selectedOutboundTag: '香港-IPEL');
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final servers = ((sanitized['dns'] as Map)['servers'] as List).cast<Map>();
+
+      expect(servers.firstWhere((item) => item['tag'] == 'remote')['detour'], '香港-IPEL');
+      expect(servers.firstWhere((item) => item['tag'] == 'local')['detour'], 'direct');
+      expect(servers.firstWhere((item) => item['tag'] == 'block').containsKey('detour'), isFalse);
+    });
+
     test('pins selector default to the app-selected node before core start', () {
       final content = jsonEncode({
         'dns': {

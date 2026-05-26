@@ -123,8 +123,10 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @visibleForTesting
   TaskEither<ConnectionFailure, Unit> guardFinalConfig(ProfileEntity prof, {required String stage}) =>
       TaskEither.tryCatch(() async {
-        final selection = ref.read(clientNodeSelectionProvider).valueOrNull;
-        final selectedOutboundTag = selection?.selectedNode?.id;
+        final selection =
+            ref.read(clientNodeSelectionProvider).valueOrNull ??
+            await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
+        final selectedOutboundTag = selection.selectedNode?.id;
         final globalRouteMode = ref.read(ConfigOptions.globalRouteMode);
         final result = await finalConfigGuard.inspectAndSanitizeFile(
           profilePathResolver.file(prof.id).path,

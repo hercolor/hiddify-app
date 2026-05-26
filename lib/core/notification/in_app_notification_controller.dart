@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,25 +13,13 @@ InAppNotificationController inAppNotificationController(Ref ref) {
 enum NotificationType { info, error, success }
 
 class InAppNotificationController with AppLogger {
-  ToastificationItem _show(
+  ToastificationItem? _show(
     String message, {
     NotificationType type = NotificationType.info,
     Duration duration = const Duration(seconds: 3),
   }) {
-    toastification.dismissAll();
-    return toastification.show(
-      title: const Text(Constants.appName),
-      description: Text(message),
-      type: type._toastificationType,
-      alignment: AlignmentDirectional.bottomStart,
-      autoCloseDuration: duration,
-      style: ToastificationStyle.fillColored,
-      pauseOnHover: true,
-      showProgressBar: false,
-      dragToClose: true,
-      closeOnClick: true,
-      closeButtonShowType: CloseButtonShowType.onHover,
-    );
+    loggy.debug('in-app toast suppressed: type=${type.name}, duration=${duration.inMilliseconds}ms, message=$message');
+    return null;
   }
 
   ToastificationItem? showErrorToast(String message) =>
@@ -43,12 +29,4 @@ class InAppNotificationController with AppLogger {
 
   ToastificationItem? showInfoToast(String message, {Duration duration = const Duration(seconds: 3)}) =>
       _show(message, duration: duration);
-}
-
-extension NotificationTypeX on NotificationType {
-  ToastificationType get _toastificationType => switch (this) {
-    NotificationType.success => ToastificationType.success,
-    NotificationType.error => ToastificationType.error,
-    NotificationType.info => ToastificationType.info,
-  };
 }

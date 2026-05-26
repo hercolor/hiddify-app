@@ -422,8 +422,14 @@ class FinalConfigGuard with InfraLogger {
         } else {
           final serverMap = _mapValue(server);
           if (serverMap != null) {
-            if (serverMap['detour'] != LockedCoreConfig.outboundTag) {
-              serverMap['detour'] = LockedCoreConfig.outboundTag;
+            final desiredDetour = _desiredDnsServerDetour(serverMap);
+            if (desiredDetour == null) {
+              if (serverMap.containsKey('detour')) {
+                serverMap.remove('detour');
+                stats.forcedDnsDetours += 1;
+              }
+            } else if (serverMap['detour'] != desiredDetour) {
+              serverMap['detour'] = desiredDetour;
               stats.forcedDnsDetours += 1;
             }
             if (serverMap['strategy'] != LockedCoreConfig.dnsStrategy) {
@@ -591,6 +597,27 @@ class FinalConfigGuard with InfraLogger {
   static bool _isProxySelectorReference(Object? value) {
     final text = _stringValue(value)?.trim();
     return text == LockedCoreConfig.outboundTag || text == '节点选择' || text == 'auto' || text == '自动选择';
+  }
+
+  static String? _desiredDnsServerDetour(Map<String, dynamic> server) {
+    final tag = _stringValue(server['tag'])?.trim().toLowerCase();
+    final address = _stringValue(server['address'])?.trim().toLowerCase() ?? '';
+    final detour = _stringValue(server['detour'])?.trim();
+    final normalizedDetour = detour?.toLowerCase();
+
+    if (address.startsWith('rcode://') || tag == 'block') {
+      return null;
+    }
+
+    if (tag != null && tag.contains('remote')) {
+      return LockedCoreConfig.outboundTag;
+    }
+
+    if (normalizedDetour == 'direct' || tag == 'local' || tag == 'direct') {
+      return 'direct';
+    }
+
+    return LockedCoreConfig.outboundTag;
   }
 
   static void _sanitizeTunInbounds(Object? value, _SanitizeStats stats) {

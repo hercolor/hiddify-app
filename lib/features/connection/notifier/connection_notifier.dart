@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
-import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
@@ -16,6 +16,7 @@ import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
+import 'package:hiddify/features/proxy/data/proxy_data_providers.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
@@ -420,6 +421,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _manualDisconnecting = false;
       _reconnectAttempts = 0;
       _setClientState(const ClientConnectionState.connected(), reason: 'core connected');
+      _enforceSelectedProxyOutbound();
       if (previousStatus is! Connected) _showSuccess('4376 已连接');
     } else if (event is Connecting) {
       if (_manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping) {
@@ -627,16 +629,28 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     );
   }
 
+  void _enforceSelectedProxyOutbound() {
+    final selected = ref.read(clientNodeSelectionProvider).valueOrNull?.selectedNode?.id.trim();
+    if (selected == null || selected.isEmpty) return;
+
+    unawaited(
+      ref.read(proxyRepositoryProvider).selectProxy(LockedCoreConfig.outboundTag, selected).mapLeft((err) {
+        loggy.debug('selected outbound enforcement skipped: $err');
+        return err;
+      }).run(),
+    );
+  }
+
   void _showError(String message) {
-    ref.read(inAppNotificationControllerProvider).showErrorToast(message);
+    loggy.debug('connection toast suppressed: $message');
   }
 
   void _showInfo(String message) {
-    ref.read(inAppNotificationControllerProvider).showInfoToast(message);
+    loggy.debug('connection toast suppressed: $message');
   }
 
   void _showSuccess(String message) {
-    ref.read(inAppNotificationControllerProvider).showSuccessToast(message);
+    loggy.debug('connection toast suppressed: $message');
   }
 
   bool _isStartAttemptActive(int attemptId) {
