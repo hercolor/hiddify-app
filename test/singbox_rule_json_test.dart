@@ -19,7 +19,7 @@ void main() {
       expect(json['port'], ['53', '853']);
       expect(json['protocol'], ['dns']);
       expect(json['network'], 0);
-      expect(json['outbound'], 'bypass');
+      expect(json['outbound'], 1);
     });
 
     test('accepts matcher arrays from profile overrides while preserving app model text', () {
@@ -29,7 +29,7 @@ void main() {
         'port': ['53', '853'],
         'protocol': ['dns'],
         'network': 0,
-        'outbound': 'bypass',
+        'outbound': 1,
       });
 
       expect(rule.domains, 'domain:cn,domain:.cn');
@@ -45,6 +45,13 @@ void main() {
 
       expect(rule.network, RuleNetwork.tcp);
       expect(rule.toJson()['network'], 1);
+    });
+
+    test('accepts legacy outbound strings while emitting numeric enum values', () {
+      final rule = SingboxRule.fromJson({'outbound': 'block'});
+
+      expect(rule.outbound, RuleOutbound.block);
+      expect(rule.toJson()['outbound'], 3);
     });
   });
 }

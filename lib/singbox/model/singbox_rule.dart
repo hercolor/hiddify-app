@@ -15,7 +15,7 @@ class SingboxRule with _$SingboxRule {
     @JsonKey(fromJson: _commaTextFromJson, toJson: _commaTextToJsonList) String? port,
     @JsonKey(fromJson: _commaTextFromJson, toJson: _commaTextToJsonList) String? protocol,
     @JsonKey(fromJson: _networkFromJson, toJson: _networkToJson) @Default(RuleNetwork.tcpAndUdp) RuleNetwork network,
-    @Default(RuleOutbound.proxy) RuleOutbound outbound,
+    @JsonKey(fromJson: _outboundFromJson, toJson: _outboundToJson) @Default(RuleOutbound.proxy) RuleOutbound outbound,
   }) = _SingboxRule;
 
   factory SingboxRule.fromJson(Map<String, dynamic> json) => _$SingboxRuleFromJson(json);
@@ -44,7 +44,25 @@ RuleNetwork _networkFromJson(Object? value) {
 
 int _networkToJson(RuleNetwork value) => value.value;
 
-enum RuleOutbound { proxy, bypass, block }
+RuleOutbound _outboundFromJson(Object? value) {
+  if (value is num)
+    return RuleOutbound.values.firstWhere((item) => item.value == value.toInt(), orElse: () => RuleOutbound.proxy);
+  final text = value?.toString().trim().toLowerCase();
+  return RuleOutbound.values.firstWhere((item) => item.key == text, orElse: () => RuleOutbound.proxy);
+}
+
+int _outboundToJson(RuleOutbound value) => value.value;
+
+enum RuleOutbound {
+  proxy("proxy", 0),
+  bypass("bypass", 1),
+  block("block", 3);
+
+  const RuleOutbound(this.key, this.value);
+
+  final String key;
+  final int value;
+}
 
 @JsonEnum(valueField: 'key')
 enum RuleNetwork {

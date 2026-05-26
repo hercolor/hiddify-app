@@ -14,9 +14,7 @@ _$SingboxRuleImpl _$$SingboxRuleImplFromJson(Map<String, dynamic> json) =>
       port: _commaTextFromJson(json['port']),
       protocol: _commaTextFromJson(json['protocol']),
       network: _networkFromJson(json['network']),
-      outbound:
-          $enumDecodeNullable(_$RuleOutboundEnumMap, json['outbound']) ??
-          RuleOutbound.proxy,
+      outbound: _outboundFromJson(json['outbound']),
     );
 
 Map<String, dynamic> _$$SingboxRuleImplToJson(_$SingboxRuleImpl instance) =>
@@ -27,11 +25,5 @@ Map<String, dynamic> _$$SingboxRuleImplToJson(_$SingboxRuleImpl instance) =>
       'port': _commaTextToJsonList(instance.port),
       'protocol': _commaTextToJsonList(instance.protocol),
       'network': _networkToJson(instance.network),
-      'outbound': _$RuleOutboundEnumMap[instance.outbound]!,
+      'outbound': _outboundToJson(instance.outbound),
     };
-
-const _$RuleOutboundEnumMap = {
-  RuleOutbound.proxy: 'proxy',
-  RuleOutbound.bypass: 'bypass',
-  RuleOutbound.block: 'block',
-};
