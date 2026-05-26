@@ -14,7 +14,7 @@ class SingboxRule with _$SingboxRule {
     @JsonKey(fromJson: _commaTextFromJson, toJson: _commaTextToJsonList) String? ip,
     @JsonKey(fromJson: _commaTextFromJson, toJson: _commaTextToJsonList) String? port,
     @JsonKey(fromJson: _commaTextFromJson, toJson: _commaTextToJsonList) String? protocol,
-    @Default(RuleNetwork.tcpAndUdp) RuleNetwork network,
+    @JsonKey(fromJson: _networkFromJson, toJson: _networkToJson) @Default(RuleNetwork.tcpAndUdp) RuleNetwork network,
     @Default(RuleOutbound.proxy) RuleOutbound outbound,
   }) = _SingboxRule;
 
@@ -35,15 +35,25 @@ Object? _commaTextToJsonList(String? value) {
   return items.isEmpty ? null : items;
 }
 
+RuleNetwork _networkFromJson(Object? value) {
+  if (value is num)
+    return RuleNetwork.values.firstWhere((item) => item.value == value.toInt(), orElse: () => RuleNetwork.tcpAndUdp);
+  final text = value?.toString().trim().toLowerCase();
+  return RuleNetwork.values.firstWhere((item) => item.key == text, orElse: () => RuleNetwork.tcpAndUdp);
+}
+
+int _networkToJson(RuleNetwork value) => value.value;
+
 enum RuleOutbound { proxy, bypass, block }
 
 @JsonEnum(valueField: 'key')
 enum RuleNetwork {
-  tcpAndUdp("all"),
-  tcp("tcp"),
-  udp("udp");
+  tcpAndUdp("all", 0),
+  tcp("tcp", 1),
+  udp("udp", 2);
 
-  const RuleNetwork(this.key);
+  const RuleNetwork(this.key, this.value);
 
-  final String? key;
+  final String key;
+  final int value;
 }
