@@ -5,6 +5,7 @@ import 'package:hiddify/core/utils/exception_handler.dart';
 import 'package:hiddify/features/connection/data/windows_network_mode_guard.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
+import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/profile/data/final_config_guard.dart';
 import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
@@ -133,6 +134,15 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           stage: stage,
           globalRouteMode: globalRouteMode,
           selectedOutboundTag: selectedOutboundTag,
+        );
+        DiagnosticEventBuffer.add(
+          'final config check: stage=$stage, globalRouteMode=$globalRouteMode, '
+          'parsedJson=${result.parsedJson}, sanitized=${result.changed}, '
+          'routeFinal=${result.routeFinal}, routeRules=${result.routeRuleCount}, '
+          'dnsServers=${result.dnsServerCount}, removedClashModeRules=${result.removedClashModeRules}, '
+          'removedGlobalModeRules=${result.removedGlobalModeRules}, '
+          'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
+          'fakeIpAfter=${result.fakeIpAfter}',
         );
         if (result.hasResidualFakeIp) {
           throw const ConnectionFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);
