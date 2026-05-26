@@ -50,12 +50,9 @@ abstract final class ClientRoutePolicy {
 
   static const privateIpv4Cidrs = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8', '169.254.0.0/16'];
 
-  static final smartRules = [
-    SingboxRule(domains: cnBypassDomains.join(','), ip: privateIpv4Cidrs.join(','), outbound: RuleOutbound.bypass),
-  ];
+  static const smartRules = <SingboxRule>[];
 
-  static List<SingboxRule> rulesFor({required bool globalRouteMode}) =>
-      globalRouteMode ? const <SingboxRule>[] : smartRules;
+  static List<SingboxRule> rulesFor({required bool globalRouteMode}) => const <SingboxRule>[];
 
   static List<SingboxRule> lockedRules(Iterable<SingboxRule> rules) =>
       rules.where((rule) => smartRules.contains(rule)).toList(growable: false);
