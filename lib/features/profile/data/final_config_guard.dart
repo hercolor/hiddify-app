@@ -28,6 +28,7 @@ class FinalConfigGuardResult {
     required this.removedClashModeRules,
     required this.removedGlobalModeRules,
     required this.forcedSelectorDefaults,
+    required this.forcedSelectedOutboundReferences,
     required this.outboundTags,
     this.sanitizedContent,
   });
@@ -54,6 +55,7 @@ class FinalConfigGuardResult {
   final int removedClashModeRules;
   final int removedGlobalModeRules;
   final int forcedSelectorDefaults;
+  final int forcedSelectedOutboundReferences;
   final List<String> outboundTags;
   final String? sanitizedContent;
 
@@ -119,6 +121,7 @@ class FinalConfigGuard with InfraLogger {
         removedClashModeRules: 0,
         removedGlobalModeRules: 0,
         forcedSelectorDefaults: 0,
+        forcedSelectedOutboundReferences: 0,
         outboundTags: const [],
       );
     }
@@ -147,6 +150,7 @@ class FinalConfigGuard with InfraLogger {
         removedClashModeRules: 0,
         removedGlobalModeRules: 0,
         forcedSelectorDefaults: 0,
+        forcedSelectedOutboundReferences: 0,
         outboundTags: const [],
       );
     }
@@ -160,7 +164,7 @@ class FinalConfigGuard with InfraLogger {
     _normalizeSingBoxRuleListFields(root);
     _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
     _sanitizeRoute(_ensureRoute(root), stats, globalRouteMode: globalRouteMode);
-    _forceSelectedProxyDefault(root, selectedOutboundTag, stats);
+    _lockSelectedOutboundReferences(root, selectedOutboundTag, stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
 
     final afterJson = jsonEncode(root);
@@ -191,6 +195,7 @@ class FinalConfigGuard with InfraLogger {
       removedClashModeRules: stats.removedClashModeRules,
       removedGlobalModeRules: stats.removedGlobalModeRules,
       forcedSelectorDefaults: stats.forcedSelectorDefaults,
+      forcedSelectedOutboundReferences: stats.forcedSelectedOutboundReferences,
       outboundTags: _extractOutboundTags(root),
       sanitizedContent: changed ? encoder!.convert(root) : null,
     );
@@ -225,6 +230,7 @@ class FinalConfigGuard with InfraLogger {
       'removedClashModeRules=${result.removedClashModeRules}, '
       'removedGlobalModeRules=${result.removedGlobalModeRules}, '
       'forcedSelectorDefaults=${result.forcedSelectorDefaults}, '
+      'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
       'nodeCount=${result.outboundTags.length}, '
       'outboundTags=[$tags], '
       'coreConfigVersion=${LockedCoreConfig.schemaVersion}',
@@ -504,7 +510,11 @@ class FinalConfigGuard with InfraLogger {
     }
   }
 
-  static void _forceSelectedProxyDefault(Map<String, dynamic> root, String? selectedOutboundTag, _SanitizeStats stats) {
+  static void _lockSelectedOutboundReferences(
+    Map<String, dynamic> root,
+    String? selectedOutboundTag,
+    _SanitizeStats stats,
+  ) {
     final selected = selectedOutboundTag?.trim();
     if (selected == null || selected.isEmpty) return;
 
@@ -516,15 +526,71 @@ class FinalConfigGuard with InfraLogger {
         _findOutboundByTag(outbounds, LockedCoreConfig.outboundTag) ??
         _findOutboundByTag(outbounds, '节点选择') ??
         _findFirstOutboundByType(outbounds, 'selector');
-    if (selector == null) return;
-
-    final choices = _listValue(selector['outbounds']);
-    if (choices != null && choices.isNotEmpty && !choices.any((item) => item?.toString() == selected)) return;
-
-    if (_stringValue(selector['default']) != selected) {
-      selector['default'] = selected;
-      stats.forcedSelectorDefaults += 1;
+    if (selector != null) {
+      final choices = _listValue(selector['outbounds']);
+      if ((choices == null || choices.isEmpty || choices.any((item) => item?.toString() == selected)) &&
+          _stringValue(selector['default']) != selected) {
+        selector['default'] = selected;
+        stats.forcedSelectorDefaults += 1;
+      }
     }
+
+    _lockDnsDetours(root['dns'], selected, stats);
+    _lockRouteOutbounds(root['route'], selected, stats);
+  }
+
+  static void _lockDnsDetours(Object? value, String selected, _SanitizeStats stats) {
+    final dns = _mapValue(value);
+    if (dns == null) return;
+    final servers = _listValue(dns['servers']);
+    if (servers == null) return;
+    for (final server in servers) {
+      final map = _mapValue(server);
+      if (map == null) continue;
+      if (_isProxySelectorReference(map['detour'])) {
+        map['detour'] = selected;
+        stats.forcedSelectedOutboundReferences += 1;
+      }
+    }
+  }
+
+  static void _lockRouteOutbounds(Object? value, String selected, _SanitizeStats stats) {
+    final route = _mapValue(value);
+    if (route == null) return;
+
+    if (_isProxySelectorReference(route['final'])) {
+      route['final'] = selected;
+      stats.forcedSelectedOutboundReferences += 1;
+    }
+
+    final rules = _listValue(route['rules']);
+    if (rules != null) {
+      for (final rule in rules) {
+        final map = _mapValue(rule);
+        if (map == null) continue;
+        if (_isProxySelectorReference(map['outbound'])) {
+          map['outbound'] = selected;
+          stats.forcedSelectedOutboundReferences += 1;
+        }
+      }
+    }
+
+    final ruleSets = _listValue(route['rule_set']);
+    if (ruleSets != null) {
+      for (final ruleSet in ruleSets) {
+        final map = _mapValue(ruleSet);
+        if (map == null) continue;
+        if (_isProxySelectorReference(map['download_detour'])) {
+          map['download_detour'] = selected;
+          stats.forcedSelectedOutboundReferences += 1;
+        }
+      }
+    }
+  }
+
+  static bool _isProxySelectorReference(Object? value) {
+    final text = _stringValue(value)?.trim();
+    return text == LockedCoreConfig.outboundTag || text == '节点选择' || text == 'auto' || text == '自动选择';
   }
 
   static void _sanitizeTunInbounds(Object? value, _SanitizeStats stats) {
@@ -822,4 +888,5 @@ class _SanitizeStats {
   int removedClashModeRules = 0;
   int removedGlobalModeRules = 0;
   int forcedSelectorDefaults = 0;
+  int forcedSelectedOutboundReferences = 0;
 }

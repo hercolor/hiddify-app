@@ -253,6 +253,12 @@ void main() {
 
     test('pins selector default to the app-selected node before core start', () {
       final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'remote', 'address': 'https://1.1.1.1/dns-query', 'detour': 'proxy'},
+          ],
+          'final': 'remote',
+        },
         'outbounds': [
           {
             'tag': 'proxy',
@@ -274,8 +280,15 @@ void main() {
               'outbound': 'dns-out',
               'protocol': ['dns'],
             },
+            {
+              'domain_suffix': ['example.com'],
+              'outbound': 'proxy',
+            },
           ],
           'final': 'proxy',
+          'rule_set': [
+            {'tag': 'geosite-cn', 'type': 'remote', 'download_detour': 'proxy'},
+          ],
         },
       });
 
@@ -283,9 +296,18 @@ void main() {
       final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
       final outbounds = (sanitized['outbounds'] as List).cast<Map>();
       final proxy = outbounds.firstWhere((item) => item['tag'] == LockedCoreConfig.outboundTag);
+      final dnsServer = ((sanitized['dns'] as Map)['servers'] as List).single as Map;
+      final route = sanitized['route'] as Map;
+      final routeRules = (route['rules'] as List).cast<Map>();
+      final routeRuleSet = (route['rule_set'] as List).single as Map;
 
       expect(proxy['default'], '香港-IPEL');
+      expect(dnsServer['detour'], '香港-IPEL');
+      expect(route['final'], '香港-IPEL');
+      expect(routeRules[1]['outbound'], '香港-IPEL');
+      expect(routeRuleSet['download_detour'], '香港-IPEL');
       expect(result.forcedSelectorDefaults, 1);
+      expect(result.forcedSelectedOutboundReferences, 4);
     });
 
     test('global mode removes split route rules but keeps dns routing', () {

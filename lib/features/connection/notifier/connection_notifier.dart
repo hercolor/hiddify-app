@@ -17,7 +17,6 @@ import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -80,18 +79,6 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       }
     });
 
-    ref.listen(ConfigOptions.globalRouteMode, (previous, next) async {
-      if (previous == null || previous == next) return;
-      final profile = await ref.read(activeProfileProvider.future);
-      if (_currentStatus == const Connected() && profile != null) {
-        loggy.info(
-          'route mode changed, reconnecting with selectedNodeName=${_selectedNodeNameSync()} globalRouteMode=$next',
-        );
-        await reconnect(profile);
-      } else {
-        _refreshClientState(reason: 'route mode changed');
-      }
-    });
     ref.watch(coreRestartSignalProvider);
 
     yield* _connectionRepo.watchConnectionStatus().doOnData(_handleCoreStatus);
@@ -147,6 +134,41 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
           .mapLeft(_handleConnectFailure)
           .run();
     }
+  }
+
+  Future<void> restartForConfigChange(ProfileEntity? profile) async {
+    if (profile == null) return;
+    if (_clientState.isBusy) {
+      DiagnosticEventBuffer.addSafe(
+        'config change observed while connection is busy; current start will use latest mode',
+      );
+      loggy.info('config change ignored while busy: state=${_clientState.phase.name}');
+      return;
+    }
+    if (_currentStatus != const Connected()) {
+      _refreshClientState(reason: 'config changed while stopped');
+      return;
+    }
+
+    _startAttemptId++;
+    _userRequestedConnection = true;
+    _manualDisconnecting = true;
+    _autoReconnectRunning = false;
+    _reconnectAttempts = 0;
+    _setClientState(const ClientConnectionState.reconnecting(), reason: 'config change restart');
+    await ref.read(Preferences.startedByUser.notifier).update(true);
+
+    final stopResult = await _connectionRepo.disconnect().run();
+    stopResult.mapLeft((err) {
+      loggy.warning('config change stop before restart failed: ${ConnectionErrorMapper.fromFailure(err)}');
+      return err;
+    });
+
+    _manualDisconnecting = false;
+    _userRequestedConnection = true;
+    _lastCoreStatus = const ConnectionStatus.disconnected();
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    await _connectThrottled(reconnecting: true, attemptId: ++_startAttemptId);
   }
 
   Future<void> abortConnection() => userDisconnect();
