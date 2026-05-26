@@ -181,6 +181,75 @@ void main() {
       expect((sanitized['route'] as Map)['final'], LockedCoreConfig.routeFinal);
     });
 
+    test('normalizes legacy Chinese selector tags to locked proxy tags', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'remote', 'address': 'https://1.1.1.1/dns-query', 'detour': '节点选择'},
+          ],
+          'rules': [
+            {
+              'rule_set': ['geosite-cn'],
+              'server': 'remote',
+            },
+          ],
+          'final': 'remote',
+        },
+        'outbounds': [
+          {
+            'tag': '节点选择',
+            'type': 'selector',
+            'default': '自动选择',
+            'outbounds': ['自动选择', '香港-IPEL'],
+          },
+          {
+            'tag': '自动选择',
+            'type': 'urltest',
+            'outbounds': ['香港-IPEL'],
+          },
+          {'tag': '香港-IPEL', 'type': 'shadowsocks'},
+        ],
+        'route': {
+          'rules': [
+            {'clash_mode': 'global', 'outbound': '节点选择'},
+            {
+              'rule_set': ['geosite-cn', 'geoip-cn'],
+              'outbound': 'direct',
+            },
+          ],
+          'final': '节点选择',
+          'rule_set': [
+            {
+              'tag': 'geosite-cn',
+              'type': 'remote',
+              'format': 'binary',
+              'url': 'https://example.test/geosite-cn.srs',
+              'download_detour': '节点选择',
+            },
+          ],
+        },
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final encoded = jsonEncode(sanitized);
+      final outbounds = (sanitized['outbounds'] as List).cast<Map>();
+      final proxy = outbounds.firstWhere((item) => item['tag'] == LockedCoreConfig.outboundTag);
+      final auto = outbounds.firstWhere((item) => item['tag'] == 'auto');
+      final route = sanitized['route'] as Map;
+      final dnsServer = ((sanitized['dns'] as Map)['servers'] as List).single as Map;
+
+      expect(proxy['default'], 'auto');
+      expect(proxy['outbounds'], contains('auto'));
+      expect(auto['outbounds'], contains('香港-IPEL'));
+      expect(route['final'], LockedCoreConfig.routeFinal);
+      expect((route['rule_set'] as List).single['download_detour'], LockedCoreConfig.outboundTag);
+      expect(dnsServer['detour'], LockedCoreConfig.outboundTag);
+      expect(encoded, isNot(contains('节点选择')));
+      expect(encoded, isNot(contains('自动选择')));
+      expect(encoded, contains('香港-IPEL'));
+    });
+
     test('creates locked DNS and route defaults when final config omits them', () {
       final content = jsonEncode({
         'outbounds': [

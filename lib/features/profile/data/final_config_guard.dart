@@ -133,6 +133,7 @@ class FinalConfigGuard with InfraLogger {
     final beforeJson = jsonEncode(root);
 
     _removeUnsafeKeysDeep(root);
+    _normalizeLockedOutboundTags(root);
     _sanitizeDns(_ensureDns(root, stats), stats);
     _sanitizeRoute(_ensureRoute(root), stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
@@ -199,6 +200,87 @@ class FinalConfigGuard with InfraLogger {
     );
     if (result.hasResidualFakeIp) {
       loggy.warning('final config check [$stage]: residual fake-ip marker detected after sanitize');
+    }
+  }
+
+  static void _normalizeLockedOutboundTags(Map<String, dynamic> root) {
+    final outbounds = _listValue(root['outbounds']);
+    if (outbounds == null || outbounds.isEmpty) return;
+
+    _renameOutboundTagIfMissing(
+      root: root,
+      outbounds: outbounds,
+      requiredTag: LockedCoreConfig.outboundTag,
+      preferredLegacyTag: '节点选择',
+      type: 'selector',
+    );
+    _renameOutboundTagIfMissing(
+      root: root,
+      outbounds: outbounds,
+      requiredTag: 'auto',
+      preferredLegacyTag: '自动选择',
+      type: 'urltest',
+    );
+  }
+
+  static void _renameOutboundTagIfMissing({
+    required Map<String, dynamic> root,
+    required List<Object?> outbounds,
+    required String requiredTag,
+    required String preferredLegacyTag,
+    required String type,
+  }) {
+    if (_hasOutboundTag(outbounds, requiredTag)) return;
+
+    final target = _findOutboundByTag(outbounds, preferredLegacyTag) ?? _findFirstOutboundByType(outbounds, type);
+    if (target == null) return;
+
+    final previousTag = _stringValue(target['tag']);
+    if (previousTag == null || previousTag.isEmpty || previousTag == requiredTag) return;
+
+    _replaceExactStringValues(root, previousTag, requiredTag);
+    target['tag'] = requiredTag;
+  }
+
+  static bool _hasOutboundTag(List<Object?> outbounds, String tag) =>
+      outbounds.any((item) => _stringValue(_mapValue(item)?['tag']) == tag);
+
+  static Map<String, dynamic>? _findOutboundByTag(List<Object?> outbounds, String tag) {
+    for (final item in outbounds) {
+      final map = _mapValue(item);
+      if (map != null && _stringValue(map['tag']) == tag) return map;
+    }
+    return null;
+  }
+
+  static Map<String, dynamic>? _findFirstOutboundByType(List<Object?> outbounds, String type) {
+    for (final item in outbounds) {
+      final map = _mapValue(item);
+      if (map != null && _stringValue(map['type']) == type) return map;
+    }
+    return null;
+  }
+
+  static void _replaceExactStringValues(Object? value, String from, String to) {
+    if (from == to || from.isEmpty) return;
+    if (value is Map) {
+      for (final key in value.keys.toList()) {
+        final child = value[key];
+        if (child is String) {
+          if (child == from) value[key] = to;
+        } else {
+          _replaceExactStringValues(child, from, to);
+        }
+      }
+    } else if (value is List) {
+      for (var index = 0; index < value.length; index += 1) {
+        final child = value[index];
+        if (child is String) {
+          if (child == from) value[index] = to;
+        } else {
+          _replaceExactStringValues(child, from, to);
+        }
+      }
     }
   }
 
