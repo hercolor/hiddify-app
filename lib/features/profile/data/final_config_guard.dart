@@ -628,9 +628,11 @@ class FinalConfigGuard with InfraLogger {
         map['outbounds'] = [selected];
         stats.forcedSelectedOutboundReferences += 1;
       }
-      if (_stringValue(map['default']) != selected) {
+      if (type == 'selector' && _stringValue(map['default']) != selected) {
         map['default'] = selected;
         stats.forcedSelectorDefaults += 1;
+      } else if ((type == 'urltest' || type == 'url-test') && map.containsKey('default')) {
+        map.remove('default');
       }
     }
   }

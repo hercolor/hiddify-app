@@ -385,7 +385,7 @@ void main() {
       expect(route['final'], '香港-IPEL');
       expect(routeRules[1]['outbound'], '香港-IPEL');
       expect(routeRuleSets.map((item) => item['download_detour']), everyElement('香港-IPEL'));
-      expect(result.forcedSelectorDefaults, 2);
+      expect(result.forcedSelectorDefaults, 1);
       expect(result.forcedSelectedOutboundReferences, 7);
       expect(result.removedUnselectedOutbounds, 1);
     });
@@ -436,7 +436,7 @@ void main() {
       expect(outboundTags, isNot(contains('美国-IPEL')));
       expect(selector['default'], '香港-IPEL');
       expect(selector['outbounds'], ['香港-IPEL']);
-      expect(auto['default'], '香港-IPEL');
+      expect(auto.containsKey('default'), isFalse);
       expect(auto['outbounds'], ['香港-IPEL']);
       expect(result.removedUnselectedOutbounds, 1);
     });
