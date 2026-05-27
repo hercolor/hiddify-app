@@ -70,7 +70,6 @@ void main() {
         'outbounds': [
           {'tag': 'proxy', 'type': 'selector'},
           {'tag': 'direct', 'type': 'direct'},
-          {'tag': 'dns-out', 'type': 'dns'},
         ],
       });
 
@@ -354,7 +353,7 @@ void main() {
         'route': {
           'rules': [
             {
-              'outbound': 'dns-out',
+              'action': 'hijack-dns',
               'protocol': ['dns'],
             },
             {
@@ -394,12 +393,11 @@ void main() {
       final content = jsonEncode({
         'outbounds': [
           {'tag': 'proxy', 'type': 'selector'},
-          {'tag': 'dns-out', 'type': 'dns'},
         ],
         'route': {
           'rules': [
             {
-              'outbound': 'dns-out',
+              'action': 'hijack-dns',
               'protocol': ['dns'],
             },
             {'ip_is_private': true, 'outbound': 'direct'},
@@ -443,7 +441,6 @@ void main() {
         },
         'outbounds': [
           {'tag': 'proxy', 'type': 'selector'},
-          {'tag': 'dns-out', 'type': 'dns'},
         ],
       });
 
@@ -490,7 +487,8 @@ void main() {
       expect(route['final'], 'proxy');
       expect(routeRules, hasLength(5));
       expect(routeRules[0]['protocol'], ['dns']);
-      expect(routeRules[0]['outbound'], 'dns-out');
+      expect(routeRules[0]['action'], 'hijack-dns');
+      expect(routeRules[0].containsKey('outbound'), isFalse);
       expect(routeRules[1]['ip_is_private'], isTrue);
       expect(routeRules[2]['domain_suffix'], contains('baidu.com'));
       expect(routeRules[2]['outbound'], 'direct');
@@ -545,7 +543,7 @@ void main() {
       expect(route['final'], LockedCoreConfig.routeFinal);
       expect(route['rules'], isNotEmpty);
       final routeRules = (route['rules'] as List).cast<Map>();
-      expect(routeRules.first['outbound'], 'dns-out');
+      expect(routeRules.first['action'], 'hijack-dns');
       expect(jsonEncode(route['rules']), contains('domain_suffix'));
       expect(jsonEncode(route['rules']), contains('baidu.com'));
     });

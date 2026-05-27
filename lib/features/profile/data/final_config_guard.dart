@@ -645,12 +645,11 @@ class FinalConfigGuard with InfraLogger {
     if (route == null) return;
 
     _ensureDirectOutbound(root);
-    _ensureDnsOutbound(root);
     _ensureRuleSetEntries(route);
     _ensureSmartDnsRules(root);
 
     final rules = _listValue(route['rules']) ?? <Object?>[];
-    _addDnsRouteRuleIfMissing(rules);
+    _ensureDnsHijackRouteRule(rules);
     _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct'});
     _addRouteRuleIfMissing(rules, 'domain_suffix', {
       'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes,
@@ -701,22 +700,20 @@ class FinalConfigGuard with InfraLogger {
     if (!exists) rules.add(rule);
   }
 
-  static void _addDnsRouteRuleIfMissing(List<Object?> rules) {
-    final exists = rules.any((item) {
-      final map = _mapValue(item);
-      if (map == null || _stringValue(map['outbound']) != 'dns-out') return false;
-      final protocol = map['protocol'];
-      if (protocol is Iterable && protocol is! String) {
-        return protocol.any((item) => item?.toString().toLowerCase() == 'dns');
+  static void _ensureDnsHijackRouteRule(List<Object?> rules) {
+    for (final rule in rules) {
+      final map = _mapValue(rule);
+      if (map == null || !_isDnsProtocolRule(map)) continue;
+      map['action'] = 'hijack-dns';
+      if (_stringValue(map['outbound']) == 'dns-out') {
+        map.remove('outbound');
       }
-      return protocol?.toString().toLowerCase() == 'dns';
-    });
-    if (!exists) {
-      rules.insert(0, {
-        'protocol': ['dns'],
-        'outbound': 'dns-out',
-      });
+      return;
     }
+    rules.insert(0, {
+      'protocol': ['dns'],
+      'action': 'hijack-dns',
+    });
   }
 
   static void _ensureSmartDnsRules(Map<String, dynamic> root) {
@@ -768,13 +765,6 @@ class FinalConfigGuard with InfraLogger {
     if (outbounds == null) return;
     if (_hasOutboundTag(outbounds, 'direct')) return;
     outbounds.add({'tag': 'direct', 'type': 'direct'});
-  }
-
-  static void _ensureDnsOutbound(Map<String, dynamic> root) {
-    final outbounds = _listValue(root['outbounds']);
-    if (outbounds == null) return;
-    if (_hasOutboundTag(outbounds, 'dns-out')) return;
-    outbounds.add({'tag': 'dns-out', 'type': 'dns'});
   }
 
   static bool _isProxySelectorReference(Object? value) {
@@ -1038,6 +1028,7 @@ class FinalConfigGuard with InfraLogger {
           if (map == null) return '$index:<non-map>';
           final parts = <String>['#$index'];
           for (final key in const [
+            'action',
             'outbound',
             'server',
             'protocol',
