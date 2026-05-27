@@ -463,12 +463,14 @@ void main() {
       final dnsRules = (dns['rules'] as List).cast<Map>();
 
       expect(route['final'], 'proxy');
-      expect(routeRules, hasLength(4));
-      expect(routeRules[0]['ip_is_private'], isTrue);
-      expect(routeRules[1]['domain_suffix'], contains('baidu.com'));
-      expect(routeRules[1]['outbound'], 'direct');
-      expect(routeRules[2]['domain_keyword'], contains('baidu'));
-      expect(routeRules[3]['rule_set'], ['geosite-cn', 'geoip-cn']);
+      expect(routeRules, hasLength(5));
+      expect(routeRules[0]['protocol'], ['dns']);
+      expect(routeRules[0]['outbound'], 'dns-out');
+      expect(routeRules[1]['ip_is_private'], isTrue);
+      expect(routeRules[2]['domain_suffix'], contains('baidu.com'));
+      expect(routeRules[2]['outbound'], 'direct');
+      expect(routeRules[3]['domain_keyword'], contains('baidu'));
+      expect(routeRules[4]['rule_set'], ['geosite-cn', 'geoip-cn']);
       expect((route['rule_set'] as List).map((item) => item['url']), everyElement(contains('/rules/sing-box/')));
       expect(dnsServers.any((item) => item['tag'] == 'dns-local' && item['detour'] == 'direct'), isTrue);
       expect(dnsRules.any((item) => (item['domain_suffix'] as List?)?.contains('ip138.com') == true), isTrue);
@@ -516,6 +518,7 @@ void main() {
       expect(localDnsServer['detour'], 'direct');
       expect(route['final'], LockedCoreConfig.routeFinal);
       expect(route['rules'], isNotEmpty);
+      expect((route['rules'] as List).first['outbound'], 'dns-out');
       expect(jsonEncode(route['rules']), contains('domain_suffix'));
       expect(jsonEncode(route['rules']), contains('baidu.com'));
     });
