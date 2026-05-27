@@ -144,6 +144,10 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
           'fakeIpAfter=${result.fakeIpAfter}',
         );
+        DiagnosticEventBuffer.add('final config route rules: ${result.routeRuleSummary.join(' ; ')}');
+        DiagnosticEventBuffer.add('final config dns servers: ${result.dnsServerSummary.join(' ; ')}');
+        DiagnosticEventBuffer.add('final config dns rules: ${result.dnsRuleSummary.join(' ; ')}');
+        DiagnosticEventBuffer.add('final config rule sets: ${result.routeRuleSetSummary.join(' ; ')}');
         if (result.hasResidualFakeIp) {
           throw const ConnectionFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);
         }

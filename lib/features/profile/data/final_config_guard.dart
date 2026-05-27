@@ -31,6 +31,10 @@ class FinalConfigGuardResult {
     required this.forcedSelectorDefaults,
     required this.forcedSelectedOutboundReferences,
     required this.outboundTags,
+    required this.routeRuleSummary,
+    required this.dnsServerSummary,
+    required this.dnsRuleSummary,
+    required this.routeRuleSetSummary,
     this.sanitizedContent,
   });
 
@@ -58,6 +62,10 @@ class FinalConfigGuardResult {
   final int forcedSelectorDefaults;
   final int forcedSelectedOutboundReferences;
   final List<String> outboundTags;
+  final List<String> routeRuleSummary;
+  final List<String> dnsServerSummary;
+  final List<String> dnsRuleSummary;
+  final List<String> routeRuleSetSummary;
   final String? sanitizedContent;
 
   bool get hasResidualFakeIp => fakeIpAfter;
@@ -124,6 +132,10 @@ class FinalConfigGuard with InfraLogger {
         forcedSelectorDefaults: 0,
         forcedSelectedOutboundReferences: 0,
         outboundTags: const [],
+        routeRuleSummary: const [],
+        dnsServerSummary: const [],
+        dnsRuleSummary: const [],
+        routeRuleSetSummary: const [],
       );
     }
 
@@ -153,6 +165,10 @@ class FinalConfigGuard with InfraLogger {
         forcedSelectorDefaults: 0,
         forcedSelectedOutboundReferences: 0,
         outboundTags: const [],
+        routeRuleSummary: const [],
+        dnsServerSummary: const [],
+        dnsRuleSummary: const [],
+        routeRuleSetSummary: const [],
       );
     }
 
@@ -199,6 +215,10 @@ class FinalConfigGuard with InfraLogger {
       forcedSelectorDefaults: stats.forcedSelectorDefaults,
       forcedSelectedOutboundReferences: stats.forcedSelectedOutboundReferences,
       outboundTags: _extractOutboundTags(root),
+      routeRuleSummary: _summarizeRules(_listValue(_mapValue(root['route'])?['rules'])),
+      dnsServerSummary: _summarizeDnsServers(_listValue(_mapValue(root['dns'])?['servers'])),
+      dnsRuleSummary: _summarizeRules(_listValue(_mapValue(root['dns'])?['rules'])),
+      routeRuleSetSummary: _summarizeRuleSets(_listValue(_mapValue(root['route'])?['rule_set'])),
       sanitizedContent: changed ? encoder!.convert(root) : null,
     );
   }
@@ -956,6 +976,77 @@ class FinalConfigGuard with InfraLogger {
       if (tag != null && tag.isNotEmpty && !_containsFakeIpMarker(tag)) return tag;
     }
     return null;
+  }
+
+  static List<String> _summarizeRules(List<Object?>? rules) {
+    if (rules == null) return const [];
+    return rules
+        .asMap()
+        .entries
+        .map((entry) {
+          final index = entry.key;
+          final map = _mapValue(entry.value);
+          if (map == null) return '$index:<non-map>';
+          final parts = <String>['#$index'];
+          for (final key in const [
+            'outbound',
+            'server',
+            'protocol',
+            'ip_is_private',
+            'domain_suffix',
+            'domain_keyword',
+            'rule_set',
+          ]) {
+            if (!map.containsKey(key)) continue;
+            parts.add('$key=${_summarizeValue(map[key])}');
+          }
+          return parts.join(' ');
+        })
+        .toList(growable: false);
+  }
+
+  static List<String> _summarizeDnsServers(List<Object?>? servers) {
+    if (servers == null) return const [];
+    return servers
+        .asMap()
+        .entries
+        .map((entry) {
+          final index = entry.key;
+          final map = _mapValue(entry.value);
+          if (map == null) return '$index:<non-map>';
+          return '#$index tag=${_summarizeValue(map['tag'])} address=${_summarizeAddress(map['address'])} detour=${_summarizeValue(map['detour'])} strategy=${_summarizeValue(map['strategy'])}';
+        })
+        .toList(growable: false);
+  }
+
+  static List<String> _summarizeRuleSets(List<Object?>? ruleSets) {
+    if (ruleSets == null) return const [];
+    return ruleSets
+        .asMap()
+        .entries
+        .map((entry) {
+          final index = entry.key;
+          final map = _mapValue(entry.value);
+          if (map == null) return '$index:<non-map>';
+          return '#$index tag=${_summarizeValue(map['tag'])} url=${_summarizeAddress(map['url'])} detour=${_summarizeValue(map['download_detour'])}';
+        })
+        .toList(growable: false);
+  }
+
+  static String _summarizeValue(Object? value) {
+    if (value == null) return '-';
+    if (value is Iterable && value is! String) {
+      final list = value.map((item) => item?.toString() ?? '').where((item) => item.isNotEmpty).toList(growable: false);
+      final shown = list.take(6).join('|');
+      return list.length > 6 ? '[$shown|+${list.length - 6}]' : '[$shown]';
+    }
+    return value.toString();
+  }
+
+  static String _summarizeAddress(Object? value) {
+    final text = value?.toString() ?? '-';
+    if (text.length <= 80) return text;
+    return '${text.substring(0, 77)}...';
   }
 
   static List<String> _extractOutboundTags(Map<String, dynamic> root) {
