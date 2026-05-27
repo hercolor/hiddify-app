@@ -142,6 +142,7 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           'dnsServers=${result.dnsServerCount}, removedClashModeRules=${result.removedClashModeRules}, '
           'removedGlobalModeRules=${result.removedGlobalModeRules}, '
           'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
+          'forcedCoreLogLevel=${result.forcedCoreLogLevel}, coreLogLevel=${result.coreLogLevel}, '
           'fakeIpAfter=${result.fakeIpAfter}',
         );
         DiagnosticEventBuffer.add('final config route rules: ${result.routeRuleSummary.join(' ; ')}');

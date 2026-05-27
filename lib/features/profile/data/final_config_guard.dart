@@ -30,6 +30,8 @@ class FinalConfigGuardResult {
     required this.removedGlobalModeRules,
     required this.forcedSelectorDefaults,
     required this.forcedSelectedOutboundReferences,
+    required this.forcedCoreLogLevel,
+    required this.coreLogLevel,
     required this.outboundTags,
     required this.routeRuleSummary,
     required this.dnsServerSummary,
@@ -61,6 +63,8 @@ class FinalConfigGuardResult {
   final int removedGlobalModeRules;
   final int forcedSelectorDefaults;
   final int forcedSelectedOutboundReferences;
+  final int forcedCoreLogLevel;
+  final String coreLogLevel;
   final List<String> outboundTags;
   final List<String> routeRuleSummary;
   final List<String> dnsServerSummary;
@@ -131,6 +135,8 @@ class FinalConfigGuard with InfraLogger {
         removedGlobalModeRules: 0,
         forcedSelectorDefaults: 0,
         forcedSelectedOutboundReferences: 0,
+        forcedCoreLogLevel: 0,
+        coreLogLevel: 'unknown',
         outboundTags: const [],
         routeRuleSummary: const [],
         dnsServerSummary: const [],
@@ -164,6 +170,8 @@ class FinalConfigGuard with InfraLogger {
         removedGlobalModeRules: 0,
         forcedSelectorDefaults: 0,
         forcedSelectedOutboundReferences: 0,
+        forcedCoreLogLevel: 0,
+        coreLogLevel: 'unknown',
         outboundTags: const [],
         routeRuleSummary: const [],
         dnsServerSummary: const [],
@@ -177,6 +185,7 @@ class FinalConfigGuard with InfraLogger {
     final beforeJson = jsonEncode(root);
 
     _removeUnsafeKeysDeep(root);
+    _ensureDiagnosticLogLevel(root, stats);
     _normalizeLockedOutboundTags(root);
     _normalizeSingBoxRuleListFields(root);
     _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
@@ -214,6 +223,8 @@ class FinalConfigGuard with InfraLogger {
       removedGlobalModeRules: stats.removedGlobalModeRules,
       forcedSelectorDefaults: stats.forcedSelectorDefaults,
       forcedSelectedOutboundReferences: stats.forcedSelectedOutboundReferences,
+      forcedCoreLogLevel: stats.forcedCoreLogLevel,
+      coreLogLevel: _stringValue(_mapValue(root['log'])?['level']) ?? 'missing',
       outboundTags: _extractOutboundTags(root),
       routeRuleSummary: _summarizeRules(_listValue(_mapValue(root['route'])?['rules'])),
       dnsServerSummary: _summarizeDnsServers(_listValue(_mapValue(root['dns'])?['servers'])),
@@ -253,6 +264,8 @@ class FinalConfigGuard with InfraLogger {
       'removedGlobalModeRules=${result.removedGlobalModeRules}, '
       'forcedSelectorDefaults=${result.forcedSelectorDefaults}, '
       'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
+      'forcedCoreLogLevel=${result.forcedCoreLogLevel}, '
+      'coreLogLevel=${_safeLogValue(result.coreLogLevel)}, '
       'nodeCount=${result.outboundTags.length}, '
       'outboundTags=[$tags], '
       'coreConfigVersion=${LockedCoreConfig.schemaVersion}',
@@ -260,6 +273,15 @@ class FinalConfigGuard with InfraLogger {
     if (result.hasResidualFakeIp) {
       loggy.warning('final config check [$stage]: residual fake-ip marker detected after sanitize');
     }
+  }
+
+  static void _ensureDiagnosticLogLevel(Map<String, dynamic> root, _SanitizeStats stats) {
+    final log = _mapValue(root['log']) ?? <String, dynamic>{};
+    if (log['level'] != LockedCoreConfig.coreLogLevel) {
+      log['level'] = LockedCoreConfig.coreLogLevel;
+      stats.forcedCoreLogLevel += 1;
+    }
+    root['log'] = log;
   }
 
   static void _normalizeLockedOutboundTags(Map<String, dynamic> root) {
@@ -1148,4 +1170,5 @@ class _SanitizeStats {
   int removedGlobalModeRules = 0;
   int forcedSelectorDefaults = 0;
   int forcedSelectedOutboundReferences = 0;
+  int forcedCoreLogLevel = 0;
 }

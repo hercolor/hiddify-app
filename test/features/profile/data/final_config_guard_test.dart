@@ -58,6 +58,30 @@ void main() {
       expect(jsonEncode(sanitized), isNot(contains('198.18.')));
     });
 
+    test('forces final core log level to debug for routing diagnostics', () {
+      final content = jsonEncode({
+        'log': {'level': 'warn'},
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8'},
+          ],
+        },
+        'route': {'rules': <Object?>[], 'final': 'proxy'},
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+          {'tag': 'dns-out', 'type': 'dns'},
+        ],
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+
+      expect(result.coreLogLevel, LockedCoreConfig.coreLogLevel);
+      expect(result.forcedCoreLogLevel, 1);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      expect((sanitized['log'] as Map)['level'], LockedCoreConfig.coreLogLevel);
+    });
+
     test('locks DNS to proxy detour, IPv4 only, and keeps smart route rule sets', () {
       final content = jsonEncode({
         'dns': {
@@ -113,6 +137,7 @@ void main() {
       final dnsServers = ((sanitized['dns'] as Map)['servers'] as List).cast<Map>();
       final dnsServer = dnsServers.firstWhere((item) => item['tag'] != 'dns-local');
       final localDnsServer = dnsServers.firstWhere((item) => item['tag'] == 'dns-local');
+      expect(localDnsServer['detour'], 'direct');
       expect(dnsServer['detour'], 'proxy');
       expect(dnsServer['strategy'], 'ipv4_only');
       expect((sanitized['dns'] as Map)['strategy'], 'ipv4_only');
@@ -471,7 +496,8 @@ void main() {
       expect(routeRules[2]['outbound'], 'direct');
       expect(routeRules[3]['domain_keyword'], contains('baidu'));
       expect(routeRules[4]['rule_set'], ['geosite-cn', 'geoip-cn']);
-      expect((route['rule_set'] as List).map((item) => item['url']), everyElement(contains('/rules/sing-box/')));
+      final ruleSets = (route['rule_set'] as List).cast<Map>();
+      expect(ruleSets.map((item) => item['url']), everyElement(contains('/rules/sing-box/')));
       expect(dnsServers.any((item) => item['tag'] == 'dns-local' && item['detour'] == 'direct'), isTrue);
       expect(dnsRules.any((item) => (item['domain_suffix'] as List?)?.contains('ip138.com') == true), isTrue);
       expect(dnsRules.any((item) => (item['rule_set'] as List?)?.contains('geosite-cn') == true), isTrue);
@@ -518,7 +544,8 @@ void main() {
       expect(localDnsServer['detour'], 'direct');
       expect(route['final'], LockedCoreConfig.routeFinal);
       expect(route['rules'], isNotEmpty);
-      expect((route['rules'] as List).first['outbound'], 'dns-out');
+      final routeRules = (route['rules'] as List).cast<Map>();
+      expect(routeRules.first['outbound'], 'dns-out');
       expect(jsonEncode(route['rules']), contains('domain_suffix'));
       expect(jsonEncode(route['rules']), contains('baidu.com'));
     });
