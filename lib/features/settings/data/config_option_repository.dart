@@ -418,7 +418,7 @@ abstract class ConfigOptions {
       useXrayCoreWhenPossible: false,
       executeConfigAsIs: false,
       logLevel: LogLevel.warn,
-      resolveDestination: false,
+      resolveDestination: LockedCoreConfig.resolveDestination,
       ipv6Mode: IPv6Mode.disable,
       remoteDnsAddress: LockedCoreConfig.remoteDnsAddress,
       remoteDnsDomainStrategy: DomainStrategy.ipv4Only,
@@ -511,6 +511,7 @@ class ConfigOptionRepository with ExceptionHandler, InfraLogger {
             'dnsStrategy=${LockedCoreConfig.dnsStrategy}, '
             'fakeIp=${lockedOptions.enableFakeDns}, '
             'ipv6=${LockedCoreConfig.ipv6}, '
+            'resolveDestination=${LockedCoreConfig.resolveDestination}, '
             'tunDnsServer=${lockedOptions.remoteDnsAddress}, '
             'routeFinal=${LockedCoreConfig.routeFinal}, '
             'outboundTag=${LockedCoreConfig.outboundTag}, '
@@ -528,7 +529,7 @@ class ConfigOptionRepository with ExceptionHandler, InfraLogger {
       useXrayCoreWhenPossible: false,
       executeConfigAsIs: false,
       logLevel: LogLevel.warn,
-      resolveDestination: false,
+      resolveDestination: LockedCoreConfig.resolveDestination,
       ipv6Mode: IPv6Mode.disable,
       remoteDnsAddress: LockedCoreConfig.remoteDnsAddress,
       remoteDnsDomainStrategy: DomainStrategy.ipv4Only,

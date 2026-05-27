@@ -11,6 +11,7 @@ abstract final class LockedCoreConfig {
 
   static const bool fakeIp = false;
   static const bool ipv6 = false;
+  static const bool resolveDestination = true;
 
   static const String remoteDnsAddress = 'tcp://8.8.8.8';
   static const String directDnsAddress = 'https://223.5.5.5/dns-query';

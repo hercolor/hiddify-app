@@ -334,6 +334,7 @@ String _buildDiagnosticText({
     ..writeln('connectionState=${clientState.phase.name}')
     ..writeln('fakeIp=${LockedCoreConfig.fakeIp}')
     ..writeln('ipv6=${LockedCoreConfig.ipv6}')
+    ..writeln('resolveDestination=${LockedCoreConfig.resolveDestination}')
     ..writeln('dnsStrategy=${LockedCoreConfig.dnsStrategy}')
     ..writeln('routeFinal=${LockedCoreConfig.routeFinal}')
     ..writeln('dnsMode=${LockedCoreConfig.dnsMode}')

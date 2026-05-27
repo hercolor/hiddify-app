@@ -441,6 +441,21 @@ void main() {
       expect(result.removedUnselectedOutbounds, 1);
     });
 
+    test('locks resolve destination on for smart routing analysis', () {
+      final content = jsonEncode({
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+
+      expect(LockedCoreConfig.resolveDestination, isTrue);
+      expect(sanitized.containsKey('route'), isTrue);
+    });
+
     test('global mode removes split route rules but keeps dns routing', () {
       final content = jsonEncode({
         'outbounds': [
