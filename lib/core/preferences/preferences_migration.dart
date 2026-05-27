@@ -150,7 +150,7 @@ class PreferencesVersion2Migration extends PreferencesMigrationStep with InfraLo
     await sharedPreferences.setBool("bypass-lan", false);
     await sharedPreferences.setBool("allow-connection-from-lan", false);
     await sharedPreferences.setBool("block-ads", false);
-    await sharedPreferences.setBool("resolve-destination", false);
+    await sharedPreferences.setBool("resolve-destination", LockedCoreConfig.resolveDestination);
   }
 }
 
@@ -280,7 +280,7 @@ class ConsumerConfigSchemaMigration extends PreferencesMigrationStep with InfraL
     await sharedPreferences.setBool("bypass-lan", false);
     await sharedPreferences.setBool("allow-connection-from-lan", false);
     await sharedPreferences.setBool("block-ads", false);
-    await sharedPreferences.setBool("resolve-destination", false);
+    await sharedPreferences.setBool("resolve-destination", LockedCoreConfig.resolveDestination);
   }
 
   static bool _isUnsafeKey(String key) {

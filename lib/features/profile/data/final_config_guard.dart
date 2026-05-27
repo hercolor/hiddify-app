@@ -12,7 +12,9 @@ class FinalConfigGuardResult {
     required this.fakeIpBefore,
     required this.fakeIpAfter,
     required this.routeFinal,
+    required this.routeDefaultDomainResolver,
     required this.dnsFinal,
+    required this.dnsReverseMapping,
     required this.dnsServerCount,
     required this.routeRuleCount,
     required this.removedFakeDnsServers,
@@ -46,7 +48,9 @@ class FinalConfigGuardResult {
   final bool fakeIpBefore;
   final bool fakeIpAfter;
   final String routeFinal;
+  final String routeDefaultDomainResolver;
   final String dnsFinal;
+  final bool dnsReverseMapping;
   final int dnsServerCount;
   final int routeRuleCount;
   final int removedFakeDnsServers;
@@ -119,7 +123,9 @@ class FinalConfigGuard with InfraLogger {
         fakeIpBefore: fakeIpBefore,
         fakeIpAfter: fakeIpBefore,
         routeFinal: 'unknown',
+        routeDefaultDomainResolver: 'unknown',
         dnsFinal: 'unknown',
+        dnsReverseMapping: false,
         dnsServerCount: 0,
         routeRuleCount: 0,
         removedFakeDnsServers: 0,
@@ -155,7 +161,9 @@ class FinalConfigGuard with InfraLogger {
         fakeIpBefore: fakeIpBefore,
         fakeIpAfter: _containsFakeIpMarker(decoded),
         routeFinal: 'unknown',
+        routeDefaultDomainResolver: 'unknown',
         dnsFinal: 'unknown',
+        dnsReverseMapping: false,
         dnsServerCount: 0,
         routeRuleCount: 0,
         removedFakeDnsServers: 0,
@@ -209,7 +217,9 @@ class FinalConfigGuard with InfraLogger {
       fakeIpBefore: fakeIpBefore,
       fakeIpAfter: fakeIpAfter,
       routeFinal: _stringValue(_mapValue(root['route'])?['final']) ?? 'missing',
+      routeDefaultDomainResolver: _stringValue(_mapValue(root['route'])?['default_domain_resolver']) ?? 'missing',
       dnsFinal: _stringValue(_mapValue(root['dns'])?['final']) ?? 'missing',
+      dnsReverseMapping: _mapValue(root['dns'])?['reverse_mapping'] == true,
       dnsServerCount: _listValue(_mapValue(root['dns'])?['servers'])?.length ?? 0,
       routeRuleCount: _listValue(_mapValue(root['route'])?['rules'])?.length ?? 0,
       removedFakeDnsServers: stats.removedFakeDnsServers,
@@ -253,7 +263,9 @@ class FinalConfigGuard with InfraLogger {
       'dnsFinal=${_safeLogValue(result.dnsFinal)}, '
       'dnsServers=${result.dnsServerCount}, '
       'routeFinal=${_safeLogValue(result.routeFinal)}, '
+      'routeDefaultDomainResolver=${_safeLogValue(result.routeDefaultDomainResolver)}, '
       'routeRules=${result.routeRuleCount}, '
+      'dnsReverseMapping=${result.dnsReverseMapping}, '
       'removedFakeDnsServers=${result.removedFakeDnsServers}, '
       'removedIpv6DnsServers=${result.removedIpv6DnsServers}, '
       'removedFakeDnsRules=${result.removedFakeDnsRules}, '
@@ -530,6 +542,9 @@ class FinalConfigGuard with InfraLogger {
       dns['strategy'] = LockedCoreConfig.dnsStrategy;
       stats.forcedDnsStrategies += 1;
     }
+    if (dns['reverse_mapping'] != true) {
+      dns['reverse_mapping'] = true;
+    }
   }
 
   static void _sanitizeRoute(Object? value, _SanitizeStats stats, {required bool globalRouteMode}) {
@@ -720,10 +735,12 @@ class FinalConfigGuard with InfraLogger {
     _ensureDirectOutbound(root);
     _ensureRuleSetEntries(route);
     _ensureSmartDnsRules(root);
+    route['default_domain_resolver'] = 'dns-local';
 
     final rules = _listValue(route['rules']) ?? <Object?>[];
     _ensureDnsHijackRouteRule(rules);
     _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct'});
+    _addRouteRuleIfMissing(rules, 'domain', {'domain': ClientRoutePolicy.cnBypassExactDomains, 'outbound': 'direct'});
     _addRouteRuleIfMissing(rules, 'domain_suffix', {
       'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes,
       'outbound': 'direct',
@@ -803,6 +820,7 @@ class FinalConfigGuard with InfraLogger {
     dns['servers'] = servers;
 
     final rules = _listValue(dns['rules']) ?? <Object?>[];
+    _addDnsRuleIfMissing(rules, 'domain', {'domain': ClientRoutePolicy.cnBypassExactDomains, 'server': 'dns-local'});
     _addDnsRuleIfMissing(rules, 'domain_suffix', {
       'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes,
       'server': 'dns-local',
@@ -1106,6 +1124,7 @@ class FinalConfigGuard with InfraLogger {
             'server',
             'protocol',
             'ip_is_private',
+            'domain',
             'domain_suffix',
             'domain_keyword',
             'rule_set',

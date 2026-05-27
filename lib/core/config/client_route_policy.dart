@@ -84,6 +84,8 @@ abstract final class ClientRoutePolicy {
     'ip.cn',
   ];
 
+  static const cnBypassExactDomains = ['ip138.com', 'www.ip138.com', 'ip.cn', 'www.ip.cn'];
+
   static const cnBypassDomainKeywords = [
     'baidu',
     'alicdn',
