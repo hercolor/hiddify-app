@@ -30,6 +30,7 @@ class FinalConfigGuardResult {
     required this.removedGlobalModeRules,
     required this.forcedSelectorDefaults,
     required this.forcedSelectedOutboundReferences,
+    required this.removedUnselectedOutbounds,
     required this.forcedCoreLogLevel,
     required this.coreLogLevel,
     required this.outboundTags,
@@ -63,6 +64,7 @@ class FinalConfigGuardResult {
   final int removedGlobalModeRules;
   final int forcedSelectorDefaults;
   final int forcedSelectedOutboundReferences;
+  final int removedUnselectedOutbounds;
   final int forcedCoreLogLevel;
   final String coreLogLevel;
   final List<String> outboundTags;
@@ -135,6 +137,7 @@ class FinalConfigGuard with InfraLogger {
         removedGlobalModeRules: 0,
         forcedSelectorDefaults: 0,
         forcedSelectedOutboundReferences: 0,
+        removedUnselectedOutbounds: 0,
         forcedCoreLogLevel: 0,
         coreLogLevel: 'unknown',
         outboundTags: const [],
@@ -170,6 +173,7 @@ class FinalConfigGuard with InfraLogger {
         removedGlobalModeRules: 0,
         forcedSelectorDefaults: 0,
         forcedSelectedOutboundReferences: 0,
+        removedUnselectedOutbounds: 0,
         forcedCoreLogLevel: 0,
         coreLogLevel: 'unknown',
         outboundTags: const [],
@@ -223,6 +227,7 @@ class FinalConfigGuard with InfraLogger {
       removedGlobalModeRules: stats.removedGlobalModeRules,
       forcedSelectorDefaults: stats.forcedSelectorDefaults,
       forcedSelectedOutboundReferences: stats.forcedSelectedOutboundReferences,
+      removedUnselectedOutbounds: stats.removedUnselectedOutbounds,
       forcedCoreLogLevel: stats.forcedCoreLogLevel,
       coreLogLevel: _stringValue(_mapValue(root['log'])?['level']) ?? 'missing',
       outboundTags: _extractOutboundTags(root),
@@ -264,6 +269,7 @@ class FinalConfigGuard with InfraLogger {
       'removedGlobalModeRules=${result.removedGlobalModeRules}, '
       'forcedSelectorDefaults=${result.forcedSelectorDefaults}, '
       'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
+      'removedUnselectedOutbounds=${result.removedUnselectedOutbounds}, '
       'forcedCoreLogLevel=${result.forcedCoreLogLevel}, '
       'coreLogLevel=${_safeLogValue(result.coreLogLevel)}, '
       'nodeCount=${result.outboundTags.length}, '
@@ -572,6 +578,8 @@ class FinalConfigGuard with InfraLogger {
     if (outbounds == null || outbounds.isEmpty) return;
     if (!_hasOutboundTag(outbounds, selected)) return;
 
+    _pruneUnselectedProxyOutbounds(root, selected, stats);
+
     final selector =
         _findOutboundByTag(outbounds, LockedCoreConfig.outboundTag) ??
         _findOutboundByTag(outbounds, '节点选择') ??
@@ -588,6 +596,69 @@ class FinalConfigGuard with InfraLogger {
     _lockDnsDetours(root['dns'], selected, stats);
     _lockRouteOutbounds(root['route'], selected, stats);
   }
+
+  static void _pruneUnselectedProxyOutbounds(Map<String, dynamic> root, String selected, _SanitizeStats stats) {
+    final outbounds = _listValue(root['outbounds']);
+    if (outbounds == null || outbounds.isEmpty) return;
+
+    final removedTags = <String>{};
+    final keptOutbounds = <Object?>[];
+    for (final outbound in outbounds) {
+      final map = _mapValue(outbound);
+      final tag = _stringValue(map?['tag']);
+      if (map != null && tag != null && tag != selected && _isLeafProxyOutbound(map)) {
+        removedTags.add(tag);
+        stats.removedUnselectedOutbounds += 1;
+        continue;
+      }
+      keptOutbounds.add(outbound);
+    }
+    if (removedTags.isNotEmpty) {
+      root['outbounds'] = keptOutbounds;
+    }
+
+    for (final outbound in keptOutbounds) {
+      final map = _mapValue(outbound);
+      if (map == null) continue;
+      final type = _stringValue(map['type'])?.toLowerCase().trim() ?? '';
+      if (type != 'selector' && type != 'urltest' && type != 'url-test') continue;
+      final choices = _listValue(map['outbounds']);
+      if (choices == null || choices.isEmpty) continue;
+      if (choices.length != 1 || choices.first?.toString() != selected) {
+        map['outbounds'] = [selected];
+        stats.forcedSelectedOutboundReferences += 1;
+      }
+      if (_stringValue(map['default']) != selected) {
+        map['default'] = selected;
+        stats.forcedSelectorDefaults += 1;
+      }
+    }
+  }
+
+  static bool _isLeafProxyOutbound(Map<String, dynamic> outbound) {
+    final tag = _stringValue(outbound['tag'])?.toLowerCase().trim();
+    final type = _stringValue(outbound['type'])?.toLowerCase().trim();
+    if (tag == null || tag.isEmpty || type == null || type.isEmpty) return false;
+    const nonLeafProxyTypes = {'selector', 'urltest', 'url-test', 'direct', 'block', 'dns'};
+    if (nonLeafProxyTypes.contains(type)) return false;
+    return !_isSystemOutboundTag(tag);
+  }
+
+  static bool _isSystemOutboundTag(String tag) => const {
+    'direct',
+    'block',
+    'dns',
+    'dns-out',
+    'dns-remote',
+    'dns-direct',
+    'proxy',
+    'select',
+    'selector',
+    'auto',
+    'urltest',
+    'url-test',
+    'bypass',
+  }.contains(tag.toLowerCase().trim());
 
   static void _lockDnsDetours(Object? value, String selected, _SanitizeStats stats) {
     final dns = _mapValue(value);
@@ -1161,5 +1232,6 @@ class _SanitizeStats {
   int removedGlobalModeRules = 0;
   int forcedSelectorDefaults = 0;
   int forcedSelectedOutboundReferences = 0;
+  int removedUnselectedOutbounds = 0;
   int forcedCoreLogLevel = 0;
 }

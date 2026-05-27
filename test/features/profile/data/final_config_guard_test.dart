@@ -385,8 +385,60 @@ void main() {
       expect(route['final'], '香港-IPEL');
       expect(routeRules[1]['outbound'], '香港-IPEL');
       expect(routeRuleSets.map((item) => item['download_detour']), everyElement('香港-IPEL'));
-      expect(result.forcedSelectorDefaults, 1);
-      expect(result.forcedSelectedOutboundReferences, 5);
+      expect(result.forcedSelectorDefaults, 2);
+      expect(result.forcedSelectedOutboundReferences, 7);
+      expect(result.removedUnselectedOutbounds, 1);
+    });
+
+    test('prunes unselected proxy outbounds when a node is selected', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+        },
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'type': 'selector',
+            'default': 'auto',
+            'outbounds': ['auto', '香港-IPEL', '美国-IPEL'],
+          },
+          {
+            'tag': 'auto',
+            'type': 'urltest',
+            'outbounds': ['香港-IPEL', '美国-IPEL'],
+          },
+          {'tag': '香港-IPEL', 'type': 'shadowsocks'},
+          {'tag': '美国-IPEL', 'type': 'shadowsocks'},
+          {'tag': 'direct', 'type': 'direct'},
+          {'tag': 'block', 'type': 'block'},
+        ],
+        'route': {
+          'rules': [
+            {
+              'domain_suffix': ['example.com'],
+              'outbound': 'proxy',
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, selectedOutboundTag: '香港-IPEL');
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final outbounds = (sanitized['outbounds'] as List).cast<Map>();
+      final outboundTags = outbounds.map((item) => item['tag']).toList();
+      final selector = outbounds.firstWhere((item) => item['tag'] == 'proxy');
+      final auto = outbounds.firstWhere((item) => item['tag'] == 'auto');
+
+      expect(outboundTags, containsAll(['proxy', 'auto', '香港-IPEL', 'direct', 'block']));
+      expect(outboundTags, isNot(contains('美国-IPEL')));
+      expect(selector['default'], '香港-IPEL');
+      expect(selector['outbounds'], ['香港-IPEL']);
+      expect(auto['default'], '香港-IPEL');
+      expect(auto['outbounds'], ['香港-IPEL']);
+      expect(result.removedUnselectedOutbounds, 1);
     });
 
     test('global mode removes split route rules but keeps dns routing', () {
