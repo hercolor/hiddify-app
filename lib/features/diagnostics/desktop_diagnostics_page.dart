@@ -12,8 +12,10 @@ import 'package:hiddify/features/connection/data/connection_data_providers.dart'
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/diagnostics/core_log_file_snapshot.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
+import 'package:hiddify/features/log/data/log_data_providers.dart';
 import 'package:hiddify/features/log/model/log_entity.dart';
 import 'package:hiddify/features/log/overview/logs_overview_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
@@ -36,6 +38,7 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
     final logsState = ref.watch(logsOverviewNotifierProvider);
     final logs = logsState.logs;
     final diagnosticEvents = DiagnosticEventBuffer.recent();
+    final coreLogFileLines = CoreLogFileSnapshot.readTail(ref.watch(logPathResolverProvider).coreFile());
     final text = _buildDiagnosticText(
       authState: authState,
       nodeSelection: nodeSelection,
@@ -45,6 +48,7 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
       options: activeOptions,
       logs: logs,
       diagnosticEvents: diagnosticEvents,
+      coreLogFileLines: coreLogFileLines,
     );
 
     return DesktopPageScaffold(
@@ -75,7 +79,11 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
             clientState: clientState,
           );
           final config = _ConfigPanel(options: activeOptions);
-          final logPanel = _LogPanel(logs: logs, diagnosticEvents: diagnosticEvents);
+          final logPanel = _LogPanel(
+            logs: logs,
+            diagnosticEvents: diagnosticEvents,
+            coreLogFileLines: coreLogFileLines,
+          );
           if (narrow) {
             return ListView(
               padding: const EdgeInsets.only(bottom: 24),
@@ -183,10 +191,11 @@ class _ConfigPanel extends StatelessWidget {
 }
 
 class _LogPanel extends StatelessWidget {
-  const _LogPanel({required this.logs, required this.diagnosticEvents});
+  const _LogPanel({required this.logs, required this.diagnosticEvents, required this.coreLogFileLines});
 
   final AsyncValue<List<LogEntity>> logs;
   final List<String> diagnosticEvents;
+  final List<String> coreLogFileLines;
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +215,7 @@ class _LogPanel extends StatelessWidget {
                 final coreLogLimit = (100 - diagnosticEvents.length).clamp(0, 100);
                 final latest = [
                   ...diagnosticEvents,
+                  ...coreLogFileLines,
                   ...items.take(coreLogLimit).map((log) => log.message),
                 ].take(100).toList(growable: false);
                 if (latest.isEmpty) return const Center(child: Text('暂无日志'));
@@ -307,6 +317,7 @@ String _buildDiagnosticText({
   required SingboxConfigOption options,
   required AsyncValue<List<LogEntity>> logs,
   required List<String> diagnosticEvents,
+  required List<String> coreLogFileLines,
 }) {
   final buffer = StringBuffer()
     ..writeln('4376加速内部诊断')
@@ -328,10 +339,13 @@ String _buildDiagnosticText({
     ..writeln('dnsMode=${LockedCoreConfig.dnsMode}')
     ..writeln('tunDnsServer=${DiagnosticSanitizer.sanitize(options.remoteDnsAddress)}')
     ..writeln('logs:');
-  for (final event in diagnosticEvents.take(100)) {
+  for (final event in diagnosticEvents.take(120)) {
     buffer.writeln(DiagnosticSanitizer.sanitize(event));
   }
-  for (final log in logs.valueOrNull?.take(100) ?? const <LogEntity>[]) {
+  for (final line in coreLogFileLines.take(80)) {
+    buffer.writeln(DiagnosticSanitizer.sanitize(line));
+  }
+  for (final log in logs.valueOrNull?.take(80) ?? const <LogEntity>[]) {
     buffer.writeln(DiagnosticSanitizer.sanitize(log.message));
   }
   return DiagnosticSanitizer.sanitize(buffer.toString());

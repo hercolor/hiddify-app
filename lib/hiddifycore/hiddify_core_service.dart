@@ -8,6 +8,7 @@ import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/diagnostics/core_log_diagnostics.dart';
+import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/log/model/log_level.dart' as config_log_level;
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/hiddifycore/core_interface/core_interface_wrapper_stub.dart'
@@ -500,9 +501,17 @@ class HiddifyCoreService with InfraLogger {
     final coreLogLevel = _diagnosticCoreLogLevel(getCoreLogLevel(logLevel));
     final listenKey = "${key}LogListener";
     // await stopListenSingle(listenKey);
+    DiagnosticEventBuffer.addSafe('core log listener attach key=$key level=${coreLogLevel.name}');
+    var eventCount = 0;
     await listenSingle<LogMessage>(listenKey, () {
       return cc.logListener(LogRequest(level: coreLogLevel), options: grpcOptions).map((event) {
         // Handle incoming event
+        eventCount += 1;
+        if (eventCount <= 3 || eventCount % 50 == 0) {
+          DiagnosticEventBuffer.addSafe(
+            'core log listener event key=$key count=$eventCount type=${event.type.name} level=${event.level.name} bytes=${event.message.length}',
+          );
+        }
         CoreLogDiagnostics.addLogMessage(event);
         logBuffer.add(event);
         if (logBuffer.length > 300) {
