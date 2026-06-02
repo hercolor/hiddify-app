@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
 
 abstract final class DiagnosticEventBuffer {
+  static const diagnosticVersion = '20260603-001-final-config-probe';
   static final Queue<String> _events = Queue<String>();
   static const int _maxEvents = 180;
 
@@ -17,7 +18,7 @@ abstract final class DiagnosticEventBuffer {
 
   static void _addSanitized(String message) {
     final time = DateTime.now().toIso8601String().split('T').last.split('.').first;
-    final event = '$time $message';
+    final event = '$time diagVersion=$diagnosticVersion $message';
     _events.addFirst(event);
     debugPrint('4376diag $event');
     while (_events.length > _maxEvents) {

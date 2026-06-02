@@ -26,6 +26,7 @@ class DiagnosticsProbeNotifier extends StateNotifier<AsyncValue<List<DiagProbeRe
 
   Future<List<DiagProbeResult>> run() async {
     state = const AsyncLoading();
+    DiagnosticEventBuffer.add('diagProbe start');
     await _emitActiveFinalConfigSnapshot();
     final results = await DiagnosticsProbeService(_client).run();
     state = AsyncData(results);
