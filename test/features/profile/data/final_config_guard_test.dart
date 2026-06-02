@@ -571,13 +571,17 @@ void main() {
       expect(routeRules[0]['action'], 'hijack-dns');
       expect(routeRules[0].containsKey('outbound'), isFalse);
       expect(routeRules[1]['ip_is_private'], isTrue);
+      expect(routeRules[1]['action'], 'route');
       expect(routeRules[2]['domain'], contains('ip138.com'));
       expect(routeRules[2]['domain'], contains('www.ip.cn'));
       expect(routeRules[2]['outbound'], 'direct');
+      expect(routeRules[2]['action'], 'route');
       expect(routeRules[3]['domain_suffix'], contains('baidu.com'));
       expect(routeRules[3]['outbound'], 'direct');
+      expect(routeRules[3]['action'], 'route');
       expect(routeRules[4]['domain_keyword'], contains('baidu'));
       expect(routeRules[5]['rule_set'], ['geosite-cn', 'geoip-cn']);
+      expect(routeRules[5]['action'], 'route');
       final ruleSets = (route['rule_set'] as List).cast<Map>();
       expect(ruleSets.map((item) => item['url']), everyElement(contains('/rules/sing-box/')));
       expect(dnsServers.any((item) => item['tag'] == 'dns-local' && item['detour'] == 'direct'), isTrue);

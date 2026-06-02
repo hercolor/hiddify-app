@@ -742,13 +742,14 @@ class FinalConfigGuard with InfraLogger {
 
     final rules = _listValue(route['rules']) ?? <Object?>[];
     _ensureDnsHijackRouteRule(rules);
-    _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct'});
+    _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct', 'action': 'route'});
     _ensureRouteRuleValues(rules, 'domain', ClientRoutePolicy.cnBypassExactDomains);
     _ensureRouteRuleValues(rules, 'domain_suffix', ClientRoutePolicy.cnBypassDomainSuffixes);
     _ensureRouteRuleValues(rules, 'domain_keyword', ClientRoutePolicy.cnBypassDomainKeywords);
     _addRouteRuleIfMissing(rules, 'rule_set', {
       'rule_set': ['geosite-cn', 'geoip-cn'],
       'outbound': 'direct',
+      'action': 'route',
     });
     route['rules'] = rules;
   }
@@ -783,16 +784,19 @@ class FinalConfigGuard with InfraLogger {
     for (final item in rules) {
       final map = _mapValue(item);
       if (map == null || _stringValue(map['outbound']) != 'direct' || !map.containsKey(matcherKey)) continue;
+      map['action'] = 'route';
       map[matcherKey] = _mergedStringList(map[matcherKey], values);
       return;
     }
-    rules.add({matcherKey: values, 'outbound': 'direct'});
+    rules.add({matcherKey: values, 'outbound': 'direct', 'action': 'route'});
   }
 
   static void _addRouteRuleIfMissing(List<Object?> rules, String matcherKey, Map<String, Object> rule) {
     final exists = rules.any((item) {
       final map = _mapValue(item);
-      return map != null && _stringValue(map['outbound']) == 'direct' && map.containsKey(matcherKey);
+      if (map == null || _stringValue(map['outbound']) != 'direct' || !map.containsKey(matcherKey)) return false;
+      map['action'] = 'route';
+      return true;
     });
     if (!exists) rules.add(rule);
   }

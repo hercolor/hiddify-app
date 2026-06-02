@@ -335,6 +335,7 @@ String _buildDiagnosticText({
     ..writeln('mixedPort=${options.mixedPort}')
     ..writeln('routeProbe=local mixed proxy with DIRECT fallback')
     ..writeln('sniffRule=inbound sniff enabled')
+    ..writeln('routeAction=direct rules use action route')
     ..writeln('tunEnabled=${options.enableTun}')
     ..writeln('tunStrictRoute=${options.strictRoute}')
     ..writeln('tunAutoRoute=${options.enableTun}')
