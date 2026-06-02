@@ -334,7 +334,7 @@ String _buildDiagnosticText({
     ..writeln('tunDnsServer=${DiagnosticSanitizer.sanitize(options.remoteDnsAddress)}')
     ..writeln('mixedPort=${options.mixedPort}')
     ..writeln('routeProbe=local mixed proxy with DIRECT fallback')
-    ..writeln('sniffRule=route action sniff')
+    ..writeln('sniffRule=inbound sniff enabled')
     ..writeln('tunEnabled=${options.enableTun}')
     ..writeln('tunStrictRoute=${options.strictRoute}')
     ..writeln('tunAutoRoute=${options.enableTun}')

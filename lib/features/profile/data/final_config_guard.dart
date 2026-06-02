@@ -203,6 +203,7 @@ class FinalConfigGuard with InfraLogger {
     _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
     _sanitizeRoute(_ensureRoute(root), stats, globalRouteMode: globalRouteMode);
     _ensureSmartRouteFallback(root, globalRouteMode: globalRouteMode);
+    _ensureInboundSniff(root['inbounds']);
     _lockSelectedOutboundReferences(root, selectedOutboundTag, stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
 
@@ -570,6 +571,8 @@ class FinalConfigGuard with InfraLogger {
         stats.removedCatchAllRules += 1;
       } else if (_hasClashModeRule(rule)) {
         stats.removedClashModeRules += 1;
+      } else if (_isSniffActionRule(rule)) {
+        stats.removedCatchAllRules += 1;
       } else if (globalRouteMode && !_isDnsProtocolRule(rule)) {
         stats.removedGlobalModeRules += 1;
       } else {
@@ -739,7 +742,6 @@ class FinalConfigGuard with InfraLogger {
 
     final rules = _listValue(route['rules']) ?? <Object?>[];
     _ensureDnsHijackRouteRule(rules);
-    _ensureSniffRouteRule(rules);
     _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct'});
     _ensureRouteRuleValues(rules, 'domain', ClientRoutePolicy.cnBypassExactDomains);
     _ensureRouteRuleValues(rules, 'domain_suffix', ClientRoutePolicy.cnBypassDomainSuffixes);
@@ -749,27 +751,6 @@ class FinalConfigGuard with InfraLogger {
       'outbound': 'direct',
     });
     route['rules'] = rules;
-  }
-
-  static void _ensureSniffRouteRule(List<Object?> rules) {
-    var firstSniffRule = <String, dynamic>{'action': 'sniff'};
-    var foundSniffRule = false;
-    final keptRules = <Object?>[];
-    for (final rule in rules) {
-      final map = _mapValue(rule);
-      if (map != null && _stringValue(map['action']) == 'sniff') {
-        if (!foundSniffRule) {
-          firstSniffRule = map;
-          foundSniffRule = true;
-        }
-        continue;
-      }
-      keptRules.add(rule);
-    }
-    rules
-      ..clear()
-      ..add(firstSniffRule)
-      ..addAll(keptRules);
   }
 
   static void _ensureRuleSetEntries(Map<String, dynamic> route) {
@@ -814,6 +795,21 @@ class FinalConfigGuard with InfraLogger {
       return map != null && _stringValue(map['outbound']) == 'direct' && map.containsKey(matcherKey);
     });
     if (!exists) rules.add(rule);
+  }
+
+  static void _ensureInboundSniff(Object? value) {
+    final inbounds = _listValue(value);
+    if (inbounds == null) return;
+    for (final inbound in inbounds) {
+      final map = _mapValue(inbound);
+      if (map == null) continue;
+      final type = _stringValue(map['type'])?.toLowerCase().trim();
+      if (type == null || !const {'mixed', 'tun', 'tproxy', 'redirect'}.contains(type)) continue;
+      map['sniff'] = true;
+      map['sniff_override_destination'] = true;
+      map['sniff_timeout'] = '300ms';
+      map['domain_strategy'] = LockedCoreConfig.dnsStrategy;
+    }
   }
 
   static void _ensureDnsHijackRouteRule(List<Object?> rules) {
@@ -1019,6 +1015,12 @@ class FinalConfigGuard with InfraLogger {
       return protocol.any((item) => item?.toString().toLowerCase() == 'dns');
     }
     return protocol?.toString().toLowerCase() == 'dns';
+  }
+
+  static bool _isSniffActionRule(Object? value) {
+    final map = _mapValue(value);
+    if (map == null) return false;
+    return _stringValue(map['action'])?.toLowerCase().trim() == 'sniff';
   }
 
   static bool _isDefaultBlockOrDirectRule(Object? value) {
