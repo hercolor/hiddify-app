@@ -739,21 +739,37 @@ class FinalConfigGuard with InfraLogger {
 
     final rules = _listValue(route['rules']) ?? <Object?>[];
     _ensureDnsHijackRouteRule(rules);
+    _ensureSniffRouteRule(rules);
     _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct'});
-    _addRouteRuleIfMissing(rules, 'domain', {'domain': ClientRoutePolicy.cnBypassExactDomains, 'outbound': 'direct'});
-    _addRouteRuleIfMissing(rules, 'domain_suffix', {
-      'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes,
-      'outbound': 'direct',
-    });
-    _addRouteRuleIfMissing(rules, 'domain_keyword', {
-      'domain_keyword': ClientRoutePolicy.cnBypassDomainKeywords,
-      'outbound': 'direct',
-    });
+    _ensureRouteRuleValues(rules, 'domain', ClientRoutePolicy.cnBypassExactDomains);
+    _ensureRouteRuleValues(rules, 'domain_suffix', ClientRoutePolicy.cnBypassDomainSuffixes);
+    _ensureRouteRuleValues(rules, 'domain_keyword', ClientRoutePolicy.cnBypassDomainKeywords);
     _addRouteRuleIfMissing(rules, 'rule_set', {
       'rule_set': ['geosite-cn', 'geoip-cn'],
       'outbound': 'direct',
     });
     route['rules'] = rules;
+  }
+
+  static void _ensureSniffRouteRule(List<Object?> rules) {
+    var firstSniffRule = <String, dynamic>{'action': 'sniff'};
+    var foundSniffRule = false;
+    final keptRules = <Object?>[];
+    for (final rule in rules) {
+      final map = _mapValue(rule);
+      if (map != null && _stringValue(map['action']) == 'sniff') {
+        if (!foundSniffRule) {
+          firstSniffRule = map;
+          foundSniffRule = true;
+        }
+        continue;
+      }
+      keptRules.add(rule);
+    }
+    rules
+      ..clear()
+      ..add(firstSniffRule)
+      ..addAll(keptRules);
   }
 
   static void _ensureRuleSetEntries(Map<String, dynamic> route) {
@@ -780,6 +796,16 @@ class FinalConfigGuard with InfraLogger {
     if (tag == null || tag.isEmpty) return;
     final exists = ruleSets.any((item) => _stringValue(_mapValue(item)?['tag']) == tag);
     if (!exists) ruleSets.add(entry);
+  }
+
+  static void _ensureRouteRuleValues(List<Object?> rules, String matcherKey, List<String> values) {
+    for (final item in rules) {
+      final map = _mapValue(item);
+      if (map == null || _stringValue(map['outbound']) != 'direct' || !map.containsKey(matcherKey)) continue;
+      map[matcherKey] = _mergedStringList(map[matcherKey], values);
+      return;
+    }
+    rules.add({matcherKey: values, 'outbound': 'direct'});
   }
 
   static void _addRouteRuleIfMissing(List<Object?> rules, String matcherKey, Map<String, Object> rule) {
@@ -820,15 +846,9 @@ class FinalConfigGuard with InfraLogger {
     dns['servers'] = servers;
 
     final rules = _listValue(dns['rules']) ?? <Object?>[];
-    _addDnsRuleIfMissing(rules, 'domain', {'domain': ClientRoutePolicy.cnBypassExactDomains, 'server': 'dns-local'});
-    _addDnsRuleIfMissing(rules, 'domain_suffix', {
-      'domain_suffix': ClientRoutePolicy.cnBypassDomainSuffixes,
-      'server': 'dns-local',
-    });
-    _addDnsRuleIfMissing(rules, 'domain_keyword', {
-      'domain_keyword': ClientRoutePolicy.cnBypassDomainKeywords,
-      'server': 'dns-local',
-    });
+    _ensureDnsRuleValues(rules, 'domain', ClientRoutePolicy.cnBypassExactDomains);
+    _ensureDnsRuleValues(rules, 'domain_suffix', ClientRoutePolicy.cnBypassDomainSuffixes);
+    _ensureDnsRuleValues(rules, 'domain_keyword', ClientRoutePolicy.cnBypassDomainKeywords);
     _addDnsRuleIfMissing(rules, 'rule_set', {
       'rule_set': ['geosite-cn'],
       'server': 'dns-local',
@@ -841,6 +861,16 @@ class FinalConfigGuard with InfraLogger {
     if (tag == null || tag.isEmpty) return;
     final exists = servers.any((item) => _stringValue(_mapValue(item)?['tag']) == tag);
     if (!exists) servers.add(server);
+  }
+
+  static void _ensureDnsRuleValues(List<Object?> rules, String matcherKey, List<String> values) {
+    for (final item in rules) {
+      final map = _mapValue(item);
+      if (map == null || _stringValue(map['server']) != 'dns-local' || !map.containsKey(matcherKey)) continue;
+      map[matcherKey] = _mergedStringList(map[matcherKey], values);
+      return;
+    }
+    rules.add({matcherKey: values, 'server': 'dns-local'});
   }
 
   static void _addDnsRuleIfMissing(List<Object?> rules, String matcherKey, Map<String, Object> rule) {
@@ -1204,6 +1234,26 @@ class FinalConfigGuard with InfraLogger {
     if (value is List<Object?>) return value;
     if (value is List) return value.cast<Object?>();
     return null;
+  }
+
+  static List<String> _mergedStringList(Object? current, List<String> requiredValues) {
+    final merged = <String>[];
+    void add(String value) {
+      final normalized = value.trim();
+      if (normalized.isNotEmpty && !merged.contains(normalized)) merged.add(normalized);
+    }
+
+    if (current is Iterable && current is! String) {
+      for (final item in current) {
+        add(item?.toString() ?? '');
+      }
+    } else if (current != null) {
+      add(current.toString());
+    }
+    for (final value in requiredValues) {
+      add(value);
+    }
+    return merged;
   }
 
   static String? _stringValue(Object? value) {

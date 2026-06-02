@@ -385,7 +385,8 @@ void main() {
       expect(dnsServer['detour'], '香港-IPEL');
       expect(localDnsServer['detour'], 'direct');
       expect(route['final'], '香港-IPEL');
-      expect(routeRules[1]['outbound'], '香港-IPEL');
+      expect(routeRules.first['action'], 'sniff');
+      expect(routeRules.firstWhere((rule) => rule['domain_suffix'] is List)['outbound'], '香港-IPEL');
       expect(routeRuleSets.map((item) => item['download_detour']), everyElement('香港-IPEL'));
       expect(result.forcedSelectorDefaults, 1);
       expect(result.forcedSelectedOutboundReferences, 7);
@@ -521,9 +522,11 @@ void main() {
       expect(dnsRules, hasLength(5));
       expect(dnsRules.first['outbound'], ['any']);
       expect(dnsRules.first['query_type'], ['A']);
-      expect(routeRules, hasLength(6));
-      expect(routeRules.first['protocol'], ['dns']);
-      expect(routeRules[1]['domain_suffix'], ['cn']);
+      expect(routeRules, hasLength(7));
+      expect(routeRules.first['action'], 'sniff');
+      expect(routeRules[1]['protocol'], ['dns']);
+      expect(routeRules[2]['domain_suffix'], contains('cn'));
+      expect(routeRules[2]['domain_suffix'], contains('api.skk.moe'));
       expect(routeRules.any((rule) => (rule['domain'] as List?)?.contains('ip138.com') == true), isTrue);
       expect(routeRules.any((rule) => rule['ip_is_private'] == true), isTrue);
       expect(routeRules.any((rule) => rule['domain_keyword'] is List), isTrue);
@@ -555,18 +558,19 @@ void main() {
       final dnsRules = (dns['rules'] as List).cast<Map>();
 
       expect(route['final'], 'proxy');
-      expect(routeRules, hasLength(6));
-      expect(routeRules[0]['protocol'], ['dns']);
-      expect(routeRules[0]['action'], 'hijack-dns');
-      expect(routeRules[0].containsKey('outbound'), isFalse);
-      expect(routeRules[1]['ip_is_private'], isTrue);
-      expect(routeRules[2]['domain'], contains('ip138.com'));
-      expect(routeRules[2]['domain'], contains('www.ip.cn'));
-      expect(routeRules[2]['outbound'], 'direct');
-      expect(routeRules[3]['domain_suffix'], contains('baidu.com'));
+      expect(routeRules, hasLength(7));
+      expect(routeRules[0]['action'], 'sniff');
+      expect(routeRules[1]['protocol'], ['dns']);
+      expect(routeRules[1]['action'], 'hijack-dns');
+      expect(routeRules[1].containsKey('outbound'), isFalse);
+      expect(routeRules[2]['ip_is_private'], isTrue);
+      expect(routeRules[3]['domain'], contains('ip138.com'));
+      expect(routeRules[3]['domain'], contains('www.ip.cn'));
       expect(routeRules[3]['outbound'], 'direct');
-      expect(routeRules[4]['domain_keyword'], contains('baidu'));
-      expect(routeRules[5]['rule_set'], ['geosite-cn', 'geoip-cn']);
+      expect(routeRules[4]['domain_suffix'], contains('baidu.com'));
+      expect(routeRules[4]['outbound'], 'direct');
+      expect(routeRules[5]['domain_keyword'], contains('baidu'));
+      expect(routeRules[6]['rule_set'], ['geosite-cn', 'geoip-cn']);
       final ruleSets = (route['rule_set'] as List).cast<Map>();
       expect(ruleSets.map((item) => item['url']), everyElement(contains('/rules/sing-box/')));
       expect(dnsServers.any((item) => item['tag'] == 'dns-local' && item['detour'] == 'direct'), isTrue);
@@ -576,6 +580,63 @@ void main() {
       expect(dnsRules.any((item) => (item['domain_suffix'] as List?)?.contains('ip138.com') == true), isTrue);
       expect(dnsRules.any((item) => (item['rule_set'] as List?)?.contains('geosite-cn') == true), isTrue);
       expect(outbounds.any((item) => item['tag'] == 'direct' && item['type'] == 'direct'), isTrue);
+    });
+
+    test('merges diagnostic test domains into existing direct rules', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+            {'tag': 'dns-local', 'address': 'https://223.5.5.5/dns-query', 'detour': 'direct'},
+          ],
+          'rules': [
+            {
+              'domain': ['ip138.com'],
+              'server': 'dns-local',
+            },
+            {
+              'domain_suffix': ['ip.cn'],
+              'server': 'dns-local',
+            },
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {
+          'rules': [
+            {
+              'domain': ['ip138.com'],
+              'outbound': 'direct',
+            },
+            {
+              'domain_suffix': ['ip.cn'],
+              'outbound': 'direct',
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+      final dnsRules = ((sanitized['dns'] as Map)['rules'] as List).cast<Map>();
+      final routeDomainRule = routeRules.firstWhere((rule) => rule['domain'] is List);
+      final routeSuffixRule = routeRules.firstWhere((rule) => rule['domain_suffix'] is List);
+      final dnsDomainRule = dnsRules.firstWhere((rule) => rule['domain'] is List);
+      final dnsSuffixRule = dnsRules.firstWhere((rule) => rule['domain_suffix'] is List);
+
+      expect(routeDomainRule['domain'], contains('2026.ip138.com'));
+      expect(routeDomainRule['domain'], contains('my.ip.cn'));
+      expect(routeDomainRule['domain'], contains('ipv4-ip.api.skk.moe'));
+      expect(routeDomainRule['domain'], contains('ip.api.skk.moe'));
+      expect(routeSuffixRule['domain_suffix'], contains('api.skk.moe'));
+      expect(dnsDomainRule['domain'], contains('2026.ip138.com'));
+      expect(dnsDomainRule['domain'], contains('ip.api.skk.moe'));
+      expect(dnsSuffixRule['domain_suffix'], contains('api.skk.moe'));
     });
 
     test('does not inject smart direct rules in global route mode', () {
@@ -619,7 +680,8 @@ void main() {
       expect(route['final'], LockedCoreConfig.routeFinal);
       expect(route['rules'], isNotEmpty);
       final routeRules = (route['rules'] as List).cast<Map>();
-      expect(routeRules.first['action'], 'hijack-dns');
+      expect(routeRules[0]['action'], 'sniff');
+      expect(routeRules[1]['action'], 'hijack-dns');
       expect(dns['reverse_mapping'], isTrue);
       expect(route['default_domain_resolver'], 'dns-local');
       expect(jsonEncode(route['rules']), contains('domain_suffix'));
