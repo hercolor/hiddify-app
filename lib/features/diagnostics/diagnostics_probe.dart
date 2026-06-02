@@ -6,25 +6,69 @@ import 'package:hiddify/core/http_client/dio_http_client.dart';
 import 'package:hiddify/core/http_client/http_client_provider.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
+import 'package:hiddify/features/profile/data/final_config_guard.dart';
+import 'package:hiddify/features/profile/data/profile_data_providers.dart';
+import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/proxy/data/client_node_store.dart';
+import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final diagnosticsProbeProvider = StateNotifierProvider<DiagnosticsProbeNotifier, AsyncValue<List<DiagProbeResult>>>(
-  (ref) => DiagnosticsProbeNotifier(ref.read(httpClientProvider)),
+  (ref) => DiagnosticsProbeNotifier(ref),
 );
 
 class DiagnosticsProbeNotifier extends StateNotifier<AsyncValue<List<DiagProbeResult>>> {
-  DiagnosticsProbeNotifier(this._client) : super(const AsyncData([]));
+  DiagnosticsProbeNotifier(this._ref) : super(const AsyncData([]));
 
-  final DioHttpClient _client;
+  final Ref _ref;
+
+  DioHttpClient get _client => _ref.read(httpClientProvider);
 
   Future<List<DiagProbeResult>> run() async {
     state = const AsyncLoading();
+    await _emitActiveFinalConfigSnapshot();
     final results = await DiagnosticsProbeService(_client).run();
     state = AsyncData(results);
     for (final result in results) {
       DiagnosticEventBuffer.addSafe(result.toDiagnosticLine());
     }
     return results;
+  }
+
+  Future<void> _emitActiveFinalConfigSnapshot() async {
+    try {
+      final profile = await _ref.read(activeProfileProvider.future);
+      if (profile == null) {
+        DiagnosticEventBuffer.add('probe final config: no active profile');
+        return;
+      }
+      final file = _ref.read(profilePathResolverProvider).file(profile.id);
+      if (!await file.exists()) {
+        DiagnosticEventBuffer.add('probe final config: missing file profile=${profile.name}');
+        return;
+      }
+      final selection =
+          _ref.read(clientNodeSelectionProvider).valueOrNull ??
+          await _ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(
+        await file.readAsString(),
+        globalRouteMode: _ref.read(ConfigOptions.globalRouteMode),
+        selectedOutboundTag: selection.selectedNode?.id,
+      );
+      DiagnosticEventBuffer.add(
+        'probe final config check: parsedJson=${result.parsedJson}, sanitized=${result.changed}, '
+        'routeFinal=${result.routeFinal}, routeRules=${result.routeRuleCount}, '
+        'routeDefaultDomainResolver=${result.routeDefaultDomainResolver}, dnsReverseMapping=${result.dnsReverseMapping}, '
+        'dnsServers=${result.dnsServerCount}, coreLogLevel=${result.coreLogLevel}, fakeIpAfter=${result.fakeIpAfter}',
+      );
+      DiagnosticEventBuffer.add('probe final config route rules: ${result.routeRuleSummary.join(' ; ')}');
+      DiagnosticEventBuffer.add('probe final config dns servers: ${result.dnsServerSummary.join(' ; ')}');
+      DiagnosticEventBuffer.add('probe final config dns rules: ${result.dnsRuleSummary.join(' ; ')}');
+      DiagnosticEventBuffer.add('probe final config rule sets: ${result.routeRuleSetSummary.join(' ; ')}');
+      DiagnosticEventBuffer.add('probe final config outbounds: ${result.outboundTags.join(' | ')}');
+    } catch (error) {
+      DiagnosticEventBuffer.add('probe final config error=$error');
+    }
   }
 }
 
