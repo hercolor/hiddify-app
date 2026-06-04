@@ -650,6 +650,46 @@ void main() {
       expect(dnsSuffixRule['domain_suffix'], contains('api.skk.moe'));
     });
 
+    test('keeps mixed inbound domain visible for route rule matching', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+        'inbounds': [
+          {
+            'type': 'mixed',
+            'tag': 'mixed-in',
+            'listen': '127.0.0.1',
+            'listen_port': 12334,
+            'domain_strategy': 'ipv4_only',
+          },
+          {'type': 'tun', 'tag': 'tun-in'},
+        ],
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final inbounds = (sanitized['inbounds'] as List).cast<Map>();
+      final mixed = inbounds.firstWhere((item) => item['type'] == 'mixed');
+      final tun = inbounds.firstWhere((item) => item['type'] == 'tun');
+
+      expect(mixed['sniff'], isTrue);
+      expect(mixed['sniff_override_destination'], isTrue);
+      expect(mixed['sniff_timeout'], '300ms');
+      expect(mixed.containsKey('domain_strategy'), isFalse);
+      expect(tun['domain_strategy'], LockedCoreConfig.dnsStrategy);
+      expect(result.inboundSummary.join(' ; '), contains('type=mixed'));
+      expect(result.inboundSummary.join(' ; '), isNot(contains('type=mixed domain_strategy')));
+    });
+
     test('does not inject smart direct rules in global route mode', () {
       final content = jsonEncode({
         'outbounds': [

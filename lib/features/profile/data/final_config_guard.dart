@@ -40,6 +40,7 @@ class FinalConfigGuardResult {
     required this.dnsServerSummary,
     required this.dnsRuleSummary,
     required this.routeRuleSetSummary,
+    required this.inboundSummary,
     this.sanitizedContent,
   });
 
@@ -76,6 +77,7 @@ class FinalConfigGuardResult {
   final List<String> dnsServerSummary;
   final List<String> dnsRuleSummary;
   final List<String> routeRuleSetSummary;
+  final List<String> inboundSummary;
   final String? sanitizedContent;
 
   bool get hasResidualFakeIp => fakeIpAfter;
@@ -151,6 +153,7 @@ class FinalConfigGuard with InfraLogger {
         dnsServerSummary: const [],
         dnsRuleSummary: const [],
         routeRuleSetSummary: const [],
+        inboundSummary: const [],
       );
     }
 
@@ -189,6 +192,7 @@ class FinalConfigGuard with InfraLogger {
         dnsServerSummary: const [],
         dnsRuleSummary: const [],
         routeRuleSetSummary: const [],
+        inboundSummary: const [],
       );
     }
 
@@ -246,6 +250,7 @@ class FinalConfigGuard with InfraLogger {
       dnsServerSummary: _summarizeDnsServers(_listValue(_mapValue(root['dns'])?['servers'])),
       dnsRuleSummary: _summarizeRules(_listValue(_mapValue(root['dns'])?['rules'])),
       routeRuleSetSummary: _summarizeRuleSets(_listValue(_mapValue(root['route'])?['rule_set'])),
+      inboundSummary: _summarizeInbounds(_listValue(root['inbounds'])),
       sanitizedContent: changed ? encoder!.convert(root) : null,
     );
   }
@@ -287,6 +292,7 @@ class FinalConfigGuard with InfraLogger {
       'coreLogLevel=${_safeLogValue(result.coreLogLevel)}, '
       'nodeCount=${result.outboundTags.length}, '
       'outboundTags=[$tags], '
+      'inbounds=[${result.inboundSummary.join(';')}], '
       'coreConfigVersion=${LockedCoreConfig.schemaVersion}',
     );
     if (result.hasResidualFakeIp) {
@@ -812,7 +818,11 @@ class FinalConfigGuard with InfraLogger {
       map['sniff'] = true;
       map['sniff_override_destination'] = true;
       map['sniff_timeout'] = '300ms';
-      map['domain_strategy'] = LockedCoreConfig.dnsStrategy;
+      if (type == 'mixed') {
+        map.remove('domain_strategy');
+      } else {
+        map['domain_strategy'] = LockedCoreConfig.dnsStrategy;
+      }
     }
   }
 
@@ -1197,6 +1207,34 @@ class FinalConfigGuard with InfraLogger {
           final map = _mapValue(entry.value);
           if (map == null) return '$index:<non-map>';
           return '#$index tag=${_summarizeValue(map['tag'])} url=${_summarizeAddress(map['url'])} detour=${_summarizeValue(map['download_detour'])}';
+        })
+        .toList(growable: false);
+  }
+
+  static List<String> _summarizeInbounds(List<Object?>? inbounds) {
+    if (inbounds == null) return const [];
+    return inbounds
+        .asMap()
+        .entries
+        .map((entry) {
+          final index = entry.key;
+          final map = _mapValue(entry.value);
+          if (map == null) return '$index:<non-map>';
+          final parts = <String>['#$index'];
+          for (final key in const [
+            'type',
+            'tag',
+            'listen',
+            'listen_port',
+            'sniff',
+            'sniff_override_destination',
+            'sniff_timeout',
+            'domain_strategy',
+          ]) {
+            if (!map.containsKey(key)) continue;
+            parts.add('$key=${_summarizeValue(map[key])}');
+          }
+          return parts.join(' ');
         })
         .toList(growable: false);
   }

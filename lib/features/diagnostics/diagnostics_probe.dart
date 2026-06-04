@@ -66,6 +66,7 @@ class DiagnosticsProbeNotifier extends StateNotifier<AsyncValue<List<DiagProbeRe
       DiagnosticEventBuffer.add('probe final config dns servers: ${result.dnsServerSummary.join(' ; ')}');
       DiagnosticEventBuffer.add('probe final config dns rules: ${result.dnsRuleSummary.join(' ; ')}');
       DiagnosticEventBuffer.add('probe final config rule sets: ${result.routeRuleSetSummary.join(' ; ')}');
+      DiagnosticEventBuffer.add('probe final config inbounds: ${result.inboundSummary.join(' ; ')}');
       DiagnosticEventBuffer.add('probe final config outbounds: ${result.outboundTags.join(' | ')}');
     } catch (error) {
       DiagnosticEventBuffer.add('probe final config error=$error');
