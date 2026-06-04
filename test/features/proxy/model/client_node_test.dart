@@ -81,5 +81,33 @@ proxy-groups:
       expect(selection.normalized().effectiveSelectedNodeId, 'hk-01');
       expect(selection.normalized().selectedNode?.name, '香港-01');
     });
+
+    test('merges runtime nodes without dropping subscription nodes', () {
+      const selection = ClientNodeSelection(
+        nodes: [
+          ClientNode(id: '香港-IPEL', name: '香港-IPEL'),
+          ClientNode(id: '日本-02', name: '日本-02'),
+        ],
+        selectedNodeId: '香港-IPEL',
+        profileName: '4376',
+      );
+
+      final merged = selection.mergeRuntimeNodes([const ClientNode(id: '香港-IPEL', name: '香港-IPEL', delay: 123)]);
+
+      expect(merged.nodes.map((node) => node.id), ['香港-IPEL', '日本-02']);
+      expect(merged.nodes.first.delay, 123);
+      expect(merged.nodes.last.delay, isNull);
+      expect(merged.effectiveSelectedNodeId, '香港-IPEL');
+      expect(merged.profileName, '4376');
+    });
+
+    test('uses runtime nodes when no subscription nodes are cached yet', () {
+      const selection = ClientNodeSelection.empty();
+
+      final merged = selection.mergeRuntimeNodes([const ClientNode(id: '香港-IPEL', name: '香港-IPEL', delay: 123)]);
+
+      expect(merged.nodes.map((node) => node.id), ['香港-IPEL']);
+      expect(merged.effectiveSelectedNodeId, '香港-IPEL');
+    });
   });
 }

@@ -100,13 +100,17 @@ class ClientNodeSelectionNotifier extends StateNotifier<AsyncValue<ClientNodeSel
   }
 
   Future<void> cacheFromOutboundGroup(OutboundGroup group) async {
-    final nodes = ClientNodeParser.fromOutboundGroup(group);
-    if (nodes.isEmpty) return;
+    final runtimeNodes = ClientNodeParser.fromOutboundGroup(group);
+    if (runtimeNodes.isEmpty) return;
     // The core group selection can be changed by urltest/selector defaults while
     // profiles are refreshed or route mode is toggled. Preserve the user-visible
-    // selected node stored by the app; only fall back to the first node when the
-    // previous selection no longer exists.
-    await cacheNodes(nodes);
+    // selected node and the subscription node list; only merge runtime delay or
+    // extra visible core nodes instead of replacing the subscription cache.
+    final current = state.valueOrNull ?? await _ref.read(clientNodeStoreProvider).read();
+    final selection = current.mergeRuntimeNodes(runtimeNodes);
+    await _ref.read(clientNodeStoreProvider).save(selection);
+    state = AsyncData(selection);
+    _logSelection('client nodes merged from core group', selection);
   }
 
   Future<void> selectNode(String nodeId) async {

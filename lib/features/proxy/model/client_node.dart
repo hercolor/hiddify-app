@@ -72,6 +72,39 @@ class ClientNodeSelection {
         profileName: profileName ?? this.profileName,
       ).normalized();
 
+  ClientNodeSelection mergeRuntimeNodes(List<ClientNode> runtimeNodes) {
+    final current = normalized();
+    final runtime = ClientNodeSelection(nodes: runtimeNodes).normalized();
+    if (runtime.nodes.isEmpty) return current;
+    if (current.nodes.isEmpty) {
+      return ClientNodeSelection(
+        nodes: runtime.nodes,
+        selectedNodeId: selectedNodeId,
+        profileName: profileName,
+      ).normalized();
+    }
+
+    final runtimeById = <String, ClientNode>{for (final node in runtime.nodes) node.id.trim(): node};
+    final seen = <String>{};
+    final merged = <ClientNode>[];
+    for (final node in current.nodes) {
+      final id = node.id.trim();
+      seen.add(id);
+      final runtimeNode = runtimeById[id];
+      merged.add(
+        runtimeNode == null ? node : ClientNode(id: node.id, name: node.name, delay: runtimeNode.delay ?? node.delay),
+      );
+    }
+    for (final runtimeNode in runtime.nodes) {
+      if (seen.add(runtimeNode.id.trim())) merged.add(runtimeNode);
+    }
+    return ClientNodeSelection(
+      nodes: merged,
+      selectedNodeId: current.selectedNodeId,
+      profileName: current.profileName,
+    ).normalized();
+  }
+
   String encodeNodes() => jsonEncode(nodes.map((node) => node.toJson()).toList());
 
   static List<ClientNode> decodeNodes(String? raw) {
