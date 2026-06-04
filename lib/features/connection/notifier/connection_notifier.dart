@@ -472,6 +472,12 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         if (previousStatus is Connected || previousStatus is Disconnecting) _showInfo('4376 已断开');
       } else if (wasRunning) {
         _scheduleAutoReconnect();
+      } else if (ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+        userRequestedConnection: _userRequestedConnection,
+        manualDisconnecting: _manualDisconnecting,
+        current: _clientState,
+      )) {
+        DiagnosticEventBuffer.addSafe('connection state preserved reconnecting during core disconnected event');
       } else {
         _setClientState(_computeClientState(), reason: 'core disconnected');
       }

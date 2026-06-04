@@ -53,6 +53,41 @@ void main() {
       expect(shouldPreserve, isFalse);
     });
 
+    test('preserves reconnecting state during repeated core disconnected events', () {
+      expect(
+        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+          userRequestedConnection: true,
+          manualDisconnecting: false,
+          current: const ClientConnectionState.reconnecting(),
+        ),
+        isTrue,
+      );
+      expect(
+        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+          userRequestedConnection: false,
+          manualDisconnecting: false,
+          current: const ClientConnectionState.reconnecting(),
+        ),
+        isFalse,
+      );
+      expect(
+        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+          userRequestedConnection: true,
+          manualDisconnecting: true,
+          current: const ClientConnectionState.reconnecting(),
+        ),
+        isFalse,
+      );
+      expect(
+        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+          userRequestedConnection: true,
+          manualDisconnecting: false,
+          current: const ClientConnectionState.disconnected(),
+        ),
+        isFalse,
+      );
+    });
+
     test('suppresses disconnect failure only for manual or already-disconnecting paths', () {
       expect(
         ClientConnectionStatePolicy.shouldSuppressDisconnectFailure(manualDisconnecting: true, wasDisconnecting: false),
