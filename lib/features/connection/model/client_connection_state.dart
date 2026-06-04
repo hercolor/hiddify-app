@@ -94,7 +94,7 @@ abstract final class ClientConnectionStatePolicy {
         computed.phase == ClientConnectionPhase.failed;
   }
 
-  static bool shouldPreserveReconnectOnCoreDisconnected({
+  static bool shouldPreserveReconnectDuringCoreRestart({
     required bool userRequestedConnection,
     required bool manualDisconnecting,
     required ClientConnectionState current,

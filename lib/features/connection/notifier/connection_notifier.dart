@@ -41,6 +41,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   bool _vpnPermissionRequestedForAttempt = false;
   bool _vpnPermissionStartFallbackScheduled = false;
   bool _autoReconnectRunning = false;
+  bool _suppressActiveProfileReconnect = false;
   int _reconnectAttempts = 0;
   int _startAttemptId = 0;
   ConnectionStatus _lastCoreStatus = const ConnectionStatus.disconnected();
@@ -76,6 +77,11 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       if (previous == null) return;
       final shouldReconnect = next == null || previous.id != next.id;
       if (shouldReconnect) {
+        if (_suppressActiveProfileReconnect) {
+          DiagnosticEventBuffer.addSafe('active profile change ignored during node switch');
+          loggy.info('active profile change ignored during node switch');
+          return;
+        }
         await reconnect(next);
       }
     });
@@ -135,6 +141,57 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
           .mapLeft(_handleConnectFailure)
           .run();
     }
+  }
+
+  Future<void> switchSelectedNode(String nodeId) async {
+    final trimmedNodeId = nodeId.trim();
+    if (trimmedNodeId.isEmpty) return;
+
+    final previousSelection =
+        ref.read(clientNodeSelectionProvider).valueOrNull ??
+        await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
+    final alreadySelected = previousSelection.effectiveSelectedNodeId == trimmedNodeId;
+    if (alreadySelected) return;
+
+    final wasConnected = _lastCoreStatus is Connected || _clientState.phase == ClientConnectionPhase.connected;
+    await ref.read(clientNodeSelectionProvider.notifier).selectNode(trimmedNodeId);
+    DiagnosticEventBuffer.addSafe(
+      'node switch selected cached node, connected=$wasConnected, selectedNodeName=${_selectedNodeNameSync()}',
+    );
+    if (!wasConnected) return;
+
+    _startAttemptId++;
+    _userRequestedConnection = true;
+    _manualDisconnecting = false;
+    _autoReconnectRunning = false;
+    _reconnectAttempts = 0;
+    await ref.read(Preferences.startedByUser.notifier).update(true);
+    _setClientState(const ClientConnectionState.reconnecting(), reason: 'node switch requested');
+
+    var synced = false;
+    _suppressActiveProfileReconnect = true;
+    try {
+      synced = await ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
+    } finally {
+      _suppressActiveProfileReconnect = false;
+    }
+    DiagnosticEventBuffer.addSafe('node switch profile restore completed: synced=$synced');
+
+    await ref.read(clientNodeSelectionProvider.notifier).selectNode(trimmedNodeId);
+    final profile = await ref
+        .read(activeProfileProvider.future)
+        .timeout(const Duration(seconds: 3), onTimeout: () => null);
+    if (profile == null) {
+      await _fail(ConnectionErrorMapper.noNodes, reason: 'node switch no active profile');
+      return;
+    }
+
+    loggy.info('node switch reconnecting selectedNodeName=${_selectedNodeNameSync()}');
+    DiagnosticEventBuffer.addSafe('node switch reconnect requested selectedNodeName=${_selectedNodeNameSync()}');
+    await _connectionRepo
+        .reconnect(profile, ref.read(Preferences.disableMemoryLimit))
+        .mapLeft((err) => _handleConnectFailure(err, reconnecting: true))
+        .run();
   }
 
   Future<void> restartForConfigChange(ProfileEntity? profile) async {
@@ -433,7 +490,15 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _vpnPermissionStartFallbackScheduled = false;
       _setClientState(const ClientConnectionState.connecting(), reason: 'core connecting');
     } else if (event is Disconnecting) {
-      _setClientState(const ClientConnectionState.stopping(), reason: 'core disconnecting');
+      if (ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
+        userRequestedConnection: _userRequestedConnection,
+        manualDisconnecting: _manualDisconnecting,
+        current: _clientState,
+      )) {
+        DiagnosticEventBuffer.addSafe('connection state preserved reconnecting during core disconnecting event');
+      } else {
+        _setClientState(const ClientConnectionState.stopping(), reason: 'core disconnecting');
+      }
     } else if (event case Disconnected(connectionFailure: final failure?)) {
       final message = ConnectionErrorMapper.fromFailure(failure);
       if (ClientConnectionStatePolicy.shouldSuppressDisconnectFailure(
@@ -472,7 +537,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         if (previousStatus is Connected || previousStatus is Disconnecting) _showInfo('4376 已断开');
       } else if (wasRunning) {
         _scheduleAutoReconnect();
-      } else if (ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+      } else if (ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
         userRequestedConnection: _userRequestedConnection,
         manualDisconnecting: _manualDisconnecting,
         current: _clientState,

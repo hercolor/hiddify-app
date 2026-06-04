@@ -7,10 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
-import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/overview/desktop_nodes_page.dart';
@@ -48,9 +46,20 @@ class ProxiesOverviewPage extends HookConsumerWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: TextField(
-                  onChanged: (value) => ref.read(_nodeSearchProvider.notifier).state = value,
-                  decoration: const InputDecoration(hintText: '搜索国家或地区...', prefixIcon: Icon(Icons.search_rounded)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        onChanged: (value) => ref.read(_nodeSearchProvider.notifier).state = value,
+                        decoration: const InputDecoration(
+                          hintText: '搜索国家或地区...',
+                          prefixIcon: Icon(Icons.search_rounded),
+                        ),
+                      ),
+                    ),
+                    const Gap(10),
+                    _MobileSpeedButton(groupTag: proxies.valueOrNull?.tag),
+                  ],
                 ),
               ),
               Expanded(
@@ -69,6 +78,31 @@ class ProxiesOverviewPage extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MobileSpeedButton extends ConsumerWidget {
+  const _MobileSpeedButton({required this.groupTag});
+
+  final String? groupTag;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canTest = groupTag != null && groupTag!.isNotEmpty;
+    return FilledButton.icon(
+      onPressed: canTest
+          ? () async {
+              try {
+                ref.read(inAppNotificationControllerProvider).showInfoToast('正在测试所有节点延迟');
+                await ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(groupTag!);
+              } catch (_) {
+                ref.read(inAppNotificationControllerProvider).showErrorToast('测速失败');
+              }
+            }
+          : null,
+      icon: const Icon(Icons.speed_rounded, size: 18),
+      label: const Text('测速'),
     );
   }
 }
@@ -230,19 +264,11 @@ Future<void> _selectCachedNode(WidgetRef ref, String nodeId, bool selected) asyn
   final state = ref.read(clientConnectionStateProvider);
   final wasConnected = state.phase == ClientConnectionPhase.connected;
 
-  await ref.read(clientNodeSelectionProvider.notifier).selectNode(nodeId);
   if (wasConnected) {
     ref.read(inAppNotificationControllerProvider).showInfoToast('正在切换节点并重新连接');
-    unawaited(_reconnectSelectedNode(ref, nodeId));
   }
-}
-
-Future<void> _reconnectSelectedNode(WidgetRef ref, String nodeId) async {
   try {
-    await ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
-    await ref.read(clientNodeSelectionProvider.notifier).selectNode(nodeId);
-    final profile = await ref.read(activeProfileProvider.future);
-    await ref.read(connectionNotifierProvider.notifier).reconnect(profile);
+    await ref.read(connectionNotifierProvider.notifier).switchSelectedNode(nodeId);
   } catch (_) {
     ref.read(inAppNotificationControllerProvider).showErrorToast('切换节点失败，请稍后重试');
   }

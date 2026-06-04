@@ -7,10 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
-import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
@@ -363,19 +361,11 @@ Future<void> _selectCachedNode(WidgetRef ref, String nodeId, bool selected) asyn
   final state = ref.read(clientConnectionStateProvider);
   final wasConnected = state.phase == ClientConnectionPhase.connected;
 
-  await ref.read(clientNodeSelectionProvider.notifier).selectNode(nodeId);
   if (wasConnected) {
     ref.read(inAppNotificationControllerProvider).showInfoToast('正在切换节点并重新连接');
-    unawaited(_reconnectSelectedNode(ref, nodeId));
   }
-}
-
-Future<void> _reconnectSelectedNode(WidgetRef ref, String nodeId) async {
   try {
-    await ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
-    await ref.read(clientNodeSelectionProvider.notifier).selectNode(nodeId);
-    final profile = await ref.read(activeProfileProvider.future);
-    await ref.read(connectionNotifierProvider.notifier).reconnect(profile);
+    await ref.read(connectionNotifierProvider.notifier).switchSelectedNode(nodeId);
   } catch (_) {
     ref.read(inAppNotificationControllerProvider).showErrorToast('切换节点失败，请稍后重试');
   }

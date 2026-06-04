@@ -611,8 +611,6 @@ class FinalConfigGuard with InfraLogger {
     if (outbounds == null || outbounds.isEmpty) return;
     if (!_hasOutboundTag(outbounds, selected)) return;
 
-    _pruneUnselectedProxyOutbounds(root, selected, stats);
-
     final selector =
         _findOutboundByTag(outbounds, LockedCoreConfig.outboundTag) ??
         _findOutboundByTag(outbounds, '节点选择') ??
@@ -629,71 +627,6 @@ class FinalConfigGuard with InfraLogger {
     _lockDnsDetours(root['dns'], selected, stats);
     _lockRouteOutbounds(root['route'], selected, stats);
   }
-
-  static void _pruneUnselectedProxyOutbounds(Map<String, dynamic> root, String selected, _SanitizeStats stats) {
-    final outbounds = _listValue(root['outbounds']);
-    if (outbounds == null || outbounds.isEmpty) return;
-
-    final removedTags = <String>{};
-    final keptOutbounds = <Object?>[];
-    for (final outbound in outbounds) {
-      final map = _mapValue(outbound);
-      final tag = _stringValue(map?['tag']);
-      if (map != null && tag != null && tag != selected && _isLeafProxyOutbound(map)) {
-        removedTags.add(tag);
-        stats.removedUnselectedOutbounds += 1;
-        continue;
-      }
-      keptOutbounds.add(outbound);
-    }
-    if (removedTags.isNotEmpty) {
-      root['outbounds'] = keptOutbounds;
-    }
-
-    for (final outbound in keptOutbounds) {
-      final map = _mapValue(outbound);
-      if (map == null) continue;
-      final type = _stringValue(map['type'])?.toLowerCase().trim() ?? '';
-      if (type != 'selector' && type != 'urltest' && type != 'url-test') continue;
-      final choices = _listValue(map['outbounds']);
-      if (choices == null || choices.isEmpty) continue;
-      if (choices.length != 1 || choices.first?.toString() != selected) {
-        map['outbounds'] = [selected];
-        stats.forcedSelectedOutboundReferences += 1;
-      }
-      if (type == 'selector' && _stringValue(map['default']) != selected) {
-        map['default'] = selected;
-        stats.forcedSelectorDefaults += 1;
-      } else if ((type == 'urltest' || type == 'url-test') && map.containsKey('default')) {
-        map.remove('default');
-      }
-    }
-  }
-
-  static bool _isLeafProxyOutbound(Map<String, dynamic> outbound) {
-    final tag = _stringValue(outbound['tag'])?.toLowerCase().trim();
-    final type = _stringValue(outbound['type'])?.toLowerCase().trim();
-    if (tag == null || tag.isEmpty || type == null || type.isEmpty) return false;
-    const nonLeafProxyTypes = {'selector', 'urltest', 'url-test', 'direct', 'block', 'dns'};
-    if (nonLeafProxyTypes.contains(type)) return false;
-    return !_isSystemOutboundTag(tag);
-  }
-
-  static bool _isSystemOutboundTag(String tag) => const {
-    'direct',
-    'block',
-    'dns',
-    'dns-out',
-    'dns-remote',
-    'dns-direct',
-    'proxy',
-    'select',
-    'selector',
-    'auto',
-    'urltest',
-    'url-test',
-    'bypass',
-  }.contains(tag.toLowerCase().trim());
 
   static void _lockDnsDetours(Object? value, String selected, _SanitizeStats stats) {
     final dns = _mapValue(value);

@@ -53,9 +53,9 @@ void main() {
       expect(shouldPreserve, isFalse);
     });
 
-    test('preserves reconnecting state during repeated core disconnected events', () {
+    test('preserves reconnecting state during core restart events', () {
       expect(
-        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+        ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
           userRequestedConnection: true,
           manualDisconnecting: false,
           current: const ClientConnectionState.reconnecting(),
@@ -63,7 +63,7 @@ void main() {
         isTrue,
       );
       expect(
-        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+        ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
           userRequestedConnection: false,
           manualDisconnecting: false,
           current: const ClientConnectionState.reconnecting(),
@@ -71,7 +71,7 @@ void main() {
         isFalse,
       );
       expect(
-        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+        ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
           userRequestedConnection: true,
           manualDisconnecting: true,
           current: const ClientConnectionState.reconnecting(),
@@ -79,7 +79,7 @@ void main() {
         isFalse,
       );
       expect(
-        ClientConnectionStatePolicy.shouldPreserveReconnectOnCoreDisconnected(
+        ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
           userRequestedConnection: true,
           manualDisconnecting: false,
           current: const ClientConnectionState.disconnected(),

@@ -397,11 +397,11 @@ void main() {
       expect(routeRules.firstWhere((rule) => rule['domain_suffix'] is List)['outbound'], '香港-IPEL');
       expect(routeRuleSets.map((item) => item['download_detour']), everyElement('香港-IPEL'));
       expect(result.forcedSelectorDefaults, 1);
-      expect(result.forcedSelectedOutboundReferences, 7);
-      expect(result.removedUnselectedOutbounds, 1);
+      expect(result.forcedSelectedOutboundReferences, 5);
+      expect(result.removedUnselectedOutbounds, 0);
     });
 
-    test('prunes unselected proxy outbounds when a node is selected', () {
+    test('keeps unselected proxy outbounds available when a node is selected', () {
       final content = jsonEncode({
         'dns': {
           'servers': [
@@ -443,13 +443,11 @@ void main() {
       final selector = outbounds.firstWhere((item) => item['tag'] == 'proxy');
       final auto = outbounds.firstWhere((item) => item['tag'] == 'auto');
 
-      expect(outboundTags, containsAll(['proxy', 'auto', '香港-IPEL', 'direct', 'block']));
-      expect(outboundTags, isNot(contains('美国-IPEL')));
+      expect(outboundTags, containsAll(['proxy', 'auto', '香港-IPEL', '美国-IPEL', 'direct', 'block']));
       expect(selector['default'], '香港-IPEL');
-      expect(selector['outbounds'], ['香港-IPEL']);
-      expect(auto.containsKey('default'), isFalse);
-      expect(auto['outbounds'], ['香港-IPEL']);
-      expect(result.removedUnselectedOutbounds, 1);
+      expect(selector['outbounds'], ['auto', '香港-IPEL', '美国-IPEL']);
+      expect(auto['outbounds'], ['香港-IPEL', '美国-IPEL']);
+      expect(result.removedUnselectedOutbounds, 0);
     });
 
     test('keeps all proxy outbounds when selected outbound locking is disabled', () {
