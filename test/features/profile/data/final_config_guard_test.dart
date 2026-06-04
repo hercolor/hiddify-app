@@ -690,6 +690,64 @@ void main() {
       expect(result.inboundSummary.join(' ; '), isNot(contains('type=mixed domain_strategy')));
     });
 
+    test('does not synthesize Android raw inbounds unless requested', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+
+      expect(sanitized.containsKey('inbounds'), isFalse);
+      expect(result.inboundSummary, isEmpty);
+    });
+
+    test('synthesizes Android raw mixed and tun inbounds for runtime start', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, ensureAndroidRawInbounds: true);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final inbounds = (sanitized['inbounds'] as List).cast<Map>();
+      final mixed = inbounds.firstWhere((item) => item['type'] == 'mixed');
+      final tun = inbounds.firstWhere((item) => item['type'] == 'tun');
+
+      expect(mixed['listen'], '127.0.0.1');
+      expect(mixed['listen_port'], LockedCoreConfig.mixedPort);
+      expect(mixed['sniff'], isTrue);
+      expect(mixed['sniff_override_destination'], isTrue);
+      expect(mixed.containsKey('domain_strategy'), isFalse);
+      expect(tun['address'], contains('172.19.0.1/30'));
+      expect(tun['mtu'], LockedCoreConfig.mtu);
+      expect(tun['auto_route'], isTrue);
+      expect(tun['strict_route'], isTrue);
+      expect(tun['stack'], 'gvisor');
+      expect(tun['domain_strategy'], LockedCoreConfig.dnsStrategy);
+      expect(result.inboundSummary.join(' ; '), contains('type=mixed'));
+      expect(result.inboundSummary.join(' ; '), contains('type=tun'));
+    });
+
     test('does not inject smart direct rules in global route mode', () {
       final content = jsonEncode({
         'outbounds': [

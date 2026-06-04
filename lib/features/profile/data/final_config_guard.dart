@@ -93,6 +93,7 @@ class FinalConfigGuard with InfraLogger {
     required String stage,
     bool globalRouteMode = false,
     String? selectedOutboundTag,
+    bool ensureAndroidRawInbounds = false,
   }) async {
     final file = File(path);
     final content = await file.readAsString();
@@ -100,6 +101,7 @@ class FinalConfigGuard with InfraLogger {
       content,
       globalRouteMode: globalRouteMode,
       selectedOutboundTag: selectedOutboundTag,
+      ensureAndroidRawInbounds: ensureAndroidRawInbounds,
     );
     if (result.changed && result.sanitizedContent != null) {
       await file.writeAsString(result.sanitizedContent!);
@@ -112,6 +114,7 @@ class FinalConfigGuard with InfraLogger {
     String content, {
     bool globalRouteMode = false,
     String? selectedOutboundTag,
+    bool ensureAndroidRawInbounds = false,
   }) {
     final fakeIpBefore = _containsFakeIpMarker(content);
 
@@ -207,6 +210,7 @@ class FinalConfigGuard with InfraLogger {
     _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
     _sanitizeRoute(_ensureRoute(root), stats, globalRouteMode: globalRouteMode);
     _ensureSmartRouteFallback(root, globalRouteMode: globalRouteMode);
+    if (ensureAndroidRawInbounds) _ensureAndroidRawInbounds(root);
     _ensureInboundSniff(root['inbounds']);
     _lockSelectedOutboundReferences(root, selectedOutboundTag, stats);
     _sanitizeTunInbounds(root['inbounds'], stats);
@@ -805,6 +809,35 @@ class FinalConfigGuard with InfraLogger {
       return true;
     });
     if (!exists) rules.add(rule);
+  }
+
+  static void _ensureAndroidRawInbounds(Map<String, dynamic> root) {
+    final inbounds = _listValue(root['inbounds']) ?? <Object?>[];
+    if (!_hasInboundType(inbounds, 'mixed')) {
+      inbounds.insert(0, {
+        'type': 'mixed',
+        'tag': 'mixed-in',
+        'listen': '127.0.0.1',
+        'listen_port': LockedCoreConfig.mixedPort,
+      });
+    }
+    if (!_hasInboundType(inbounds, 'tun')) {
+      inbounds.add({
+        'type': 'tun',
+        'tag': 'tun-in',
+        'address': ['172.19.0.1/30'],
+        'mtu': LockedCoreConfig.mtu,
+        'auto_route': true,
+        'strict_route': true,
+        'stack': 'gvisor',
+      });
+    }
+    root['inbounds'] = inbounds;
+  }
+
+  static bool _hasInboundType(List<Object?> inbounds, String type) {
+    final normalized = type.toLowerCase().trim();
+    return inbounds.any((item) => _stringValue(_mapValue(item)?['type'])?.toLowerCase().trim() == normalized);
   }
 
   static void _ensureInboundSniff(Object? value) {

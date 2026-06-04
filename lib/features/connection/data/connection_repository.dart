@@ -156,6 +156,7 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           generatedContent,
           globalRouteMode: globalRouteMode,
           selectedOutboundTag: selectedOutboundTag,
+          ensureAndroidRawInbounds: PlatformUtils.isAndroid,
         );
         final runtimeFile = profilePathResolver.file('${prof.id}.runtime');
         await runtimeFile.writeAsString(runtimeResult.sanitizedContent ?? generatedContent);

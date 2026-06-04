@@ -169,7 +169,7 @@ class HiddifyCoreService with InfraLogger {
       // }
       final content = await File(path).readAsString();
       DiagnosticEventBuffer.addSafe(
-        'core start request: configContent=true, configBytes=${content.length}, runtime=${path.endsWith('.runtime.json')}',
+        'core start request: configContent=true, rawConfig=true, configBytes=${content.length}, runtime=${path.endsWith('.runtime.json')}',
       );
       try {
         final res = await core.bgClient.start(
@@ -177,6 +177,7 @@ class HiddifyCoreService with InfraLogger {
             configPath: path,
             configName: name,
             configContent: content,
+            enableRawConfig: true,
             disableMemoryLimit: disableMemoryLimit,
           ),
         );
@@ -251,13 +252,14 @@ class HiddifyCoreService with InfraLogger {
       try {
         final content = await File(path).readAsString();
         DiagnosticEventBuffer.addSafe(
-          'core restart request: configContent=true, configBytes=${content.length}, runtime=${path.endsWith('.runtime.json')}',
+          'core restart request: configContent=true, rawConfig=true, configBytes=${content.length}, runtime=${path.endsWith('.runtime.json')}',
         );
         final res = await core.bgClient.restart(
           StartRequest(
             configPath: path,
             configName: name,
             configContent: content,
+            enableRawConfig: true,
             disableMemoryLimit: disableMemoryLimit,
             delayStart: true,
           ),
