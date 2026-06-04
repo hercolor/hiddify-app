@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
 import 'package:grpc/grpc.dart';
@@ -166,14 +167,16 @@ class HiddifyCoreService with InfraLogger {
       //     ),
       //   );
       // }
-      // final content = await File(path).readAsString();
-      // loggy.debug("starting with content: $content");
+      final content = await File(path).readAsString();
+      DiagnosticEventBuffer.addSafe(
+        'core start request: configContent=true, configBytes=${content.length}, runtime=${path.endsWith('.runtime.json')}',
+      );
       try {
         final res = await core.bgClient.start(
           StartRequest(
             configPath: path,
             configName: name,
-            // configContent: content,
+            configContent: content,
             disableMemoryLimit: disableMemoryLimit,
           ),
         );
@@ -246,8 +249,18 @@ class HiddifyCoreService with InfraLogger {
       loggy.debug("restarting");
       // if (!await core.restart(path, name)) {
       try {
+        final content = await File(path).readAsString();
+        DiagnosticEventBuffer.addSafe(
+          'core restart request: configContent=true, configBytes=${content.length}, runtime=${path.endsWith('.runtime.json')}',
+        );
         final res = await core.bgClient.restart(
-          StartRequest(configPath: path, configName: name, disableMemoryLimit: disableMemoryLimit, delayStart: true),
+          StartRequest(
+            configPath: path,
+            configName: name,
+            configContent: content,
+            disableMemoryLimit: disableMemoryLimit,
+            delayStart: true,
+          ),
         );
         if (res.messageType != MessageType.EMPTY) return left("${res.messageType} ${res.message}");
       } on GrpcError catch (e) {
@@ -501,17 +514,11 @@ class HiddifyCoreService with InfraLogger {
     final coreLogLevel = _diagnosticCoreLogLevel(getCoreLogLevel(logLevel));
     final listenKey = "${key}LogListener";
     // await stopListenSingle(listenKey);
-    DiagnosticEventBuffer.addSafe('core log listener attach key=$key level=${coreLogLevel.name}');
-    var eventCount = 0;
+    CoreLogDiagnostics.recordAttach(key: key, level: coreLogLevel.name);
     await listenSingle<LogMessage>(listenKey, () {
       return cc.logListener(LogRequest(level: coreLogLevel), options: grpcOptions).map((event) {
         // Handle incoming event
-        eventCount += 1;
-        if (eventCount <= 3 || eventCount % 50 == 0) {
-          DiagnosticEventBuffer.addSafe(
-            'core log listener event key=$key count=$eventCount type=${event.type.name} level=${event.level.name} bytes=${event.message.length}',
-          );
-        }
+        CoreLogDiagnostics.recordEvent(key, event);
         CoreLogDiagnostics.addLogMessage(event);
         logBuffer.add(event);
         if (logBuffer.length > 300) {
@@ -527,10 +534,7 @@ class HiddifyCoreService with InfraLogger {
     });
   }
 
-  LogLevel _diagnosticCoreLogLevel(LogLevel configured) {
-    if (configured == LogLevel.TRACE) return LogLevel.TRACE;
-    return LogLevel.DEBUG;
-  }
+  LogLevel _diagnosticCoreLogLevel(LogLevel configured) => LogLevel.TRACE;
 
   Future<void> stopListenSingle(String key) async {
     // Collect keys to remove first
@@ -565,8 +569,17 @@ class HiddifyCoreService with InfraLogger {
       cancelOnError: true,
       onError: (error) {
         loggy.log(loggyl.LogLevel.error, 'Stream error: $error');
+        if (key.endsWith('LogListener')) {
+          CoreLogDiagnostics.recordStreamError(key.replaceAll('LogListener', ''), error as Object);
+        }
         onError?.call(error);
         subscriptions[key]?.cancel();
+        subscriptions.remove(key);
+      },
+      onDone: () {
+        if (key.endsWith('LogListener')) {
+          CoreLogDiagnostics.recordStreamDone(key.replaceAll('LogListener', ''));
+        }
         subscriptions.remove(key);
       },
     );

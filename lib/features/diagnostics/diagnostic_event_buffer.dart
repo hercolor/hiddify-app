@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
 
 abstract final class DiagnosticEventBuffer {
-  static const diagnosticVersion = '20260604-003-runtime-config-guard';
+  static const diagnosticVersion = '20260604-004-start-config-content';
   static final Queue<String> _events = Queue<String>();
   static const int _maxEvents = 180;
 
