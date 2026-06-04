@@ -11,10 +11,8 @@ import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
-import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
-import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final desktopNodeSearchProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -144,9 +142,7 @@ class DesktopNodesPage extends HookConsumerWidget {
                 const Gap(16),
                 Expanded(
                   child: proxies.when(
-                    data: (group) => group == null
-                        ? _CachedDesktopNodes(search: search)
-                        : _LiveDesktopNodes(group: group, search: search),
+                    data: (_) => _CachedDesktopNodes(search: search),
                     error: (_, _) => _CachedDesktopNodes(search: search),
                     loading: () => const Center(child: CircularProgressIndicator()),
                   ),
@@ -183,41 +179,6 @@ void _useAutoLatencyRefresh(WidgetRef ref, String? groupTag) {
   }, [groupTag]);
 }
 
-class _LiveDesktopNodes extends ConsumerWidget {
-  const _LiveDesktopNodes({required this.group, required this.search});
-
-  final OutboundGroup group;
-  final String search;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = group.items
-        .where(ClientNodeParser.isUserVisibleOutbound)
-        .where((item) {
-          if (search.isEmpty) return true;
-          return safeNodeDisplayName(
-            item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag,
-          ).toLowerCase().contains(search);
-        })
-        .toList(growable: false);
-
-    if (items.isEmpty) return const _EmptyNodesPanel();
-    return _NodesList(
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final name = safeNodeDisplayName(item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag);
-        return _DesktopNodeTile(
-          name: name,
-          delay: item.urlTestDelay == 0 ? null : item.urlTestDelay,
-          selected: group.selected == item.tag,
-          onTap: () => _selectLiveNode(context, ref, group.tag, item.tag, group.selected == item.tag),
-        );
-      },
-    );
-  }
-}
-
 class _CachedDesktopNodes extends ConsumerWidget {
   const _CachedDesktopNodes({required this.search});
 
@@ -243,7 +204,7 @@ class _CachedDesktopNodes extends ConsumerWidget {
               name: safeNodeDisplayName(node.name),
               delay: node.delay,
               selected: state.effectiveSelectedNodeId == node.id,
-              onTap: () => ref.read(clientNodeSelectionProvider.notifier).selectNode(node.id),
+              onTap: () => _selectCachedNode(context, ref, node.id, state.effectiveSelectedNodeId == node.id),
             );
           },
         );
@@ -396,13 +357,7 @@ class _EmptyNodesPanel extends StatelessWidget {
   }
 }
 
-Future<void> _selectLiveNode(
-  BuildContext context,
-  WidgetRef ref,
-  String groupTag,
-  String outboundTag,
-  bool selected,
-) async {
+Future<void> _selectCachedNode(BuildContext context, WidgetRef ref, String nodeId, bool selected) async {
   if (selected) return;
   final state = ref.read(clientConnectionStateProvider);
   final wasConnected = state.phase == ClientConnectionPhase.connected;
@@ -421,7 +376,7 @@ Future<void> _selectLiveNode(
     if (confirmed != true) return;
   }
 
-  await ref.read(proxiesOverviewNotifierProvider.notifier).changeProxy(groupTag, outboundTag);
+  await ref.read(clientNodeSelectionProvider.notifier).selectNode(nodeId);
   if (wasConnected) {
     final profile = await ref.read(activeProfileProvider.future);
     unawaited(ref.read(connectionNotifierProvider.notifier).reconnect(profile));

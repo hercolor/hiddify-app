@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
 
 abstract final class DiagnosticEventBuffer {
-  static const diagnosticVersion = '20260604-007-merge-runtime-nodes';
+  static const diagnosticVersion = '20260604-008-cached-node-list';
   static final Queue<String> _events = Queue<String>();
   static const int _maxEvents = 180;
 

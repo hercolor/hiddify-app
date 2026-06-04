@@ -4,13 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/brand_mark.dart';
+import 'package:hiddify/features/connection/model/client_connection_state.dart';
+import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/overview/desktop_nodes_page.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
-import 'package:hiddify/features/proxy/widget/proxy_tile.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -51,40 +54,12 @@ class ProxiesOverviewPage extends HookConsumerWidget {
               ),
               Expanded(
                 child: proxies.when(
-                  data: (group) {
-                    final allItems = (group?.items ?? []).where(ClientNodeParser.isUserVisibleOutbound).toList();
-                    final items = search.isEmpty
-                        ? allItems
-                        : allItems
-                              .where(
-                                (item) => safeNodeDisplayName(
-                                  item.tagDisplay.isNotEmpty ? item.tagDisplay : item.tag,
-                                ).toLowerCase().contains(search),
-                              )
-                              .toList();
-                    if (group == null || allItems.isEmpty) {
-                      return _CachedNodesList(search: search);
-                    }
-                    if (items.isEmpty) {
-                      return const _EmptyNodes();
-                    }
-                    return RefreshIndicator(
-                      onRefresh: () => ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(group.tag),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 112),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final proxy = items[index];
-                          return ProxyTile(
-                            proxy,
-                            selected: group.selected == proxy.tag,
-                            onTap: () =>
-                                ref.read(proxiesOverviewNotifierProvider.notifier).changeProxy(group.tag, proxy.tag),
-                          );
-                        },
-                      ),
-                    );
-                  },
+                  data: (group) => group == null
+                      ? _CachedNodesList(search: search)
+                      : RefreshIndicator(
+                          onRefresh: () => ref.read(proxiesOverviewNotifierProvider.notifier).urlTest(group.tag),
+                          child: _CachedNodesList(search: search),
+                        ),
                   error: (_, _) => _CachedNodesList(search: search),
                   loading: () => const Center(child: CircularProgressIndicator()),
                 ),
@@ -163,7 +138,7 @@ class _CachedNodesList extends ConsumerWidget {
             return _CachedNodeTile(
               node: node,
               selected: state.effectiveSelectedNodeId == node.id,
-              onTap: () => ref.read(clientNodeSelectionProvider.notifier).selectNode(node.id),
+              onTap: () => _selectCachedNode(context, ref, node.id, state.effectiveSelectedNodeId == node.id),
             );
           },
         );
@@ -246,6 +221,33 @@ class _CachedNodeTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _selectCachedNode(BuildContext context, WidgetRef ref, String nodeId, bool selected) async {
+  if (selected) return;
+  final state = ref.read(clientConnectionStateProvider);
+  final wasConnected = state.phase == ClientConnectionPhase.connected;
+  if (wasConnected) {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('切换节点'),
+        content: const Text('是否切换节点并重新连接？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('切换并重连')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+  }
+
+  await ref.read(clientNodeSelectionProvider.notifier).selectNode(nodeId);
+  if (wasConnected) {
+    final profile = await ref.read(activeProfileProvider.future);
+    unawaited(ref.read(connectionNotifierProvider.notifier).reconnect(profile));
+    ref.read(inAppNotificationControllerProvider).showInfoToast('正在切换节点并重新连接');
   }
 }
 
