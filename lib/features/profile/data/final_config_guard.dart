@@ -94,6 +94,7 @@ class FinalConfigGuard with InfraLogger {
     bool globalRouteMode = false,
     String? selectedOutboundTag,
     bool ensureAndroidRawInbounds = false,
+    bool lockSelectedOutboundReferences = true,
   }) async {
     final file = File(path);
     final content = await file.readAsString();
@@ -102,6 +103,7 @@ class FinalConfigGuard with InfraLogger {
       globalRouteMode: globalRouteMode,
       selectedOutboundTag: selectedOutboundTag,
       ensureAndroidRawInbounds: ensureAndroidRawInbounds,
+      lockSelectedOutboundReferences: lockSelectedOutboundReferences,
     );
     if (result.changed && result.sanitizedContent != null) {
       await file.writeAsString(result.sanitizedContent!);
@@ -115,6 +117,7 @@ class FinalConfigGuard with InfraLogger {
     bool globalRouteMode = false,
     String? selectedOutboundTag,
     bool ensureAndroidRawInbounds = false,
+    bool lockSelectedOutboundReferences = true,
   }) {
     final fakeIpBefore = _containsFakeIpMarker(content);
 
@@ -212,7 +215,9 @@ class FinalConfigGuard with InfraLogger {
     _ensureSmartRouteFallback(root, globalRouteMode: globalRouteMode);
     if (ensureAndroidRawInbounds) _ensureAndroidRawInbounds(root);
     _ensureInboundSniff(root['inbounds']);
-    _lockSelectedOutboundReferences(root, selectedOutboundTag, stats);
+    if (lockSelectedOutboundReferences) {
+      _lockSelectedOutboundReferences(root, selectedOutboundTag, stats);
+    }
     _sanitizeTunInbounds(root['inbounds'], stats);
 
     final afterJson = jsonEncode(root);

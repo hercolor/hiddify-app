@@ -452,6 +452,54 @@ void main() {
       expect(result.removedUnselectedOutbounds, 1);
     });
 
+    test('keeps all proxy outbounds when selected outbound locking is disabled', () {
+      final content = jsonEncode({
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'type': 'selector',
+            'default': 'auto',
+            'outbounds': ['auto', '香港-IPEL', '美国-IPEL'],
+          },
+          {
+            'tag': 'auto',
+            'type': 'urltest',
+            'outbounds': ['香港-IPEL', '美国-IPEL'],
+          },
+          {'tag': '香港-IPEL', 'type': 'shadowsocks'},
+          {'tag': '美国-IPEL', 'type': 'shadowsocks'},
+          {'tag': 'direct', 'type': 'direct'},
+          {'tag': 'block', 'type': 'block'},
+        ],
+        'route': {
+          'rules': [
+            {
+              'domain_suffix': ['example.com'],
+              'outbound': 'proxy',
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(
+        content,
+        selectedOutboundTag: '香港-IPEL',
+        lockSelectedOutboundReferences: false,
+      );
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final outbounds = (sanitized['outbounds'] as List).cast<Map>();
+      final outboundTags = outbounds.map((item) => item['tag']).toList();
+      final selector = outbounds.firstWhere((item) => item['tag'] == 'proxy');
+      final route = sanitized['route'] as Map;
+
+      expect(outboundTags, containsAll(['proxy', 'auto', '香港-IPEL', '美国-IPEL', 'direct', 'block']));
+      expect(selector['outbounds'], ['auto', '香港-IPEL', '美国-IPEL']);
+      expect(route['final'], 'proxy');
+      expect(result.forcedSelectedOutboundReferences, 0);
+      expect(result.removedUnselectedOutbounds, 0);
+    });
+
     test('locks resolve destination on for smart routing analysis', () {
       final content = jsonEncode({
         'outbounds': [

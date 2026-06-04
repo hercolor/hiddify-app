@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
 
 abstract final class DiagnosticEventBuffer {
-  static const diagnosticVersion = '20260604-009-reconnect-state-guard';
+  static const diagnosticVersion = '20260604-010-node-switch-direct';
   static final Queue<String> _events = Queue<String>();
   static const int _maxEvents = 180;
 

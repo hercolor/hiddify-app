@@ -136,6 +136,7 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           stage: '$stage-profile',
           globalRouteMode: globalRouteMode,
           selectedOutboundTag: selectedOutboundTag,
+          lockSelectedOutboundReferences: false,
         );
         _emitFinalConfigDiagnostics(
           stage: stage,
