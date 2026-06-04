@@ -58,7 +58,7 @@ void main() {
       expect(jsonEncode(sanitized), isNot(contains('198.18.')));
     });
 
-    test('forces final core log level to debug for routing diagnostics', () {
+    test('forces final core log level to locked production level', () {
       final content = jsonEncode({
         'log': {'level': 'warn'},
         'dns': {

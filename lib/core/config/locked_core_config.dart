@@ -5,7 +5,7 @@ abstract final class LockedCoreConfig {
   static const String dnsMode = 'real-ip';
   static const String dnsStrategy = 'ipv4_only';
   static const String routeFinal = 'proxy';
-  static const String coreLogLevel = 'debug';
+  static const String coreLogLevel = 'warning';
   static const String outboundTag = 'proxy';
   static const String rulesBaseUrl = 'https://api.y88.pro';
 

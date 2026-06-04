@@ -536,7 +536,7 @@ class HiddifyCoreService with InfraLogger {
     });
   }
 
-  LogLevel _diagnosticCoreLogLevel(LogLevel configured) => LogLevel.TRACE;
+  LogLevel _diagnosticCoreLogLevel(LogLevel configured) => configured;
 
   Future<void> stopListenSingle(String key) async {
     // Collect keys to remove first
