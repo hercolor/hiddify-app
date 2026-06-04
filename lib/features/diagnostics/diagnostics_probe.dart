@@ -43,7 +43,10 @@ class DiagnosticsProbeNotifier extends StateNotifier<AsyncValue<List<DiagProbeRe
         DiagnosticEventBuffer.add('probe final config: no active profile');
         return;
       }
-      final file = _ref.read(profilePathResolverProvider).file(profile.id);
+      final resolver = _ref.read(profilePathResolverProvider);
+      final runtimeFile = resolver.file('${profile.id}.runtime');
+      final profileFile = resolver.file(profile.id);
+      final file = await runtimeFile.exists() ? runtimeFile : profileFile;
       if (!await file.exists()) {
         DiagnosticEventBuffer.add('probe final config: missing file profile=${profile.name}');
         return;
@@ -57,7 +60,8 @@ class DiagnosticsProbeNotifier extends StateNotifier<AsyncValue<List<DiagProbeRe
         selectedOutboundTag: selection.selectedNode?.id,
       );
       DiagnosticEventBuffer.add(
-        'probe final config check: parsedJson=${result.parsedJson}, sanitized=${result.changed}, '
+        'probe final config check: source=${file == runtimeFile ? 'runtime' : 'profile'}, '
+        'parsedJson=${result.parsedJson}, sanitized=${result.changed}, '
         'routeFinal=${result.routeFinal}, routeRules=${result.routeRuleCount}, '
         'routeDefaultDomainResolver=${result.routeDefaultDomainResolver}, dnsReverseMapping=${result.dnsReverseMapping}, '
         'dnsServers=${result.dnsServerCount}, coreLogLevel=${result.coreLogLevel}, fakeIpAfter=${result.fakeIpAfter}',

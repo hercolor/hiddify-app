@@ -85,9 +85,9 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @override
   TaskEither<ConnectionFailure, Unit> connect(ProfileEntity activeProfile, bool disableMemoryLimit) => setup().flatMap(
     (_) => applyConfigOption(activeProfile).flatMap(
-      (_) => guardFinalConfig(activeProfile, stage: 'connect').flatMap((_) {
+      (_) => prepareRuntimeConfig(activeProfile, stage: 'connect').flatMap((runtimeConfigPath) {
         _logFinalConfigSummary(activeProfile);
-        return singbox.start(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit);
+        return singbox.start(runtimeConfigPath, activeProfile.name, disableMemoryLimit);
       }),
     ),
   );
@@ -98,10 +98,10 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
   @override
   TaskEither<ConnectionFailure, Unit> reconnect(ProfileEntity activeProfile, bool disableMemoryLimit) =>
       applyConfigOption(activeProfile).flatMap(
-        (_) => guardFinalConfig(activeProfile, stage: 'reconnect').flatMap((_) {
+        (_) => prepareRuntimeConfig(activeProfile, stage: 'reconnect').flatMap((runtimeConfigPath) {
           _logFinalConfigSummary(activeProfile);
           return singbox
-              .restart(profilePathResolver.file(activeProfile.id).path, activeProfile.name, disableMemoryLimit)
+              .restart(runtimeConfigPath, activeProfile.name, disableMemoryLimit)
               .mapLeft(UnexpectedConnectionFailure.new);
         }),
       );
@@ -122,41 +122,88 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           );
 
   @visibleForTesting
-  TaskEither<ConnectionFailure, Unit> guardFinalConfig(ProfileEntity prof, {required String stage}) =>
+  TaskEither<ConnectionFailure, String> prepareRuntimeConfig(ProfileEntity prof, {required String stage}) =>
       TaskEither.tryCatch(() async {
         final selection =
             ref.read(clientNodeSelectionProvider).valueOrNull ??
             await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
         final selectedOutboundTag = selection.selectedNode?.id;
         final globalRouteMode = ref.read(ConfigOptions.globalRouteMode);
-        final result = await finalConfigGuard.inspectAndSanitizeFile(
-          profilePathResolver.file(prof.id).path,
-          stage: stage,
+
+        final sourceConfigPath = profilePathResolver.file(prof.id).path;
+        final profileResult = await finalConfigGuard.inspectAndSanitizeFile(
+          sourceConfigPath,
+          stage: '$stage-profile',
           globalRouteMode: globalRouteMode,
           selectedOutboundTag: selectedOutboundTag,
         );
-        DiagnosticEventBuffer.add(
-          'final config check: stage=$stage, globalRouteMode=$globalRouteMode, '
-          'parsedJson=${result.parsedJson}, sanitized=${result.changed}, '
-          'routeFinal=${result.routeFinal}, routeRules=${result.routeRuleCount}, '
-          'dnsServers=${result.dnsServerCount}, removedClashModeRules=${result.removedClashModeRules}, '
-          'removedGlobalModeRules=${result.removedGlobalModeRules}, '
-          'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
-          'removedUnselectedOutbounds=${result.removedUnselectedOutbounds}, '
-          'forcedCoreLogLevel=${result.forcedCoreLogLevel}, coreLogLevel=${result.coreLogLevel}, '
-          'fakeIpAfter=${result.fakeIpAfter}',
+        _emitFinalConfigDiagnostics(
+          stage: stage,
+          label: 'profile',
+          result: profileResult,
+          globalRouteMode: globalRouteMode,
         );
-        DiagnosticEventBuffer.add('final config route rules: ${result.routeRuleSummary.join(' ; ')}');
-        DiagnosticEventBuffer.add('final config dns servers: ${result.dnsServerSummary.join(' ; ')}');
-        DiagnosticEventBuffer.add('final config dns rules: ${result.dnsRuleSummary.join(' ; ')}');
-        DiagnosticEventBuffer.add('final config rule sets: ${result.routeRuleSetSummary.join(' ; ')}');
-        DiagnosticEventBuffer.add('final config inbounds: ${result.inboundSummary.join(' ; ')}');
-        DiagnosticEventBuffer.add('final config outbounds: ${result.outboundTags.join(' | ')}');
-        if (result.hasResidualFakeIp) {
+        if (profileResult.hasResidualFakeIp) {
           throw const ConnectionFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);
         }
-        return unit;
+
+        final generated = await singbox.generateFullConfigByPath(sourceConfigPath).run();
+        final generatedContent = generated.match(
+          (error) => throw ConnectionFailure.invalidConfig(error),
+          (content) => content,
+        );
+        final runtimeResult = finalConfigGuard.inspectAndSanitizeContent(
+          generatedContent,
+          globalRouteMode: globalRouteMode,
+          selectedOutboundTag: selectedOutboundTag,
+        );
+        final runtimeFile = profilePathResolver.file('${prof.id}.runtime');
+        await runtimeFile.writeAsString(runtimeResult.sanitizedContent ?? generatedContent);
+        _emitFinalConfigDiagnostics(
+          stage: stage,
+          label: 'runtime',
+          result: runtimeResult,
+          globalRouteMode: globalRouteMode,
+        );
+        DiagnosticEventBuffer.add(
+          'runtime final config prepared: stage=$stage, parsedJson=${runtimeResult.parsedJson}, '
+          'sanitized=${runtimeResult.changed}, routeRules=${runtimeResult.routeRuleCount}, '
+          'inbounds=${runtimeResult.inboundSummary.length}, pathSuffix=.runtime.json',
+        );
+        if (runtimeResult.hasResidualFakeIp) {
+          throw const ConnectionFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);
+        }
+        return runtimeFile.path;
       }, (err, st) => err is ConnectionFailure ? err : ConnectionFailure.unexpected(err, st));
+
+  @visibleForTesting
+  TaskEither<ConnectionFailure, Unit> guardFinalConfig(ProfileEntity prof, {required String stage}) =>
+      prepareRuntimeConfig(prof, stage: stage).map((_) => unit);
+
+  void _emitFinalConfigDiagnostics({
+    required String stage,
+    required String label,
+    required FinalConfigGuardResult result,
+    required bool globalRouteMode,
+  }) {
+    DiagnosticEventBuffer.add(
+      'final config check: stage=$stage, label=$label, globalRouteMode=$globalRouteMode, '
+      'parsedJson=${result.parsedJson}, sanitized=${result.changed}, '
+      'routeFinal=${result.routeFinal}, routeRules=${result.routeRuleCount}, '
+      'dnsServers=${result.dnsServerCount}, removedClashModeRules=${result.removedClashModeRules}, '
+      'removedGlobalModeRules=${result.removedGlobalModeRules}, '
+      'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
+      'removedUnselectedOutbounds=${result.removedUnselectedOutbounds}, '
+      'forcedCoreLogLevel=${result.forcedCoreLogLevel}, coreLogLevel=${result.coreLogLevel}, '
+      'fakeIpAfter=${result.fakeIpAfter}',
+    );
+    DiagnosticEventBuffer.add('final config route rules [$label]: ${result.routeRuleSummary.join(' ; ')}');
+    DiagnosticEventBuffer.add('final config dns servers [$label]: ${result.dnsServerSummary.join(' ; ')}');
+    DiagnosticEventBuffer.add('final config dns rules [$label]: ${result.dnsRuleSummary.join(' ; ')}');
+    DiagnosticEventBuffer.add('final config rule sets [$label]: ${result.routeRuleSetSummary.join(' ; ')}');
+    DiagnosticEventBuffer.add('final config inbounds [$label]: ${result.inboundSummary.join(' ; ')}');
+    DiagnosticEventBuffer.add('final config outbounds [$label]: ${result.outboundTags.join(' | ')}');
+  }
 
   void _logFinalConfigSummary(ProfileEntity profile) {
     final selectedNode = ref.read(clientNodeSelectionProvider).valueOrNull?.selectedNode;
