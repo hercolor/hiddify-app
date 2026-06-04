@@ -104,7 +104,7 @@ class DiagnosticsProbeService {
       final response = await _client
           .get<Object>(
             target.url,
-            proxyOnly: mode == DiagProbeMode.proxy,
+            proxyOnly: mode == DiagProbeMode.route || mode == DiagProbeMode.proxy,
             directOnly: mode == DiagProbeMode.direct,
             headers: const {'Accept': 'application/json,text/plain,text/html;q=0.8,*/*;q=0.5'},
           )
@@ -139,10 +139,10 @@ class DiagnosticsProbeService {
     final policyTrace = _policyTrace(host);
     return switch (mode) {
       DiagProbeMode.route =>
-        'actualMode=route viaCoreProxy=${client.diagnosticRouteProxyEndpoint} policyTrace=$policyTrace actualExit=body-ip',
+        'actualMode=route viaCoreProxy=${client.diagnosticRouteProxyEndpoint} noDirectFallback=true policyTrace=$policyTrace actualExit=body-ip',
       DiagProbeMode.direct => 'actualMode=forcedDirect policyApplied=false policyTrace=$policyTrace actualExit=body-ip',
       DiagProbeMode.proxy =>
-        'actualMode=forcedProxy viaCoreProxy=${client.diagnosticRouteProxyEndpoint} policyApplied=false policyTrace=$policyTrace actualExit=body-ip',
+        'actualMode=coreOnly viaCoreProxy=${client.diagnosticRouteProxyEndpoint} policyApplied=false policyTrace=$policyTrace actualExit=body-ip',
     };
   }
 

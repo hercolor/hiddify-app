@@ -9,8 +9,12 @@ void main() {
     final results = await DiagnosticsProbeService(client).run();
 
     expect(results, hasLength(15));
-    expect(client.modes, hasLength(15));
-    expect(client.modes.take(3), ['route', 'direct', 'proxy']);
+    expect(client.requests, hasLength(15));
+    expect(client.requests.take(3).map((request) => (proxyOnly: request.proxyOnly, directOnly: request.directOnly)), [
+      (proxyOnly: true, directOnly: false),
+      (proxyOnly: false, directOnly: true),
+      (proxyOnly: true, directOnly: false),
+    ]);
     expect(results.where((result) => result.ok), hasLength(15));
 
     final routeResults = results.where((result) => result.mode == 'route').toList();
@@ -24,13 +28,14 @@ void main() {
     expect(routeResults.first.summary, contains('contentType=application/json'));
     expect(routeResults.first.summary, contains('actualMode=route'));
     expect(routeResults.first.summary, contains('viaCoreProxy=localhost:unset'));
+    expect(routeResults.first.summary, contains('noDirectFallback=true'));
     expect(routeResults.first.summary, contains('policyTrace=expectedDirect:domain:ipv4-ip.api.skk.moe'));
     expect(routeResults.first.summary, contains('country=HK'));
     expect(directResults.first.summary, contains('actualMode=forcedDirect'));
     expect(directResults.first.summary, contains('policyApplied=false'));
     expect(directResults.first.summary, contains('policyTrace=expectedDirect:domain:ipv4-ip.api.skk.moe'));
     expect(directResults.first.summary, contains('country=CN'));
-    expect(proxyResults.first.summary, contains('actualMode=forcedProxy'));
+    expect(proxyResults.first.summary, contains('actualMode=coreOnly'));
     expect(proxyResults.first.summary, contains('policyApplied=false'));
     expect(proxyResults.first.summary, contains('policyTrace=expectedDirect:domain:ipv4-ip.api.skk.moe'));
     expect(proxyResults.first.summary, contains('country=HK'));
@@ -50,6 +55,7 @@ class _FakeProbeClient extends DioHttpClient {
   _FakeProbeClient() : super(timeout: const Duration(seconds: 1), userAgent: 'test-agent', debug: false);
 
   final List<String> modes = [];
+  final List<({bool proxyOnly, bool directOnly})> requests = [];
 
   @override
   Future<Response<T>> get<T>(
@@ -61,11 +67,12 @@ class _FakeProbeClient extends DioHttpClient {
     bool proxyOnly = false,
     bool directOnly = false,
   }) async {
-    final mode = proxyOnly
-        ? 'proxy'
-        : directOnly
+    requests.add((proxyOnly: proxyOnly, directOnly: directOnly));
+    final mode = directOnly
         ? 'direct'
-        : 'route';
+        : proxyOnly
+        ? 'core'
+        : 'fallback';
     modes.add(mode);
     final host = Uri.parse(url).host;
     final data =

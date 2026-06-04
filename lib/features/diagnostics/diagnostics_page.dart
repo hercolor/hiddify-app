@@ -333,7 +333,7 @@ String _buildDiagnosticText({
     ..writeln('dnsMode=${LockedCoreConfig.dnsMode}')
     ..writeln('tunDnsServer=${DiagnosticSanitizer.sanitize(options.remoteDnsAddress)}')
     ..writeln('mixedPort=${options.mixedPort}')
-    ..writeln('routeProbe=local mixed proxy with DIRECT fallback')
+    ..writeln('routeProbe=local mixed proxy core-only no DIRECT fallback')
     ..writeln('sniffRule=inbound sniff enabled')
     ..writeln('routeAction=direct rules use action route')
     ..writeln('tunEnabled=${options.enableTun}')
