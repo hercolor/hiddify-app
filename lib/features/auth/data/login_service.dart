@@ -18,10 +18,10 @@ abstract interface class LoginService {
     String? inviteCode,
   });
 
-  TaskEither<AuthFailure, Unit> sendEmailVerify({required String email});
+  TaskEither<AuthFailure, Unit> sendEmailVerify({required String account});
 
   TaskEither<AuthFailure, Unit> resetPassword({
-    required String email,
+    required String account,
     required String emailCode,
     required String password,
   });
@@ -85,11 +85,12 @@ class XBoardLoginService with InfraLogger implements LoginService {
   }
 
   @override
-  TaskEither<AuthFailure, Unit> sendEmailVerify({required String email}) {
+  TaskEither<AuthFailure, Unit> sendEmailVerify({required String account}) {
     return TaskEither.tryCatch(() async {
+      final trimmedAccount = account.trim();
       final response = await _httpClient.post<Map<String, dynamic>>(
         '$_apiBaseUrl/api/v1/passport/comm/sendEmailVerify',
-        data: {'email': email.trim()},
+        data: _accountPayload(trimmedAccount),
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       );
       _ensureOk(response, fallbackMessage: '验证码发送失败');
@@ -99,14 +100,15 @@ class XBoardLoginService with InfraLogger implements LoginService {
 
   @override
   TaskEither<AuthFailure, Unit> resetPassword({
-    required String email,
+    required String account,
     required String emailCode,
     required String password,
   }) {
     return TaskEither.tryCatch(() async {
+      final trimmedAccount = account.trim();
       final response = await _httpClient.post<Map<String, dynamic>>(
         '$_apiBaseUrl/api/v1/passport/auth/forget',
-        data: {'email': email.trim(), 'email_code': emailCode.trim(), 'password': password},
+        data: {..._accountPayload(trimmedAccount), 'email_code': emailCode.trim(), 'password': password},
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       );
       _ensureOk(response, fallbackMessage: '密码重置失败');
@@ -119,6 +121,13 @@ class XBoardLoginService with InfraLogger implements LoginService {
       return {'account': account, 'email': account, 'password': password};
     }
     return {'account': account, 'password': password};
+  }
+
+  Map<String, String> _accountPayload(String account) {
+    if (account.contains('@')) {
+      return {'account': account, 'email': account};
+    }
+    return {'account': account};
   }
 
   AuthSession _sessionFromResponse(

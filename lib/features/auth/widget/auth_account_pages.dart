@@ -54,7 +54,7 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
     });
     try {
       final service = await ref.read(loginServiceProvider.future);
-      await service.sendEmailVerify(email: email).match((err) => throw err, (_) {}).run();
+      await service.sendEmailVerify(account: email).match((err) => throw err, (_) {}).run();
       ref.read(inAppNotificationControllerProvider).showSuccessToast('验证码已发送');
     } catch (error) {
       setState(() => _errorText = _authErrorMessage(error));
@@ -204,7 +204,7 @@ class AuthForgotPasswordPage extends ConsumerStatefulWidget {
 }
 
 class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage> {
-  final _emailController = TextEditingController();
+  final _accountController = TextEditingController();
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -214,7 +214,7 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _accountController.dispose();
     _codeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -222,9 +222,9 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
   }
 
   Future<void> _sendEmailCode() async {
-    final email = _emailController.text.trim();
-    if (!_looksLikeEmail(email)) {
-      setState(() => _errorText = '请先输入正确的邮箱');
+    final account = _accountController.text.trim();
+    if (!_looksLikeAccount(account)) {
+      setState(() => _errorText = '请先输入正确的邮箱或手机号');
       return;
     }
     if (_sendingCode) return;
@@ -234,8 +234,8 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
     });
     try {
       final service = await ref.read(loginServiceProvider.future);
-      await service.sendEmailVerify(email: email).match((err) => throw err, (_) {}).run();
-      ref.read(inAppNotificationControllerProvider).showSuccessToast('验证码已发送');
+      await service.sendEmailVerify(account: account).match((err) => throw err, (_) {}).run();
+      ref.read(inAppNotificationControllerProvider).showSuccessToast('验证码已发送到绑定邮箱');
     } catch (error) {
       setState(() => _errorText = _authErrorMessage(error));
     } finally {
@@ -258,7 +258,7 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
       final service = await ref.read(loginServiceProvider.future);
       await service
           .resetPassword(
-            email: _emailController.text.trim(),
+            account: _accountController.text.trim(),
             emailCode: _codeController.text.trim(),
             password: _passwordController.text,
           )
@@ -274,8 +274,8 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
   }
 
   String? _validate() {
-    if (!_looksLikeEmail(_emailController.text.trim())) return '请输入正确的邮箱';
-    if (_codeController.text.trim().isEmpty) return '请输入邮箱验证码';
+    if (!_looksLikeAccount(_accountController.text.trim())) return '请输入正确的邮箱或手机号';
+    if (_codeController.text.trim().isEmpty) return '请输入验证码';
     final password = _passwordController.text;
     if (password.length < 8) return '密码至少 8 位';
     if (password != _confirmPasswordController.text) return '两次输入的密码不一致';
@@ -286,14 +286,14 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
   Widget build(BuildContext context) {
     return _AuthFormScaffold(
       title: '忘记密码',
-      subtitle: '通过邮箱验证码重置账号密码',
+      subtitle: '通过账号绑定邮箱验证码重置密码',
       child: Column(
         children: [
           if (_errorText != null) ...[_ErrorBanner(_errorText!), const Gap(14)],
           TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded), hintText: '邮箱'),
+            controller: _accountController,
+            keyboardType: TextInputType.text,
+            decoration: const InputDecoration(prefixIcon: Icon(Icons.person_outline_rounded), hintText: '邮箱 / 手机号'),
           ),
           const Gap(12),
           Row(
@@ -302,7 +302,7 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
                 child: TextField(
                   controller: _codeController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(prefixIcon: Icon(Icons.verified_outlined), hintText: '邮箱验证码'),
+                  decoration: const InputDecoration(prefixIcon: Icon(Icons.verified_outlined), hintText: '验证码'),
                 ),
               ),
               const Gap(10),
@@ -432,6 +432,8 @@ class _ErrorBanner extends StatelessWidget {
 bool _looksLikeEmail(String value) => value.contains('@') && value.contains('.');
 
 bool _looksLikePhone(String value) => RegExp(r'^\+?[0-9][0-9\s\-()]{5,30}$').hasMatch(value);
+
+bool _looksLikeAccount(String value) => _looksLikeEmail(value) || _looksLikePhone(value);
 
 String? _emptyToNull(String text) {
   final value = text.trim();
