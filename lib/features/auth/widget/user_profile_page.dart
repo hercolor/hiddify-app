@@ -161,12 +161,12 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
   }
 
   bool _validateInputs() {
-    final email = _emailController.text.trim();
+    final account = _emailController.text.trim();
     final password = _passwordController.text;
-    final nextEmailError = email.isEmpty
-        ? '请输入邮箱'
-        : !email.contains('@')
-        ? '邮箱格式不正确'
+    final nextEmailError = account.isEmpty
+        ? '请输入邮箱或手机号'
+        : !_looksLikeLoginAccount(account)
+        ? '邮箱或手机号格式不正确'
         : null;
     final nextPasswordError = password.isEmpty ? '请输入密码' : null;
     _emailError.value = nextEmailError;
@@ -234,9 +234,9 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                         smartDashesType: SmartDashesType.disabled,
                         smartQuotesType: SmartQuotesType.disabled,
                         decoration: InputDecoration(
-                          hintText: '邮箱账号',
+                          hintText: '邮箱 / 手机号',
                           errorText: errorText,
-                          prefixIcon: const Icon(Icons.mail_outline_rounded),
+                          prefixIcon: const Icon(Icons.person_outline_rounded),
                         ),
                         textInputAction: TextInputAction.next,
                       );
@@ -267,6 +267,21 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                     width: double.infinity,
                     height: 56,
                     child: _GradientButton(onPressed: isLoading ? null : _submit, label: '登 录', isLoading: isLoading),
+                  ),
+                  const Gap(12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: isLoading ? null : () => context.pushNamed('authRegister'),
+                        child: const Text('注册账号'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: isLoading ? null : () => context.pushNamed('authForgotPassword'),
+                        child: const Text('忘记密码'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 44),
                   Text('登录后自动完成加速准备', style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.signalBlue)),
@@ -675,4 +690,10 @@ class _LogoutButton extends ConsumerWidget {
 String _formatExpiredAt(DateTime? expiredAt) {
   if (expiredAt == null) return '--';
   return DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
+}
+
+bool _looksLikeLoginAccount(String value) {
+  final trimmed = value.trim();
+  if (trimmed.contains('@')) return trimmed.contains('.');
+  return RegExp(r'^\+?[0-9][0-9\s\-()]{5,30}$').hasMatch(trimmed);
 }

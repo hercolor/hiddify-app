@@ -4,6 +4,7 @@ import 'package:hiddify/core/router/adaptive_layout/my_adaptive_layout.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
+import 'package:hiddify/features/auth/widget/auth_account_pages.dart';
 import 'package:hiddify/features/diagnostics/diagnostics_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
@@ -132,6 +133,17 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
           ],
         ),
 
+        GoRoute(
+          name: 'authRegister',
+          path: '/auth/register',
+          pageBuilder: (_, state) => customTransition(TransitionType.slide, state.pageKey, const AuthRegisterPage()),
+        ),
+        GoRoute(
+          name: 'authForgotPassword',
+          path: '/auth/forgot-password',
+          pageBuilder: (_, state) =>
+              customTransition(TransitionType.slide, state.pageKey, const AuthForgotPasswordPage()),
+        ),
         GoRoute(
           name: 'premiumRenewal',
           path: '/premium/renewal',

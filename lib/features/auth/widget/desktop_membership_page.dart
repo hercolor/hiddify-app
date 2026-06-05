@@ -77,13 +77,13 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
   }
 
   bool _validate() {
-    final email = _emailController.text.trim();
+    final account = _emailController.text.trim();
     final password = _passwordController.text;
     setState(() {
-      _emailError = email.isEmpty
-          ? '请输入邮箱'
-          : !email.contains('@')
-          ? '邮箱格式不正确'
+      _emailError = account.isEmpty
+          ? '请输入邮箱或手机号'
+          : !_looksLikeLoginAccount(account)
+          ? '邮箱或手机号格式不正确'
           : null;
       _passwordError = password.isEmpty ? '请输入密码' : null;
     });
@@ -137,9 +137,9 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                           enableSuggestions: false,
                           autocorrect: false,
                           decoration: InputDecoration(
-                            hintText: '邮箱账号',
+                            hintText: '邮箱 / 手机号',
                             errorText: _emailError,
-                            prefixIcon: const Icon(Icons.mail_outline_rounded),
+                            prefixIcon: const Icon(Icons.person_outline_rounded),
                           ),
                           textInputAction: TextInputAction.next,
                           onChanged: (_) {
@@ -173,6 +173,21 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                             isLoading: _isSubmitting,
                             onPressed: _isSubmitting ? null : _submit,
                           ),
+                        ),
+                        const Gap(12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: _isSubmitting ? null : () => context.pushNamed('authRegister'),
+                              child: const Text('注册账号'),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton(
+                              onPressed: _isSubmitting ? null : () => context.pushNamed('authForgotPassword'),
+                              child: const Text('忘记密码'),
+                            ),
+                          ],
                         ),
                         const Gap(42),
                         Text(
@@ -610,4 +625,10 @@ String _maskUser(String value) {
   if (!trimmed.contains('@')) return trimmed.length <= 2 ? '***' : '${trimmed.substring(0, 1)}***';
   final parts = trimmed.split('@');
   return '${parts.first.substring(0, 1)}***@${parts.last}';
+}
+
+bool _looksLikeLoginAccount(String value) {
+  final trimmed = value.trim();
+  if (trimmed.contains('@')) return trimmed.contains('.');
+  return RegExp(r'^\+?[0-9][0-9\s\-()]{5,30}$').hasMatch(trimmed);
 }

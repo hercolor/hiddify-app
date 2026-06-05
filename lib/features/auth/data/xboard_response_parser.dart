@@ -22,6 +22,20 @@ class XBoardResponseParser {
     return trimmed == null || trimmed.isEmpty ? null : _stripBearer(trimmed);
   }
 
+  static String? parseEmail(Object? responseData) {
+    final data = _decodeIfString(responseData);
+    final email = _findStringByKeys(data, const ['email', 'mail']);
+    final trimmed = email?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  static String? parsePhone(Object? responseData) {
+    final data = _decodeIfString(responseData);
+    final phone = _findStringByKeys(data, const ['phone', 'mobile']);
+    final trimmed = phone?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
   static String? parseSubscribeUrl(Object? responseData, {String? fallbackSubscribeUrl, String? baseUrl}) {
     final data = _decodeIfString(responseData);
     final subscribeUrl = _resolveSubscribeUrl(_findSubscriptionUrl(data) ?? fallbackSubscribeUrl, baseUrl);

@@ -34,7 +34,7 @@ sealed class AuthFailure with _$AuthFailure, Failure {
   ({String type, String? message}) present(TranslationsEn t) {
     return switch (this) {
       AuthUnexpectedFailure() => (type: '发生未知错误', message: null),
-      AuthInvalidCredentialsFailure(:final message) => (type: '邮箱或密码不正确', message: message),
+      AuthInvalidCredentialsFailure(:final message) => (type: '账号或密码不正确', message: message),
       AuthTokenExpiredFailure(:final message) => (type: '登录已过期，请重新登录', message: message),
       AuthNotLoggedInFailure() => (type: '请先登录', message: null),
       AuthNetworkFailure(:final message) => (type: '网络连接失败，请稍后重试', message: message),

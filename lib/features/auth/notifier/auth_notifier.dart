@@ -55,34 +55,64 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     }
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String account, String password) async {
     if (state.isLoading) return;
     state = const AsyncLoading<AuthState>().copyWithPrevious(state);
     state = await AsyncValue.guard(() async {
       final loginService = await ref.read(loginServiceProvider.future);
       final session = await loginService
-          .login(email: email, password: password)
+          .login(account: account, password: password)
           .match((err) => throw err, (session) => session)
           .run();
 
-      await ref.read(authTokenStorageProvider).save(session);
-      var syncedSession = session;
-      var userInfoSynced = false;
-      try {
-        final result = await _fetchSubscriptionAndImport(session);
-        syncedSession = result.session;
-        userInfoSynced = true;
-      } catch (error, stackTrace) {
-        loggy.warning('failed to sync user info after login', error, stackTrace);
-        DiagnosticEventBuffer.add('user info sync after login failed: ${_safeError(error)}');
-        ref.read(inAppNotificationControllerProvider).showErrorToast(_loginSyncErrorMessage(error));
-      }
-      await ref.read(authTokenStorageProvider).save(syncedSession);
-      ref.read(inAppNotificationControllerProvider).showSuccessToast(userInfoSynced ? '登录成功' : '已登录');
-      final nextState = AuthState.loggedIn(syncedSession);
-      await _logAuthDebug(nextState, userInfoLoaded: syncedSession.subscription != null);
-      return nextState;
+      return _completeAuthenticatedSession(session, successMessage: '登录成功', fallbackSuccessMessage: '已登录');
     });
+  }
+
+  Future<void> register({
+    required String email,
+    String? phone,
+    required String password,
+    String? emailCode,
+    String? inviteCode,
+  }) async {
+    if (state.isLoading) return;
+    state = const AsyncLoading<AuthState>().copyWithPrevious(state);
+    state = await AsyncValue.guard(() async {
+      final loginService = await ref.read(loginServiceProvider.future);
+      final session = await loginService
+          .register(email: email, phone: phone, password: password, emailCode: emailCode, inviteCode: inviteCode)
+          .match((err) => throw err, (session) => session)
+          .run();
+
+      return _completeAuthenticatedSession(session, successMessage: '注册成功', fallbackSuccessMessage: '已注册');
+    });
+  }
+
+  Future<AuthState> _completeAuthenticatedSession(
+    AuthSession session, {
+    required String successMessage,
+    required String fallbackSuccessMessage,
+  }) async {
+    await ref.read(authTokenStorageProvider).save(session);
+    var syncedSession = session;
+    var userInfoSynced = false;
+    try {
+      final result = await _fetchSubscriptionAndImport(session);
+      syncedSession = result.session;
+      userInfoSynced = true;
+    } catch (error, stackTrace) {
+      loggy.warning('failed to sync user info after auth', error, stackTrace);
+      DiagnosticEventBuffer.add('user info sync after auth failed: ${_safeError(error)}');
+      ref.read(inAppNotificationControllerProvider).showErrorToast(_loginSyncErrorMessage(error));
+    }
+    await ref.read(authTokenStorageProvider).save(syncedSession);
+    ref
+        .read(inAppNotificationControllerProvider)
+        .showSuccessToast(userInfoSynced ? successMessage : fallbackSuccessMessage);
+    final nextState = AuthState.loggedIn(syncedSession);
+    await _logAuthDebug(nextState, userInfoLoaded: syncedSession.subscription != null);
+    return nextState;
   }
 
   Future<void> refreshSubscription() async {
