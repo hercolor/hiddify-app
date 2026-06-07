@@ -15,6 +15,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
   static const _legacyTokenKey = 'xboard.auth.token';
   static const _subscribeTokenKey = 'xboard.auth.subscribe_token';
   static const _emailKey = 'xboard.auth.email';
+  static const _phoneKey = 'xboard.auth.phone';
   static const _createdAtKey = 'xboard.auth.created_at';
   static const _subscribeUrlKey = 'xboard.auth.subscribe_url';
   static const _expiredAtKey = 'xboard.auth.expired_at';
@@ -33,6 +34,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
     await _storage.write(key: _authDataKey, value: session.authData);
     await _storage.write(key: _subscribeTokenKey, value: session.subscribeToken);
     await _storage.write(key: _emailKey, value: session.email);
+    await _storage.write(key: _phoneKey, value: session.phone);
     await _storage.write(key: _createdAtKey, value: session.createdAt.toIso8601String());
 
     final subscription = session.subscription;
@@ -63,6 +65,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
     return AuthSession(
       authData: authData,
       email: email,
+      phone: await _storage.read(key: _phoneKey),
       createdAt: DateTime.tryParse(createdAtText ?? '') ?? DateTime.now(),
       subscribeToken: subscribeToken == null || subscribeToken.isEmpty ? null : subscribeToken,
       subscription: subscribeUrl == null || subscribeUrl.isEmpty
@@ -88,6 +91,7 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
       _legacyTokenKey,
       _subscribeTokenKey,
       _emailKey,
+      _phoneKey,
       _createdAtKey,
       _subscribeUrlKey,
       _expiredAtKey,

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -18,8 +19,25 @@ class InAppNotificationController with AppLogger {
     NotificationType type = NotificationType.info,
     Duration duration = const Duration(seconds: 3),
   }) {
-    loggy.debug('in-app toast suppressed: type=${type.name}, duration=${duration.inMilliseconds}ms, message=$message');
-    return null;
+    final trimmed = message.trim();
+    if (trimmed.isEmpty) return null;
+    loggy.debug('in-app toast show: type=${type.name}, duration=${duration.inMilliseconds}ms, message=$trimmed');
+    return toastification.show(
+      title: Text(trimmed),
+      type: switch (type) {
+        NotificationType.info => ToastificationType.info,
+        NotificationType.error => ToastificationType.error,
+        NotificationType.success => ToastificationType.success,
+      },
+      alignment: Alignment.bottomCenter,
+      autoCloseDuration: duration,
+      style: ToastificationStyle.fillColored,
+      pauseOnHover: true,
+      showProgressBar: false,
+      dragToClose: true,
+      closeOnClick: true,
+      closeButtonShowType: CloseButtonShowType.onHover,
+    );
   }
 
   ToastificationItem? showErrorToast(String message) =>

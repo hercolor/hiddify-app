@@ -71,7 +71,6 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
   Future<void> register({
     required String email,
-    String? phone,
     required String password,
     String? emailCode,
     String? inviteCode,
@@ -81,7 +80,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     state = await AsyncValue.guard(() async {
       final loginService = await ref.read(loginServiceProvider.future);
       final session = await loginService
-          .register(email: email, phone: phone, password: password, emailCode: emailCode, inviteCode: inviteCode)
+          .register(email: email, password: password, emailCode: emailCode, inviteCode: inviteCode)
           .match((err) => throw err, (session) => session)
           .run();
 
@@ -97,19 +96,26 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     await ref.read(authTokenStorageProvider).save(session);
     var syncedSession = session;
     var userInfoSynced = false;
+    Object? syncError;
     try {
       final result = await _fetchSubscriptionAndImport(session);
       syncedSession = result.session;
       userInfoSynced = true;
     } catch (error, stackTrace) {
+      syncError = error;
       loggy.warning('failed to sync user info after auth', error, stackTrace);
       DiagnosticEventBuffer.add('user info sync after auth failed: ${_safeError(error)}');
+      if (_isSubscriptionUnavailable(error)) {
+        await _clearSubscriptionAccessCache(session: session, reason: _safeError(error));
+      }
       ref.read(inAppNotificationControllerProvider).showErrorToast(_loginSyncErrorMessage(error));
     }
     await ref.read(authTokenStorageProvider).save(syncedSession);
-    ref
-        .read(inAppNotificationControllerProvider)
-        .showSuccessToast(userInfoSynced ? successMessage : fallbackSuccessMessage);
+    if (syncError == null) {
+      ref
+          .read(inAppNotificationControllerProvider)
+          .showSuccessToast(userInfoSynced ? successMessage : fallbackSuccessMessage);
+    }
     final nextState = AuthState.loggedIn(syncedSession);
     await _logAuthDebug(nextState, userInfoLoaded: syncedSession.subscription != null);
     return nextState;
@@ -142,6 +148,9 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     } catch (error, stackTrace) {
       loggy.warning('failed to sync nodes', error, stackTrace);
       DiagnosticEventBuffer.add('node sync failed: ${_safeError(error)}');
+      if (_isSubscriptionUnavailable(error)) {
+        await _clearSubscriptionAccessCache(session: current, reason: _safeError(error));
+      }
       final nextState = AuthState.loggedIn(current);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: current.subscription != null);
@@ -159,9 +168,41 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
   Future<void> logout() async {
     await ref.read(authTokenStorageProvider).clear();
+    await ref.read(clientNodeSelectionProvider.notifier).clear();
     state = const AsyncData(AuthState.loggedOut());
     await _logAuthDebug(const AuthState.loggedOut(), userInfoLoaded: false);
     ref.read(inAppNotificationControllerProvider).showSuccessToast('已退出登录');
+  }
+
+  Future<void> sendPhoneBindVerify(String phone) async {
+    final session = state.valueOrNull?.session;
+    if (session == null) {
+      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      return;
+    }
+    final loginService = await ref.read(loginServiceProvider.future);
+    await loginService
+        .sendPhoneBindVerify(authData: session.authData, phone: phone)
+        .match((err) => throw err, (_) => unit)
+        .run();
+    ref.read(inAppNotificationControllerProvider).showSuccessToast('手机验证码已发送');
+  }
+
+  Future<void> bindPhone({required String phone, required String phoneCode}) async {
+    final session = state.valueOrNull?.session;
+    if (session == null) {
+      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      return;
+    }
+    final loginService = await ref.read(loginServiceProvider.future);
+    final boundPhone = await loginService
+        .bindPhone(authData: session.authData, phone: phone, phoneCode: phoneCode)
+        .match((err) => throw err, (phone) => phone)
+        .run();
+    final nextSession = session.copyWith(phone: boundPhone);
+    await ref.read(authTokenStorageProvider).save(nextSession);
+    state = AsyncData(AuthState.loggedIn(nextSession));
+    ref.read(inAppNotificationControllerProvider).showSuccessToast('手机号已绑定');
   }
 
   Future<({AuthSession session, bool nodesSynced})> _fetchSubscriptionAndImport(
@@ -183,7 +224,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     if (subscriptionUrl.isEmpty) {
       throw const AuthFailure.serverMessage('订阅信息为空，请联系客服');
     }
-    final syncedSession = session.copyWith(subscription: subscription);
+    var syncedSession = session.copyWith(subscription: subscription);
+    final boundPhone = await _safeFetchBoundPhone(syncedSession.authData);
+    if (boundPhone != null) {
+      syncedSession = syncedSession.copyWith(phone: boundPhone);
+    }
     await ref.read(authTokenStorageProvider).save(syncedSession);
     loggy.info(
       'subscription data ready: '
@@ -265,6 +310,16 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     return (session: syncedSession, nodesSynced: nodesSynced);
   }
 
+  Future<String?> _safeFetchBoundPhone(String authData) async {
+    try {
+      final loginService = await ref.read(loginServiceProvider.future);
+      return loginService.fetchBoundPhone(authData: authData).match((err) => null, (phone) => phone).run();
+    } catch (error, stackTrace) {
+      loggy.debug('bound phone fetch skipped', error, stackTrace);
+      return null;
+    }
+  }
+
   Future<List<ClientNode>> _downloadAndCacheNodes(String subscriptionUrl) async {
     final response = await ref.read(httpClientProvider).get<Object?>(subscriptionUrl, headers: const {'Accept': '*/*'});
     if ((response.statusCode ?? 0) >= 400) {
@@ -277,7 +332,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     );
     loggy.info('subscription content parsed: nodeCount=${nodes.length}, contentLength=${content.length}');
     if (nodes.isNotEmpty) {
-      await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '4376');
+      await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '蝴蝶VPN');
     }
     return nodes;
   }
@@ -306,6 +361,9 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     } catch (error, stackTrace) {
       loggy.warning('failed to sync nodes during bootstrap', error, stackTrace);
       if (!_isCurrentSession(session)) return;
+      if (_isSubscriptionUnavailable(error)) {
+        await _clearSubscriptionAccessCache(session: session, reason: _safeError(error));
+      }
       final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? session);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: nextState.session?.subscription != null);
@@ -354,12 +412,12 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         source = 'generatedConfig';
       }
       if (nodes.isNotEmpty) {
-        await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '4376');
+        await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '蝴蝶VPN');
       }
       final selection =
           ref.read(clientNodeSelectionProvider).valueOrNull ??
           await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
-      final summary = _nodeDebugFromSelection(selection.copyWith(profileName: '4376'));
+      final summary = _nodeDebugFromSelection(selection.copyWith(profileName: '蝴蝶VPN'));
       DiagnosticEventBuffer.add(
         'node cache parsed: source=$source, profileName=${summary.profileName}, '
         'nodeCount=${summary.nodeCount}, selectedNodeName=${summary.selectedNodeName}',
@@ -450,13 +508,59 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       _ => '获取节点失败，请稍后重试',
     };
   }
+
+  bool _isSubscriptionUnavailable(Object error) {
+    final text = _safeError(error).toLowerCase();
+    return text.contains('会员') ||
+        text.contains('到期') ||
+        text.contains('过期') ||
+        text.contains('expired') ||
+        text.contains('unavailable') ||
+        text.contains('traffic') ||
+        text.contains('流量');
+  }
+
+  Future<void> _clearSubscriptionAccessCache({required AuthSession session, required String reason}) async {
+    DiagnosticEventBuffer.addSafe('subscription access cache cleared: $reason');
+    await ref.read(clientNodeSelectionProvider.notifier).clear();
+    try {
+      final activeProfile = await ref
+          .read(activeProfileProvider.future)
+          .timeout(const Duration(seconds: 1), onTimeout: () => null);
+      if (activeProfile case RemoteProfileEntity(
+        :final id,
+        :final active,
+        :final url,
+      ) when _isAccountSubscriptionProfile(url, session.subscription?.subscribeUrl)) {
+        final repo = await ref.read(profileRepositoryProvider.future);
+        await repo.deleteById(id, active).match((err) => null, (_) => unit).run();
+        ref.invalidate(activeProfileProvider);
+      }
+    } catch (error, stackTrace) {
+      loggy.debug('failed to clear active subscription profile', error, stackTrace);
+    }
+  }
+
+  bool _isAccountSubscriptionProfile(String profileUrl, String? subscriptionUrl) {
+    final profile = profileUrl.trim();
+    final subscription = subscriptionUrl?.trim();
+    if (subscription != null && subscription.isNotEmpty && profile == subscription) return true;
+    final uri = Uri.tryParse(profile);
+    return uri?.path.toLowerCase().endsWith('/api/v1/client/subscribe') == true;
+  }
 }
 
 extension AuthAsyncValueX on AsyncValue<AuthState> {
   String? readableError(TranslationsEn t) {
     return switch (this) {
-      AsyncError(:final error) => t.presentError(error).type,
+      AsyncError(:final error) => _formatAuthError(t.presentError(error)),
       _ => null,
     };
+  }
+
+  String _formatAuthError(({String type, String? message}) pair) {
+    final message = pair.message?.trim();
+    if (message == null || message.isEmpty) return pair.type;
+    return '${pair.type}\n$message';
   }
 }

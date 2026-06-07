@@ -36,8 +36,9 @@ Object? _commaTextToJsonList(String? value) {
 }
 
 RuleNetwork _networkFromJson(Object? value) {
-  if (value is num)
+  if (value is num) {
     return RuleNetwork.values.firstWhere((item) => item.value == value.toInt(), orElse: () => RuleNetwork.tcpAndUdp);
+  }
   final text = value?.toString().trim().toLowerCase();
   return RuleNetwork.values.firstWhere((item) => item.key == text, orElse: () => RuleNetwork.tcpAndUdp);
 }
@@ -45,8 +46,9 @@ RuleNetwork _networkFromJson(Object? value) {
 int _networkToJson(RuleNetwork value) => value.value;
 
 RuleOutbound _outboundFromJson(Object? value) {
-  if (value is num)
+  if (value is num) {
     return RuleOutbound.values.firstWhere((item) => item.value == value.toInt(), orElse: () => RuleOutbound.proxy);
+  }
   final text = value?.toString().trim().toLowerCase();
   return RuleOutbound.values.firstWhere((item) => item.key == text, orElse: () => RuleOutbound.proxy);
 }

@@ -20,7 +20,6 @@ class AuthRegisterPage extends ConsumerStatefulWidget {
 
 class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -33,7 +32,6 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
   @override
   void dispose() {
     _emailController.dispose();
-    _phoneController.dispose();
     _codeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -79,7 +77,6 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
           .read(authNotifierProvider.notifier)
           .register(
             email: _emailController.text.trim(),
-            phone: _emptyToNull(_phoneController.text),
             password: _passwordController.text,
             emailCode: _emptyToNull(_codeController.text),
             inviteCode: _emptyToNull(_inviteCodeController.text),
@@ -99,10 +96,8 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
 
   String? _validate() {
     final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
     final password = _passwordController.text;
     if (!_looksLikeEmail(email)) return '请输入正确的邮箱';
-    if (phone.isNotEmpty && !_looksLikePhone(phone)) return '手机号格式不正确';
     if (password.length < 8) return '密码至少 8 位';
     if (password != _confirmPasswordController.text) return '两次输入的密码不一致';
     if (!_acceptedTerms) return '请先同意用户协议和隐私政策';
@@ -113,7 +108,7 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
   Widget build(BuildContext context) {
     return _AuthFormScaffold(
       title: '注册账号',
-      subtitle: '创建 4376 账号后自动完成加速准备',
+      subtitle: '创建 蝴蝶VPN 账号后自动完成加速准备',
       child: Column(
         children: [
           if (_errorText != null) ...[_ErrorBanner(_errorText!), const Gap(14)],
@@ -121,15 +116,6 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded), hintText: '邮箱'),
-          ),
-          const Gap(12),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.phone_iphone_rounded),
-              hintText: '手机号（可选，用于手机号登录）',
-            ),
           ),
           const Gap(12),
           Row(
@@ -234,8 +220,13 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
     });
     try {
       final service = await ref.read(loginServiceProvider.future);
-      await service.sendEmailVerify(account: account).match((err) => throw err, (_) {}).run();
-      ref.read(inAppNotificationControllerProvider).showSuccessToast('验证码已发送到绑定邮箱');
+      if (_looksLikeEmail(account)) {
+        await service.sendEmailVerify(account: account).match((err) => throw err, (_) {}).run();
+        ref.read(inAppNotificationControllerProvider).showSuccessToast('验证码已发送到绑定邮箱');
+      } else {
+        await service.sendPhoneVerify(account: account).match((err) => throw err, (_) {}).run();
+        ref.read(inAppNotificationControllerProvider).showSuccessToast('验证码已发送到绑定手机');
+      }
     } catch (error) {
       setState(() => _errorText = _authErrorMessage(error));
     } finally {
@@ -259,7 +250,7 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
       await service
           .resetPassword(
             account: _accountController.text.trim(),
-            emailCode: _codeController.text.trim(),
+            verifyCode: _codeController.text.trim(),
             password: _passwordController.text,
           )
           .match((err) => throw err, (_) {})

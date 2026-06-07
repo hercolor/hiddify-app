@@ -12,7 +12,6 @@ abstract interface class LoginService {
 
   TaskEither<AuthFailure, AuthSession> register({
     required String email,
-    String? phone,
     required String password,
     String? emailCode,
     String? inviteCode,
@@ -20,10 +19,22 @@ abstract interface class LoginService {
 
   TaskEither<AuthFailure, Unit> sendEmailVerify({required String account});
 
+  TaskEither<AuthFailure, Unit> sendPhoneVerify({required String account});
+
   TaskEither<AuthFailure, Unit> resetPassword({
     required String account,
-    required String emailCode,
+    required String verifyCode,
     required String password,
+  });
+
+  TaskEither<AuthFailure, String?> fetchBoundPhone({required String authData});
+
+  TaskEither<AuthFailure, Unit> sendPhoneBindVerify({required String authData, required String phone});
+
+  TaskEither<AuthFailure, String> bindPhone({
+    required String authData,
+    required String phone,
+    required String phoneCode,
   });
 }
 
@@ -63,7 +74,6 @@ class XBoardLoginService with InfraLogger implements LoginService {
   @override
   TaskEither<AuthFailure, AuthSession> register({
     required String email,
-    String? phone,
     required String password,
     String? emailCode,
     String? inviteCode,
@@ -74,7 +84,6 @@ class XBoardLoginService with InfraLogger implements LoginService {
         data: {
           'email': email.trim(),
           'password': password,
-          if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
           if (emailCode != null && emailCode.trim().isNotEmpty) 'email_code': emailCode.trim(),
           if (inviteCode != null && inviteCode.trim().isNotEmpty) 'invite_code': inviteCode.trim(),
         },
@@ -99,21 +108,82 @@ class XBoardLoginService with InfraLogger implements LoginService {
   }
 
   @override
+  TaskEither<AuthFailure, Unit> sendPhoneVerify({required String account}) {
+    return TaskEither.tryCatch(() async {
+      final trimmedAccount = account.trim();
+      final response = await _httpClient.post<Map<String, dynamic>>(
+        '$_apiBaseUrl/api/v1/passport/comm/sendPhoneVerify',
+        data: _accountPayload(trimmedAccount),
+        headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+      );
+      _ensureOk(response, fallbackMessage: '手机验证码发送失败');
+      return unit;
+    }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'send phone verify failed'));
+  }
+
+  @override
   TaskEither<AuthFailure, Unit> resetPassword({
     required String account,
-    required String emailCode,
+    required String verifyCode,
     required String password,
   }) {
     return TaskEither.tryCatch(() async {
       final trimmedAccount = account.trim();
       final response = await _httpClient.post<Map<String, dynamic>>(
         '$_apiBaseUrl/api/v1/passport/auth/forget',
-        data: {..._accountPayload(trimmedAccount), 'email_code': emailCode.trim(), 'password': password},
+        data: {
+          ..._accountPayload(trimmedAccount),
+          if (trimmedAccount.contains('@')) 'email_code': verifyCode.trim() else 'phone_code': verifyCode.trim(),
+          'password': password,
+        },
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       );
       _ensureOk(response, fallbackMessage: '密码重置失败');
       return unit;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'reset password failed'));
+  }
+
+  @override
+  TaskEither<AuthFailure, String?> fetchBoundPhone({required String authData}) {
+    return TaskEither.tryCatch(() async {
+      final response = await _httpClient.get<Map<String, dynamic>>(
+        '$_apiBaseUrl/api/v1/user/info',
+        headers: {'Accept': 'application/json', 'Authorization': authData},
+      );
+      _ensureOk(response, fallbackMessage: '用户信息返回异常');
+      return XBoardResponseParser.parsePhone(response.data);
+    }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'fetch bound phone failed'));
+  }
+
+  @override
+  TaskEither<AuthFailure, Unit> sendPhoneBindVerify({required String authData, required String phone}) {
+    return TaskEither.tryCatch(() async {
+      final response = await _httpClient.post<Map<String, dynamic>>(
+        '$_apiBaseUrl/api/v1/user/phone/sendVerify',
+        data: {'phone': phone.trim()},
+        headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': authData},
+      );
+      _ensureOk(response, fallbackMessage: '手机验证码发送失败');
+      return unit;
+    }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'send bind phone verify failed'));
+  }
+
+  @override
+  TaskEither<AuthFailure, String> bindPhone({
+    required String authData,
+    required String phone,
+    required String phoneCode,
+  }) {
+    return TaskEither.tryCatch(() async {
+      final normalizedPhone = phone.trim();
+      final response = await _httpClient.post<Map<String, dynamic>>(
+        '$_apiBaseUrl/api/v1/user/phone/bind',
+        data: {'phone': normalizedPhone, 'phone_code': phoneCode.trim()},
+        headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': authData},
+      );
+      _ensureOk(response, fallbackMessage: '手机号绑定失败');
+      return XBoardResponseParser.parsePhone(response.data) ?? normalizedPhone;
+    }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'bind phone failed'));
   }
 
   Map<String, String> _loginPayload({required String account, required String password}) {
@@ -142,6 +212,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
     return AuthSession(
       authData: authData,
       email: XBoardResponseParser.parseEmail(response.data) ?? account.trim(),
+      phone: XBoardResponseParser.parsePhone(response.data),
       createdAt: DateTime.now(),
       subscribeToken: subscribeToken,
       subscription: subscribeUrl == null ? null : UserSubscription(subscribeUrl: subscribeUrl),

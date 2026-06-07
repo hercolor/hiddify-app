@@ -27,6 +27,12 @@ class UserSubscription {
 
   bool get hasTrafficInfo => transferEnable > 0;
 
+  bool get isExpired => expiredAt != null && !expiredAt!.isAfter(DateTime.now());
+
+  bool get isTrafficExhausted => remainingTraffic != null && remainingTraffic! <= 0;
+
+  bool get canConnect => !isExpired && !isTrafficExhausted;
+
   UserSubscription copyWith({
     String? subscribeUrl,
     DateTime? expiredAt,

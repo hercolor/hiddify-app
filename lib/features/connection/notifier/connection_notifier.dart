@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
+import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
@@ -288,6 +289,12 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       reason: reconnecting ? 'reconnect preparing' : 'connect preparing',
     );
 
+    final unavailableMessage = _subscriptionUnavailableMessage();
+    if (unavailableMessage != null) {
+      await _fail(unavailableMessage, reason: 'subscription unavailable');
+      return;
+    }
+
     var activeProfile = await ref.read(activeProfileProvider.future);
     if (!_isStartAttemptActive(currentAttemptId)) {
       loggy.debug('connect aborted before node preparation completed');
@@ -479,7 +486,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _reconnectAttempts = 0;
       _setClientState(const ClientConnectionState.connected(), reason: 'core connected');
       _enforceSelectedProxyOutbound();
-      if (previousStatus is! Connected) _showSuccess('4376 已连接');
+      if (previousStatus is! Connected) _showSuccess('蝴蝶VPN 已连接');
     } else if (event is Connecting) {
       if (_manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping) {
         loggy.info('core reported connecting while stop is pending; preserving stopping state');
@@ -513,7 +520,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         _reconnectAttempts = 0;
         DiagnosticEventBuffer.addSafe('manual/core disconnect failure suppressed');
         _setClientState(const ClientConnectionState.disconnected(), reason: 'manual/core disconnected');
-        _showInfo('4376 已断开');
+        _showInfo('蝴蝶VPN 已断开');
       } else if (failure is MissingVpnPermission) {
         _vpnPermissionRequestedForAttempt = false;
         _vpnPermissionStartFallbackScheduled = false;
@@ -534,7 +541,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       if (_manualDisconnecting || !_userRequestedConnection) {
         _manualDisconnecting = false;
         _setClientState(_computeClientState(), reason: 'manual/core disconnected');
-        if (previousStatus is Connected || previousStatus is Disconnecting) _showInfo('4376 已断开');
+        if (previousStatus is Connected || previousStatus is Disconnecting) _showInfo('蝴蝶VPN 已断开');
       } else if (wasRunning) {
         _scheduleAutoReconnect();
       } else if (ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
@@ -610,6 +617,10 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     }
     if (authValue?.status != AuthStatus.loggedIn) {
       return const ClientConnectionState.loggedOut();
+    }
+    final unavailableMessage = _subscriptionUnavailableMessage();
+    if (unavailableMessage != null) {
+      return ClientConnectionState.failed(unavailableMessage);
     }
 
     return switch (_lastCoreStatus) {
@@ -713,15 +724,23 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   }
 
   void _showError(String message) {
-    loggy.debug('connection toast suppressed: $message');
+    ref.read(inAppNotificationControllerProvider).showErrorToast(message);
   }
 
   void _showInfo(String message) {
-    loggy.debug('connection toast suppressed: $message');
+    ref.read(inAppNotificationControllerProvider).showInfoToast(message);
   }
 
   void _showSuccess(String message) {
-    loggy.debug('connection toast suppressed: $message');
+    ref.read(inAppNotificationControllerProvider).showSuccessToast(message);
+  }
+
+  String? _subscriptionUnavailableMessage() {
+    final subscription = ref.read(authNotifierProvider).valueOrNull?.session?.subscription;
+    if (subscription == null) return null;
+    if (subscription.isExpired) return '会员已到期，请续费后再连接';
+    if (subscription.isTrafficExhausted) return '套餐流量已用尽，请续费后再连接';
+    return null;
   }
 
   bool _isStartAttemptActive(int attemptId) {

@@ -211,7 +211,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                   const SizedBox(height: 42),
                   const _LoginMark(),
                   const Gap(24),
-                  const Text('4376', style: BrandText.brandTitle),
+                  const Text('蝴蝶VPN', style: BrandText.brandTitle),
                   const Gap(8),
                   Text('安全、极速、无界', style: theme.textTheme.bodyMedium),
                   const Gap(48),
@@ -375,6 +375,8 @@ class _MemberCenter extends StatelessWidget {
                   children: [
                     _HeroMemberCard(session: session, subscription: subscription),
                     const Gap(18),
+                    _PhoneBindCard(session: session),
+                    const Gap(16),
                     _SupportCard(subscription: subscription),
                     const Gap(16),
                     _LogoutButton(),
@@ -495,13 +497,171 @@ class _PlanBadge extends StatelessWidget {
           const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
           const Gap(4),
           Text(
-            label == '--' ? '4376 Pro' : label,
+            label == '--' ? '蝴蝶VPN Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: BrandText.caption.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PhoneBindCard extends ConsumerStatefulWidget {
+  const _PhoneBindCard({required this.session});
+
+  final AuthSession session;
+
+  @override
+  ConsumerState<_PhoneBindCard> createState() => _PhoneBindCardState();
+}
+
+class _PhoneBindCardState extends ConsumerState<_PhoneBindCard> {
+  final _phoneController = TextEditingController();
+  final _codeController = TextEditingController();
+  bool _sendingCode = false;
+  bool _binding = false;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.text = widget.session.phone ?? '';
+  }
+
+  @override
+  void didUpdateWidget(covariant _PhoneBindCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session.phone != widget.session.phone && _codeController.text.isEmpty) {
+      _phoneController.text = widget.session.phone ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendCode() async {
+    final phone = _phoneController.text.trim();
+    if (!_looksLikeLoginAccount(phone) || phone.contains('@')) {
+      setState(() => _errorText = '请输入正确的手机号');
+      return;
+    }
+    if (_sendingCode) return;
+    setState(() {
+      _sendingCode = true;
+      _errorText = null;
+    });
+    try {
+      await ref.read(authNotifierProvider.notifier).sendPhoneBindVerify(phone);
+    } catch (error) {
+      setState(() => _errorText = _presentError(error));
+    } finally {
+      if (mounted) setState(() => _sendingCode = false);
+    }
+  }
+
+  Future<void> _bindPhone() async {
+    final phone = _phoneController.text.trim();
+    final code = _codeController.text.trim();
+    if (!_looksLikeLoginAccount(phone) || phone.contains('@')) {
+      setState(() => _errorText = '请输入正确的手机号');
+      return;
+    }
+    if (code.isEmpty) {
+      setState(() => _errorText = '请输入手机验证码');
+      return;
+    }
+    if (_binding) return;
+    setState(() {
+      _binding = true;
+      _errorText = null;
+    });
+    try {
+      await ref.read(authNotifierProvider.notifier).bindPhone(phone: phone, phoneCode: code);
+      if (mounted) _codeController.clear();
+    } catch (error) {
+      setState(() => _errorText = _presentError(error));
+    } finally {
+      if (mounted) setState(() => _binding = false);
+    }
+  }
+
+  String _presentError(Object error) {
+    final t = ref.read(translationsProvider).requireValue;
+    final pair = t.presentError(error);
+    final message = pair.message?.trim();
+    return message == null || message.isEmpty ? pair.type : '${pair.type}\n$message';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentPhone = widget.session.phone?.trim();
+    final isBound = currentPhone != null && currentPhone.isNotEmpty;
+    return _PremiumCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.phone_iphone_rounded, color: BrandColors.signalBlue, size: 20),
+                  const Gap(10),
+                  Expanded(child: Text(isBound ? '已绑定手机号：$currentPhone' : '绑定手机号', style: BrandText.sectionTitle)),
+                ],
+              ),
+              const Gap(6),
+              Text('登录成功后绑定手机号，绑定后可使用邮箱或手机号登录。', style: Theme.of(context).textTheme.bodySmall),
+              const Gap(14),
+              if (_errorText != null) ...[
+                Text(_errorText!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandColors.error)),
+                const Gap(10),
+              ],
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.phone_iphone_rounded), hintText: '请输入手机号'),
+              ),
+              const Gap(10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _codeController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(prefixIcon: Icon(Icons.verified_outlined), hintText: '手机验证码'),
+                    ),
+                  ),
+                  const Gap(10),
+                  SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: _sendingCode ? null : _sendCode,
+                      child: Text(_sendingCode ? '发送中' : '验证码'),
+                    ),
+                  ),
+                ],
+              ),
+              const Gap(12),
+              _GradientButton(
+                label: _binding
+                    ? '绑定中'
+                    : isBound
+                    ? '更换手机号'
+                    : '绑定手机号',
+                isLoading: _binding,
+                onPressed: _binding ? null : _bindPhone,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -609,7 +769,7 @@ class _SupportCard extends HookConsumerWidget {
         const _ActionDivider(),
         _ActionTile(
           icon: Icons.info_outline_rounded,
-          title: '关于 4376',
+          title: '关于 蝴蝶VPN',
           iconColor: const Color(0xFF64748B),
           onTap: () => context.pushNamed('premiumAbout'),
         ),

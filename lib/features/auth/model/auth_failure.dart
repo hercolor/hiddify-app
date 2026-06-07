@@ -46,14 +46,27 @@ sealed class AuthFailure with _$AuthFailure, Failure {
 
 AuthFailure authFailureFromDioException(DioException error, {bool treatUnauthorizedAsExpired = true}) {
   final statusCode = error.response?.statusCode;
-  if (treatUnauthorizedAsExpired && (statusCode == 401 || statusCode == 403)) {
+  final message = _extractMessage(error.response?.data);
+  if (statusCode == 400 && _isInvalidCredentialMessage(message)) {
+    return const AuthFailure.invalidCredentials();
+  }
+  if (treatUnauthorizedAsExpired && statusCode == 401) {
     return const AuthFailure.tokenExpired();
   }
+  if (treatUnauthorizedAsExpired && statusCode == 403) {
+    if (_isSubscriptionUnavailableMessage(message)) {
+      return AuthFailure.serverMessage(_localizedServerMessage(message) ?? '会员已到期，请续费后再使用');
+    }
+    return AuthFailure.tokenExpired(message);
+  }
   if (statusCode == 422) {
-    return AuthFailure.invalidCredentials(_extractMessage(error.response?.data));
+    if (_isInvalidCredentialMessage(message)) {
+      return AuthFailure.invalidCredentials(_localizedServerMessage(message) ?? message);
+    }
+    return AuthFailure.serverMessage(_localizedServerMessage(message) ?? message ?? '请求参数不正确');
   }
   if (statusCode != null && statusCode >= 400) {
-    return AuthFailure.badResponse(_extractMessage(error.response?.data) ?? 'HTTP $statusCode');
+    return AuthFailure.badResponse(_localizedServerMessage(message) ?? message ?? 'HTTP $statusCode');
   }
   return AuthFailure.network(error.message);
 }
@@ -66,6 +79,62 @@ String? _extractMessage(Object? data) {
         return value.toString();
       }
     }
+    for (final key in ['errors', 'data']) {
+      final nested = _extractMessage(data[key]);
+      if (nested != null && nested.trim().isNotEmpty) return nested;
+    }
+    for (final value in data.values) {
+      if (value is! Map && value is! Iterable) continue;
+      final nested = _extractMessage(value);
+      if (nested != null && nested.trim().isNotEmpty) return nested;
+    }
   }
+  if (data is Iterable) {
+    for (final value in data) {
+      final nested = _extractMessage(value);
+      if (nested != null && nested.trim().isNotEmpty) return nested;
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty) return text;
+    }
+  }
+  final text = data?.toString().trim();
+  if (text != null && text.isNotEmpty && text != 'null') {
+    return text;
+  }
+  return null;
+}
+
+bool _isInvalidCredentialMessage(String? message) {
+  final normalized = message?.toLowerCase().trim();
+  if (normalized == null || normalized.isEmpty) return false;
+  return normalized.contains('incorrect account or password') ||
+      normalized.contains('invalid account or password') ||
+      normalized.contains('账号或密码');
+}
+
+bool _isSubscriptionUnavailableMessage(String? message) {
+  final normalized = message?.toLowerCase().trim();
+  if (normalized == null || normalized.isEmpty) return false;
+  return normalized.contains('expired') ||
+      normalized.contains('unavailable') ||
+      normalized.contains('subscription') ||
+      normalized.contains('到期') ||
+      normalized.contains('过期') ||
+      normalized.contains('流量');
+}
+
+String? _localizedServerMessage(String? message) {
+  final normalized = message?.toLowerCase().trim();
+  if (normalized == null || normalized.isEmpty) return null;
+  if (_isInvalidCredentialMessage(normalized)) return '账号或密码不正确';
+  if (normalized.contains('email already exists')) return '邮箱已被注册';
+  if (normalized.contains('phone already exists')) return '手机号已被绑定';
+  if (normalized.contains('incorrect email verification code')) return '邮箱验证码不正确';
+  if (normalized.contains('incorrect phone verification code')) return '手机验证码不正确';
+  if (normalized.contains('this phone is not registered')) return '该手机号未绑定账号';
+  if (normalized.contains('this email is not registered')) return '该邮箱未注册';
+  if (normalized.contains('phone format is incorrect')) return '手机号格式不正确';
+  if (normalized.contains('email format is incorrect')) return '邮箱格式不正确';
+  if (_isSubscriptionUnavailableMessage(normalized)) return '会员已到期或流量不足，请续费后再使用';
   return null;
 }
