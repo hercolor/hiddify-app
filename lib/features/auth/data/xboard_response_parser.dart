@@ -46,12 +46,13 @@ class XBoardResponseParser {
   static UserSubscription parseSubscription(Object? responseData, {String? fallbackSubscribeUrl, String? baseUrl}) {
     final data = _decodeIfString(responseData);
     final subscribeUrl = parseSubscribeUrl(data, fallbackSubscribeUrl: fallbackSubscribeUrl, baseUrl: baseUrl);
-    if (subscribeUrl == null || subscribeUrl.trim().isEmpty) {
+    final serverCanConnect = _findBoolByKeys(data, const ['can_connect', 'canConnect']);
+    if ((subscribeUrl == null || subscribeUrl.trim().isEmpty) && serverCanConnect != false) {
       throw const AuthFailure.serverMessage('订阅信息为空，请联系客服');
     }
 
     return UserSubscription(
-      subscribeUrl: subscribeUrl.trim(),
+      subscribeUrl: subscribeUrl?.trim() ?? '',
       expiredAt: _findDateTimeByKeys(data, const [
         'expired_at',
         'expiredAt',
@@ -64,7 +65,12 @@ class XBoardResponseParser {
       download: _findIntByKeys(data, const ['d', 'download', 'downloaded']) ?? 0,
       transferEnable:
           _findIntByKeys(data, const ['transfer_enable', 'transferEnable', 'transfer', 'total', 'traffic']) ?? 0,
+      planId: _findIntByKeys(data, const ['plan_id', 'planId']),
       planName: _findPlanName(data),
+      membershipStatus: _findStringByKeys(data, const ['membership_status', 'membershipStatus'])?.trim(),
+      membershipLabel: _findStringByKeys(data, const ['membership_label', 'membershipLabel'])?.trim(),
+      subscriptionStatus: _findStringByKeys(data, const ['subscription_status', 'subscriptionStatus'])?.trim(),
+      serverCanConnect: serverCanConnect,
       onlineDevices: _findIntByKeys(data, const [
         'online_devices',
         'onlineDevices',
@@ -214,6 +220,18 @@ class XBoardResponseParser {
     if (found is double) return found.round();
     if (found is num) return found.toInt();
     return int.tryParse(found.toString());
+  }
+
+  static bool? _findBoolByKeys(Object? value, List<String> keys) {
+    final found = _findValueByKeys(value, keys);
+    if (found == null) return null;
+    if (found is bool) return found;
+    if (found is num) return found != 0;
+    final text = found.toString().trim().toLowerCase();
+    if (text.isEmpty) return null;
+    if (const {'1', 'true', 'yes', 'y', 'on'}.contains(text)) return true;
+    if (const {'0', 'false', 'no', 'n', 'off'}.contains(text)) return false;
+    return null;
   }
 
   static DateTime? _findDateTimeByKeys(Object? value, List<String> keys) {

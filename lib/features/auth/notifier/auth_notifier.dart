@@ -143,11 +143,15 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
       final subscription = session.subscription;
       if (subscription == null) {
-        return '订阅信息为空，请联系客服';
+        return '请先开通会员';
+      }
+      if (!subscription.canConnect) {
+        await _clearSubscriptionAccessCache(session: session, reason: 'membership unavailable before connect');
+        return _subscriptionAccessFailureMessage(subscription);
       }
       if (subscription.isExpired) {
         await _clearSubscriptionAccessCache(session: session, reason: 'expired before connect');
-        return '会员已到期，请续费后再连接';
+        return '会员已到期，请开通会员后再连接';
       }
       if (subscription.isTrafficExhausted) {
         await _clearSubscriptionAccessCache(session: session, reason: 'traffic exhausted before connect');
@@ -282,7 +286,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         .run();
     syncUserWatch.stop();
     final subscriptionUrl = subscription.subscribeUrl.trim();
-    if (subscriptionUrl.isEmpty) {
+    if (subscriptionUrl.isEmpty && subscription.canConnect) {
       throw const AuthFailure.serverMessage('订阅信息为空，请联系客服');
     }
     var syncedSession = session.copyWith(subscription: subscription);
@@ -303,6 +307,21 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       'urlLength=${subscriptionUrl.length}, planExists=${subscription.planName?.trim().isNotEmpty == true}, '
       'hasTraffic=${subscription.hasTrafficInfo}',
     );
+
+    if (!subscription.canConnect) {
+      await _clearSubscriptionAccessCache(session: syncedSession, reason: 'membership unavailable during sync');
+      loggy.info(
+        'membership unavailable, node sync skipped: '
+        'membershipStatus=${subscription.membershipStatus}, '
+        'subscriptionStatus=${subscription.subscriptionStatus}, '
+        'canConnect=${subscription.canConnect}',
+      );
+      DiagnosticEventBuffer.add(
+        'membership unavailable, node sync skipped: '
+        'membershipStatus=${subscription.membershipStatus}, subscriptionStatus=${subscription.subscriptionStatus}',
+      );
+      return (session: syncedSession, nodesSynced: false);
+    }
 
     final syncNodesWatch = Stopwatch()..start();
     var nodesSynced = false;
@@ -574,8 +593,20 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     return switch (error) {
       AuthServerMessageFailure(:final message) => message,
       AuthBadResponseFailure(:final message?) when message.trim().isNotEmpty => message,
-      _ => '会员已到期或流量不足，请续费后再连接',
+      _ => '请先开通会员',
     };
+  }
+
+  String _subscriptionAccessFailureMessage(UserSubscription subscription) {
+    if (subscription.membershipStatus == 'normal') return '请先开通会员';
+    if (subscription.membershipStatus == 'expired' || subscription.isExpired) {
+      return '会员已到期，请开通会员后再连接';
+    }
+    if (subscription.isTrafficExhausted || subscription.subscriptionStatus == 'traffic_exhausted') {
+      return '套餐流量已用尽，请续费后再连接';
+    }
+    if (subscription.subscriptionStatus == 'banned') return '账号不可用，请联系客服';
+    return '请先开通会员';
   }
 
   bool _isSubscriptionUnavailable(Object error) {
@@ -611,7 +642,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         normalized.contains('unavailable');
     if (!looksExpired && subscription.isExpired) return subscription;
     if (!looksExpired) return subscription;
-    return subscription.copyWith(expiredAt: DateTime.now());
+    return subscription.copyWith(
+      expiredAt: DateTime.now(),
+      membershipStatus: 'expired',
+      membershipLabel: '会员到期',
+      subscriptionStatus: 'expired',
+      serverCanConnect: false,
+    );
   }
 
   Future<void> _clearSubscriptionAccessCache({required AuthSession session, required String reason}) async {

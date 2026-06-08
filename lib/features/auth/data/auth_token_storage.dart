@@ -22,7 +22,12 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
   static const _uploadKey = 'xboard.auth.upload';
   static const _downloadKey = 'xboard.auth.download';
   static const _transferEnableKey = 'xboard.auth.transfer_enable';
+  static const _planIdKey = 'xboard.auth.plan_id';
   static const _planNameKey = 'xboard.auth.plan_name';
+  static const _membershipStatusKey = 'xboard.auth.membership_status';
+  static const _membershipLabelKey = 'xboard.auth.membership_label';
+  static const _subscriptionStatusKey = 'xboard.auth.subscription_status';
+  static const _canConnectKey = 'xboard.auth.can_connect';
   static const _onlineDevicesKey = 'xboard.auth.online_devices';
   static const _maxDevicesKey = 'xboard.auth.max_devices';
   static const _customerServiceKey = 'xboard.auth.customer_service';
@@ -43,7 +48,12 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
     await _storage.write(key: _uploadKey, value: subscription?.upload.toString());
     await _storage.write(key: _downloadKey, value: subscription?.download.toString());
     await _storage.write(key: _transferEnableKey, value: subscription?.transferEnable.toString());
+    await _storage.write(key: _planIdKey, value: subscription?.planId?.toString());
     await _storage.write(key: _planNameKey, value: subscription?.planName);
+    await _storage.write(key: _membershipStatusKey, value: subscription?.membershipStatus);
+    await _storage.write(key: _membershipLabelKey, value: subscription?.membershipLabel);
+    await _storage.write(key: _subscriptionStatusKey, value: subscription?.subscriptionStatus);
+    await _storage.write(key: _canConnectKey, value: subscription?.serverCanConnect?.toString());
     await _storage.write(key: _onlineDevicesKey, value: subscription?.onlineDevices?.toString());
     await _storage.write(key: _maxDevicesKey, value: subscription?.maxDevices?.toString());
     await _storage.write(key: _customerServiceKey, value: subscription?.customerService);
@@ -76,7 +86,12 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
               upload: int.tryParse(await _storage.read(key: _uploadKey) ?? '') ?? 0,
               download: int.tryParse(await _storage.read(key: _downloadKey) ?? '') ?? 0,
               transferEnable: int.tryParse(await _storage.read(key: _transferEnableKey) ?? '') ?? 0,
+              planId: int.tryParse(await _storage.read(key: _planIdKey) ?? ''),
               planName: await _storage.read(key: _planNameKey),
+              membershipStatus: await _storage.read(key: _membershipStatusKey),
+              membershipLabel: await _storage.read(key: _membershipLabelKey),
+              subscriptionStatus: await _storage.read(key: _subscriptionStatusKey),
+              serverCanConnect: _parseBool(await _storage.read(key: _canConnectKey)),
               onlineDevices: int.tryParse(await _storage.read(key: _onlineDevicesKey) ?? ''),
               maxDevices: int.tryParse(await _storage.read(key: _maxDevicesKey) ?? ''),
               customerService: await _storage.read(key: _customerServiceKey),
@@ -98,12 +113,25 @@ class SecureAuthTokenStorage implements AuthTokenStorage {
       _uploadKey,
       _downloadKey,
       _transferEnableKey,
+      _planIdKey,
       _planNameKey,
+      _membershipStatusKey,
+      _membershipLabelKey,
+      _subscriptionStatusKey,
+      _canConnectKey,
       _onlineDevicesKey,
       _maxDevicesKey,
       _customerServiceKey,
     ]) {
       await _storage.delete(key: key);
     }
+  }
+
+  bool? _parseBool(String? value) {
+    final text = value?.trim().toLowerCase();
+    if (text == null || text.isEmpty) return null;
+    if (text == 'true' || text == '1') return true;
+    if (text == 'false' || text == '0') return false;
+    return null;
   }
 }

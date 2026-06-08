@@ -131,7 +131,8 @@ class UserSecurityCenterPage extends HookConsumerWidget {
         titleTextStyle: BrandText.pageTitle,
       ),
       body: BrandScaffoldBackground(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 680),
             child: _SecurityCenterContent(authState: authState, errorText: authState.readableError(t)),
@@ -672,7 +673,6 @@ class _HeroMemberCard extends HookConsumerWidget {
     final theme = Theme.of(context);
     final planLabel = _membershipBadgeLabel(subscription);
     final statusText = _membershipStatusText(subscription);
-    final expiredAt = subscription?.expiredAt;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -732,11 +732,7 @@ class _HeroMemberCard extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: _MemberField(
-                  label: '到期时间',
-                  value: _formatExpiredAt(expiredAt, isExpired: subscription?.isExpired == true),
-                  dark: true,
-                ),
+                child: _MemberField(label: '到期时间', value: _formatActiveExpiredAt(subscription), dark: true),
               ),
               const Gap(12),
               _SmallLightButton(label: '续费', onTap: () => context.pushNamed('premiumRenewal')),
@@ -1148,12 +1144,6 @@ String _formatDeviceLimit(UserSubscription? subscription) {
   return '最多 $max 台';
 }
 
-String _displayText(String? value) {
-  final trimmed = value?.trim();
-  if (trimmed == null || trimmed.isEmpty) return '--';
-  return trimmed;
-}
-
 String _maskAccount(String value) {
   final trimmed = value.trim();
   if (trimmed.isEmpty) return '--';
@@ -1274,24 +1264,22 @@ class _LogoutButton extends ConsumerWidget {
 }
 
 String _membershipBadgeLabel(UserSubscription? subscription) {
-  if (subscription == null) return '状态待更新';
-  if (subscription.isExpired) return '会员已到期';
-  if (subscription.isTrafficExhausted) return '流量已用尽';
-  final planName = _displayText(subscription.planName);
-  return planName == '--' ? '会员有效' : planName;
+  return subscription?.displayMembershipLabel ?? '普通用户';
 }
 
 String _membershipStatusText(UserSubscription? subscription) {
-  if (subscription == null) return '状态：正在更新会员信息';
-  if (subscription.isExpired) return '状态：会员已到期';
-  if (subscription.isTrafficExhausted) return '状态：流量已用尽';
-  return '状态：会员有效 · 设备：${_formatDeviceLimit(subscription)}';
+  final label = _membershipBadgeLabel(subscription);
+  if (subscription?.hasActiveMembership == true) {
+    return '会员状态：$label · 设备：${_formatDeviceLimit(subscription)}';
+  }
+  return '会员状态：$label';
 }
 
-String _formatExpiredAt(DateTime? expiredAt, {bool isExpired = false}) {
-  if (expiredAt == null) return '--';
-  final formatted = DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
-  return isExpired ? '$formatted（已到期）' : formatted;
+String _formatActiveExpiredAt(UserSubscription? subscription) {
+  if (subscription?.hasActiveMembership != true) return '开通后显示';
+  final expiredAt = subscription?.expiredAt;
+  if (expiredAt == null) return '长期有效';
+  return DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
 }
 
 bool _looksLikeLoginAccount(String value) {

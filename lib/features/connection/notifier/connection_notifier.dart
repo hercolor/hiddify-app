@@ -790,7 +790,15 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   String? _subscriptionUnavailableMessage() {
     final subscription = ref.read(authNotifierProvider).valueOrNull?.session?.subscription;
     if (subscription == null) return null;
-    if (subscription.isExpired) return '会员已到期，请续费后再连接';
+    if (!subscription.canConnect) {
+      if (subscription.membershipStatus == 'normal') return '请先开通会员';
+      if (subscription.membershipStatus == 'expired' || subscription.isExpired) return '会员已到期，请开通会员后再连接';
+      if (subscription.isTrafficExhausted || subscription.subscriptionStatus == 'traffic_exhausted') {
+        return '套餐流量已用尽，请续费后再连接';
+      }
+      return '请先开通会员';
+    }
+    if (subscription.isExpired) return '会员已到期，请开通会员后再连接';
     if (subscription.isTrafficExhausted) return '套餐流量已用尽，请续费后再连接';
     return null;
   }
