@@ -72,7 +72,13 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       }
     });
 
-    ref.listen(authNotifierProvider, (_, next) => _refreshClientState(reason: 'auth changed'), fireImmediately: true);
+    ref.listen(authNotifierProvider, (_, next) {
+      _refreshClientState(reason: 'auth changed');
+      final message = _subscriptionUnavailableMessage();
+      if (message != null && (_lastCoreStatus is Connected || _clientState.phase == ClientConnectionPhase.connected)) {
+        unawaited(_disconnectForSubscriptionUnavailable(message));
+      }
+    }, fireImmediately: true);
 
     ref.listen(activeProfileProvider.select((value) => value.asData?.value), (previous, next) async {
       if (previous == null) return;
@@ -134,6 +140,11 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         loggy.info('no active profile, disconnecting');
         return userDisconnect();
       }
+      final accessFailure = await _ensureSubscriptionAccessForConnect();
+      if (accessFailure != null) {
+        await _disconnectForSubscriptionUnavailable(accessFailure);
+        return;
+      }
       loggy.info('active profile changed, reconnecting selectedNodeName=${_selectedNodeNameSync()}');
       await ref.read(Preferences.startedByUser.notifier).update(true);
       _setClientState(const ClientConnectionState.reconnecting(), reason: 'active profile changed');
@@ -169,14 +180,18 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     await ref.read(Preferences.startedByUser.notifier).update(true);
     _setClientState(const ClientConnectionState.reconnecting(), reason: 'node switch requested');
 
-    var synced = false;
+    String? accessFailure;
     _suppressActiveProfileReconnect = true;
     try {
-      synced = await ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
+      accessFailure = await _ensureSubscriptionAccessForConnect();
     } finally {
       _suppressActiveProfileReconnect = false;
     }
-    DiagnosticEventBuffer.addSafe('node switch profile restore completed: synced=$synced');
+    if (accessFailure != null) {
+      await _disconnectForSubscriptionUnavailable(accessFailure);
+      return;
+    }
+    DiagnosticEventBuffer.addSafe('node switch profile restore completed: subscriptionAccess=true');
 
     await ref.read(clientNodeSelectionProvider.notifier).selectNode(trimmedNodeId);
     final profile = await ref
@@ -289,6 +304,12 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       reason: reconnecting ? 'reconnect preparing' : 'connect preparing',
     );
 
+    final accessFailure = await _ensureSubscriptionAccessForConnect();
+    if (accessFailure != null) {
+      await _fail(accessFailure, reason: 'subscription access check failed');
+      return;
+    }
+
     final unavailableMessage = _subscriptionUnavailableMessage();
     if (unavailableMessage != null) {
       await _fail(unavailableMessage, reason: 'subscription unavailable');
@@ -361,6 +382,16 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState?.status != AuthStatus.loggedIn) return false;
     return ref.read(authNotifierProvider.notifier).syncNodes(showSuccessToast: false);
+  }
+
+  Future<String?> _ensureSubscriptionAccessForConnect() async {
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    if (authState?.status != AuthStatus.loggedIn) return '请先登录账号';
+    final message = await ref.read(authNotifierProvider.notifier).ensureSubscriptionAccessForConnect();
+    if (message != null) {
+      DiagnosticEventBuffer.addSafe('subscription access blocked connection: $message');
+    }
+    return message;
   }
 
   Future<ClientNodeSelection> _readCachedNodeSelection() async {
@@ -456,6 +487,27 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         }
       },
     );
+  }
+
+  Future<void> _disconnectForSubscriptionUnavailable(String message) async {
+    if (_clientState.phase == ClientConnectionPhase.stopping) return;
+    _manualDisconnecting = true;
+    _resetUserConnectionIntent();
+    _startAttemptId++;
+    _setClientState(const ClientConnectionState.stopping(), reason: 'subscription unavailable while connected');
+    await ref.read(Preferences.startedByUser.notifier).update(false);
+
+    final result = await _connectionRepo.disconnect().run();
+    result.mapLeft((err) {
+      loggy.debug(
+        'disconnect for subscription unavailable completed with local error: ${ConnectionErrorMapper.fromFailure(err)}',
+      );
+      return err;
+    });
+    _manualDisconnecting = false;
+    _lastCoreStatus = const ConnectionStatus.disconnected();
+    _setClientState(ClientConnectionState.failed(message), reason: 'subscription unavailable');
+    _showError(message);
   }
 
   ConnectionStatus? get _currentStatus => state.valueOrNull ?? _lastCoreStatus;

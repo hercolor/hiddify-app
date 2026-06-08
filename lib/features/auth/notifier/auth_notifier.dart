@@ -107,6 +107,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       DiagnosticEventBuffer.add('user info sync after auth failed: ${_safeError(error)}');
       if (_isSubscriptionUnavailable(error)) {
         await _clearSubscriptionAccessCache(session: session, reason: _safeError(error));
+        syncedSession = session.copyWith(clearSubscription: true);
       }
       ref.read(inAppNotificationControllerProvider).showErrorToast(_loginSyncErrorMessage(error));
     }
@@ -123,6 +124,49 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
   Future<void> refreshSubscription() async {
     await syncNodes();
+  }
+
+  Future<String?> ensureSubscriptionAccessForConnect() async {
+    final current = state.valueOrNull?.session;
+    if (current == null) {
+      return '请先登录账号';
+    }
+
+    try {
+      final result = await _fetchSubscriptionAndImport(current, showNodeFailureToast: false);
+      final session = result.session;
+      await ref.read(authTokenStorageProvider).save(session);
+      final nextState = AuthState.loggedIn(session);
+      state = AsyncData(nextState);
+      await _logAuthDebug(nextState, userInfoLoaded: session.subscription != null);
+
+      final subscription = session.subscription;
+      if (subscription == null) {
+        return '订阅信息为空，请联系客服';
+      }
+      if (subscription.isExpired) {
+        await _clearSubscriptionAccessCache(session: session, reason: 'expired before connect');
+        return '会员已到期，请续费后再连接';
+      }
+      if (subscription.isTrafficExhausted) {
+        await _clearSubscriptionAccessCache(session: session, reason: 'traffic exhausted before connect');
+        return '套餐流量已用尽，请续费后再连接';
+      }
+      return null;
+    } catch (error, stackTrace) {
+      loggy.warning('subscription access check before connect failed', error, stackTrace);
+      DiagnosticEventBuffer.add('subscription access check before connect failed: ${_safeError(error)}');
+      if (_isSubscriptionUnavailable(error)) {
+        await _markSubscriptionUnavailable(current, reason: _safeError(error));
+        return _subscriptionUnavailableErrorMessage(error);
+      }
+
+      final cachedSubscription = current.subscription;
+      if (cachedSubscription != null && cachedSubscription.canConnect && cachedSubscription.expiredAt != null) {
+        return null;
+      }
+      return '获取会员状态失败，请稍后重试';
+    }
   }
 
   Future<bool> syncNodes({bool showSuccessToast = true}) async {
@@ -149,11 +193,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       loggy.warning('failed to sync nodes', error, stackTrace);
       DiagnosticEventBuffer.add('node sync failed: ${_safeError(error)}');
       if (_isSubscriptionUnavailable(error)) {
-        await _clearSubscriptionAccessCache(session: current, reason: _safeError(error));
+        await _markSubscriptionUnavailable(current, reason: _safeError(error));
       }
-      final nextState = AuthState.loggedIn(current);
+      final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? current);
       state = AsyncData(nextState);
-      await _logAuthDebug(nextState, userInfoLoaded: current.subscription != null);
+      await _logAuthDebug(nextState, userInfoLoaded: nextState.session?.subscription != null);
       final cachedNodes = await _safeReadCachedNodes();
       ref
           .read(inAppNotificationControllerProvider)
@@ -362,7 +406,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       loggy.warning('failed to sync nodes during bootstrap', error, stackTrace);
       if (!_isCurrentSession(session)) return;
       if (_isSubscriptionUnavailable(error)) {
-        await _clearSubscriptionAccessCache(session: session, reason: _safeError(error));
+        await _markSubscriptionUnavailable(session, reason: _safeError(error));
       }
       final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? session);
       state = AsyncData(nextState);
@@ -509,6 +553,14 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     };
   }
 
+  String _subscriptionUnavailableErrorMessage(Object error) {
+    return switch (error) {
+      AuthServerMessageFailure(:final message) => message,
+      AuthBadResponseFailure(:final message?) when message.trim().isNotEmpty => message,
+      _ => '会员已到期或流量不足，请续费后再连接',
+    };
+  }
+
   bool _isSubscriptionUnavailable(Object error) {
     final text = _safeError(error).toLowerCase();
     return text.contains('会员') ||
@@ -518,6 +570,14 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         text.contains('unavailable') ||
         text.contains('traffic') ||
         text.contains('流量');
+  }
+
+  Future<void> _markSubscriptionUnavailable(AuthSession session, {required String reason}) async {
+    await _clearSubscriptionAccessCache(session: session, reason: reason);
+    final unavailableSession = session.copyWith(clearSubscription: true);
+    await ref.read(authTokenStorageProvider).save(unavailableSession);
+    state = AsyncData(AuthState.loggedIn(unavailableSession));
+    await _logAuthDebug(AuthState.loggedIn(unavailableSession), userInfoLoaded: false);
   }
 
   Future<void> _clearSubscriptionAccessCache({required AuthSession session, required String reason}) async {

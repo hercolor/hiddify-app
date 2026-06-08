@@ -25,6 +25,7 @@ class AuthSession {
     DateTime? createdAt,
     String? subscribeToken,
     UserSubscription? subscription,
+    bool clearSubscription = false,
   }) {
     return AuthSession(
       authData: authData ?? this.authData,
@@ -32,7 +33,7 @@ class AuthSession {
       phone: clearPhone ? null : phone ?? this.phone,
       createdAt: createdAt ?? this.createdAt,
       subscribeToken: subscribeToken ?? this.subscribeToken,
-      subscription: subscription ?? this.subscription,
+      subscription: clearSubscription ? null : subscription ?? this.subscription,
     );
   }
 }
