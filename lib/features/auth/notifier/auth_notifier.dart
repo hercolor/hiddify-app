@@ -11,6 +11,7 @@ import 'package:hiddify/features/auth/data/auth_data_providers.dart';
 import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
+import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/data/profile_repository.dart';
@@ -122,8 +123,8 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     return nextState;
   }
 
-  Future<void> refreshSubscription() async {
-    await syncNodes();
+  Future<void> refreshSubscription({bool showSuccessToast = true, bool showFailureToast = true}) async {
+    await syncNodes(showSuccessToast: showSuccessToast, showFailureToast: showFailureToast);
   }
 
   Future<String?> ensureSubscriptionAccessForConnect() async {
@@ -169,7 +170,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     }
   }
 
-  Future<bool> syncNodes({bool showSuccessToast = true}) async {
+  Future<bool> syncNodes({bool showSuccessToast = true, bool showFailureToast = true}) async {
     final current = state.valueOrNull?.session;
     if (current == null) {
       ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
@@ -198,10 +199,12 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? current);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: nextState.session?.subscription != null);
-      final cachedNodes = await _safeReadCachedNodes();
-      ref
-          .read(inAppNotificationControllerProvider)
-          .showErrorToast(_nodeSyncErrorMessage(error, hasCachedNodes: cachedNodes.nodeCount > 0));
+      if (showFailureToast) {
+        final cachedNodes = await _safeReadCachedNodes();
+        ref
+            .read(inAppNotificationControllerProvider)
+            .showErrorToast(_nodeSyncErrorMessage(error, hasCachedNodes: cachedNodes.nodeCount > 0));
+      }
       return false;
     }
   }
@@ -588,10 +591,27 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
   Future<void> _markSubscriptionUnavailable(AuthSession session, {required String reason}) async {
     await _clearSubscriptionAccessCache(session: session, reason: reason);
-    final unavailableSession = session.copyWith(clearSubscription: true);
+    final unavailableSubscription = _subscriptionMarkedUnavailable(session.subscription, reason: reason);
+    final unavailableSession = unavailableSubscription == null
+        ? session.copyWith(clearSubscription: true)
+        : session.copyWith(subscription: unavailableSubscription);
     await ref.read(authTokenStorageProvider).save(unavailableSession);
     state = AsyncData(AuthState.loggedIn(unavailableSession));
-    await _logAuthDebug(AuthState.loggedIn(unavailableSession), userInfoLoaded: false);
+    await _logAuthDebug(AuthState.loggedIn(unavailableSession), userInfoLoaded: unavailableSubscription != null);
+  }
+
+  UserSubscription? _subscriptionMarkedUnavailable(UserSubscription? subscription, {required String reason}) {
+    if (subscription == null) return null;
+    final normalized = reason.toLowerCase();
+    final looksExpired =
+        normalized.contains('会员') ||
+        normalized.contains('到期') ||
+        normalized.contains('过期') ||
+        normalized.contains('expired') ||
+        normalized.contains('unavailable');
+    if (!looksExpired && subscription.isExpired) return subscription;
+    if (!looksExpired) return subscription;
+    return subscription.copyWith(expiredAt: DateTime.now());
   }
 
   Future<void> _clearSubscriptionAccessCache({required AuthSession session, required String reason}) async {

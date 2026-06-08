@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -25,6 +28,7 @@ class UserProfilePage extends HookConsumerWidget {
     final authState = ref.watch(authNotifierProvider);
     final currentState = authState.valueOrNull;
     final showingLogin = currentState?.session == null;
+    final session = currentState?.session;
 
     ref.listen(authNotifierProvider, (_, next) {
       if (next case AsyncError(:final error)) {
@@ -34,6 +38,24 @@ class UserProfilePage extends HookConsumerWidget {
             .showErrorToast(pair.message == null ? pair.type : '${pair.type}\n${pair.message}');
       }
     });
+
+    useEffect(() {
+      final authData = session?.authData.trim();
+      if (authData == null || authData.isEmpty) return null;
+
+      var disposed = false;
+      Future<void> refresh() async {
+        if (disposed) return;
+        await ref
+            .read(authNotifierProvider.notifier)
+            .refreshSubscription(showSuccessToast: false, showFailureToast: false);
+      }
+
+      unawaited(Future<void>.microtask(refresh));
+      return () {
+        disposed = true;
+      };
+    }, [session?.authData]);
 
     if (PlatformUtils.isWindows) {
       return DesktopMembershipPage(authState: authState, errorText: authState.readableError(t));
@@ -648,7 +670,8 @@ class _HeroMemberCard extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final planName = _displayText(subscription?.planName);
+    final planLabel = _membershipBadgeLabel(subscription);
+    final statusText = _membershipStatusText(subscription);
     final expiredAt = subscription?.expiredAt;
     return Container(
       padding: const EdgeInsets.all(24),
@@ -689,7 +712,7 @@ class _HeroMemberCard extends HookConsumerWidget {
                           ),
                           const Gap(4),
                           Text(
-                            '设备：${_formatDeviceLimit(subscription)}',
+                            statusText,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
@@ -701,7 +724,7 @@ class _HeroMemberCard extends HookConsumerWidget {
                 ),
               ),
               const Gap(12),
-              _PlanBadge(label: planName),
+              _PlanBadge(label: planLabel),
             ],
           ),
           const Gap(32),
@@ -709,7 +732,11 @@ class _HeroMemberCard extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: _MemberField(label: '到期时间', value: _formatExpiredAt(expiredAt), dark: true),
+                child: _MemberField(
+                  label: '到期时间',
+                  value: _formatExpiredAt(expiredAt, isExpired: subscription?.isExpired == true),
+                  dark: true,
+                ),
               ),
               const Gap(12),
               _SmallLightButton(label: '续费', onTap: () => context.pushNamed('premiumRenewal')),
@@ -745,7 +772,7 @@ class _PlanBadge extends StatelessWidget {
           const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
           const Gap(4),
           Text(
-            label == '--' ? '蝴蝶VPN Pro' : label,
+            label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: BrandText.caption.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
@@ -1246,9 +1273,25 @@ class _LogoutButton extends ConsumerWidget {
   }
 }
 
-String _formatExpiredAt(DateTime? expiredAt) {
+String _membershipBadgeLabel(UserSubscription? subscription) {
+  if (subscription == null) return '状态待更新';
+  if (subscription.isExpired) return '会员已到期';
+  if (subscription.isTrafficExhausted) return '流量已用尽';
+  final planName = _displayText(subscription.planName);
+  return planName == '--' ? '会员有效' : planName;
+}
+
+String _membershipStatusText(UserSubscription? subscription) {
+  if (subscription == null) return '状态：正在更新会员信息';
+  if (subscription.isExpired) return '状态：会员已到期';
+  if (subscription.isTrafficExhausted) return '状态：流量已用尽';
+  return '状态：会员有效 · 设备：${_formatDeviceLimit(subscription)}';
+}
+
+String _formatExpiredAt(DateTime? expiredAt, {bool isExpired = false}) {
   if (expiredAt == null) return '--';
-  return DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
+  final formatted = DateFormat('yyyy/MM/dd HH:mm').format(expiredAt.toLocal());
+  return isExpired ? '$formatted（已到期）' : formatted;
 }
 
 bool _looksLikeLoginAccount(String value) {
