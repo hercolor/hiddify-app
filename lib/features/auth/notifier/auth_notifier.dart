@@ -162,8 +162,9 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       loggy.warning('subscription access check before connect failed', error, stackTrace);
       DiagnosticEventBuffer.add('subscription access check before connect failed: ${_safeError(error)}');
       if (_isSubscriptionUnavailable(error)) {
+        final message = _subscriptionUnavailableErrorMessage(error, cachedSubscription: current.subscription);
         await _markSubscriptionUnavailable(current, reason: _safeError(error));
-        return _subscriptionUnavailableErrorMessage(error);
+        return message;
       }
 
       final cachedSubscription = current.subscription;
@@ -589,12 +590,17 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     };
   }
 
-  String _subscriptionUnavailableErrorMessage(Object error) {
-    return switch (error) {
-      AuthServerMessageFailure(:final message) => message,
-      AuthBadResponseFailure(:final message?) when message.trim().isNotEmpty => message,
-      _ => '请先开通会员',
-    };
+  String _subscriptionUnavailableErrorMessage(Object error, {UserSubscription? cachedSubscription}) {
+    if (cachedSubscription != null && !cachedSubscription.canConnect) {
+      return _subscriptionAccessFailureMessage(cachedSubscription);
+    }
+    final text = _safeError(error).toLowerCase();
+    final looksExpired = text.contains('到期') || text.contains('过期') || text.contains('expired');
+    final looksTraffic = text.contains('流量') || text.contains('traffic');
+    if (looksExpired && looksTraffic) return '请先开通或续费会员后再连接';
+    if (looksTraffic) return '套餐流量已用尽，请续费后再连接';
+    if (looksExpired) return '会员已到期，请开通会员后再连接';
+    return '请先开通会员';
   }
 
   String _subscriptionAccessFailureMessage(UserSubscription subscription) {

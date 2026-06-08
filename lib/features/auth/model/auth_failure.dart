@@ -138,6 +138,6 @@ String? _localizedServerMessage(String? message) {
   if (normalized.contains('this email is not registered')) return '该邮箱未注册';
   if (normalized.contains('phone format is incorrect')) return '手机号格式不正确';
   if (normalized.contains('email format is incorrect')) return '邮箱格式不正确';
-  if (_isSubscriptionUnavailableMessage(normalized)) return '会员已到期或流量不足，请续费后再使用';
+  if (_isSubscriptionUnavailableMessage(normalized)) return '请先开通或续费会员后再连接';
   return null;
 }
