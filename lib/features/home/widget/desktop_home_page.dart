@@ -34,7 +34,7 @@ class DesktopHomePage extends HookConsumerWidget {
               child: const Icon(Icons.power_settings_new_rounded, color: Color(0xFFEF4444), size: 22),
             ),
             const Gap(12),
-            const Text('退出 4376 VPN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text('退出 蝴蝶VPN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           ],
         ),
         content: const Text('选择退出方式', style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
@@ -126,7 +126,7 @@ class DesktopHomePage extends HookConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _TopRoundIcon(icon: Icons.settings_outlined, onTap: () => context.pushNamed('settings')),
-                  const Text('4376 VPN', style: BrandDesktopText.pageTitle),
+                  const Text('蝴蝶VPN', style: BrandDesktopText.pageTitle),
                   if (PlatformUtils.isWindows)
                     _TopRoundIcon(icon: Icons.close_rounded, onTap: () => _handleClose(context))
                   else
@@ -242,6 +242,8 @@ class _ConnectionHero extends StatelessWidget {
     final status = _statusInfo(state);
     final connected = state.phase == ClientConnectionPhase.connected;
     final busy = state.isBusy;
+    final failed = state.phase == ClientConnectionPhase.failed;
+    final failedMessage = failed ? _connectionFailureLabel(state) : null;
 
     return Container(
       width: double.infinity,
@@ -268,6 +270,10 @@ class _ConnectionHero extends StatelessWidget {
                   ? '已保护您的网络连接'
                   : busy
                   ? '正在建立安全连接'
+                  : failed
+                  ? failedMessage == status.label
+                        ? '请处理后重试'
+                        : failedMessage ?? '请处理后重试'
                   : state.phase == ClientConnectionPhase.loggedOut
                   ? '登录后开启加速服务'
                   : '畅享 VIP 高速专线',
@@ -616,11 +622,20 @@ _StatusInfo _statusInfo(ClientConnectionState state) {
     ),
     ClientConnectionPhase.reconnecting => const _StatusInfo('重连中...', Color(0xFFF59E0B), Icons.restart_alt_rounded),
     ClientConnectionPhase.stopping => const _StatusInfo('停止中...', Color(0xFFF59E0B), Icons.power_settings_new_rounded),
-    ClientConnectionPhase.failed => const _StatusInfo('连接异常', Color(0xFFEF4444), Icons.error_rounded),
+    ClientConnectionPhase.failed => _StatusInfo(
+      _connectionFailureLabel(state),
+      const Color(0xFFEF4444),
+      Icons.error_rounded,
+    ),
     ClientConnectionPhase.loggedOut => const _StatusInfo('未登录', Color(0xFF0F172A), Icons.person_off_rounded),
     ClientConnectionPhase.initializing => const _StatusInfo('初始化中...', Color(0xFF64748B), Icons.hourglass_top_rounded),
     _ => const _StatusInfo('未连接', Color(0xFF0F172A), Icons.radio_button_unchecked_rounded),
   };
+}
+
+String _connectionFailureLabel(ClientConnectionState state) {
+  final message = state.message?.trim();
+  return message == null || message.isEmpty ? '连接异常' : message;
 }
 
 String _nodeFlagFor(String name) {

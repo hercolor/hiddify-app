@@ -17,6 +17,11 @@ import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hiddify/utils/uri_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+final _premiumPlansProvider = FutureProvider.autoDispose.family<List<PremiumPlan>, String>((ref, authData) async {
+  final service = await ref.watch(premiumApiServiceProvider.future);
+  return service.fetchPlans(authData);
+});
+
 class PremiumRenewalPage extends ConsumerWidget {
   const PremiumRenewalPage({super.key});
 
@@ -24,6 +29,7 @@ class PremiumRenewalPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authNotifierProvider).valueOrNull?.session;
     final subscription = session?.subscription;
+    final plansAsync = session == null ? null : ref.watch(_premiumPlansProvider(session.authData));
     return _PremiumScaffold(
       title: '会员续费',
       child: session == null
@@ -40,11 +46,27 @@ class PremiumRenewalPage extends ConsumerWidget {
                       const Gap(26),
                       _CurrentPlanCard(session: session, subscription: subscription),
                       const Gap(16),
-                      const _PlanOptionCard(selected: false, title: '月度套餐', description: '适合短期使用，灵活续费', tag: '灵活'),
-                      const Gap(16),
-                      const _PlanOptionCard(selected: true, title: '年度套餐', description: '长期使用更划算，优先推荐', tag: '推荐'),
-                      const Gap(16),
-                      const _PlanOptionCard(selected: false, title: '企业套餐', description: '多设备与商务支持方案', tag: '商务'),
+                      plansAsync!.when(
+                        loading: () => const _PlanListLoading(),
+                        error: (error, _) => _PlanListError(
+                          message: _failureMessage(error, fallback: '套餐列表加载失败'),
+                          onRetry: () => ref.invalidate(_premiumPlansProvider(session.authData)),
+                        ),
+                        data: (plans) => plans.isEmpty
+                            ? const _EmptyPlanList()
+                            : Column(
+                                children: [
+                                  for (var index = 0; index < plans.length; index++) ...[
+                                    _PlanOptionCard(
+                                      plan: plans[index],
+                                      selected: subscription?.planId == plans[index].id,
+                                      recommended: subscription?.planId != plans[index].id && index == 0,
+                                    ),
+                                    if (index != plans.length - 1) const Gap(16),
+                                  ],
+                                ],
+                              ),
+                      ),
                     ],
                   ),
                 ),
@@ -313,11 +335,11 @@ class PremiumWebsitePage extends ConsumerWidget {
             children: [
               const Icon(Icons.language_rounded, size: 64, color: Color(0xFF10B981)),
               const Gap(18),
-              const Text('访问 4376 官方支持', style: BrandDesktopText.sectionTitle),
+              const Text('访问 蝴蝶VPN 官方支持', style: BrandDesktopText.sectionTitle),
               const Gap(6),
               const Text('获取最新客户端、使用帮助及服务支持。', textAlign: TextAlign.center, style: BrandDesktopText.bodySecondary),
               const Gap(36),
-              const _SoftInfoBox(icon: Icons.public_rounded, title: '4376', subtitle: '官方入口以客服返回的信息为准'),
+              const _SoftInfoBox(icon: Icons.public_rounded, title: '蝴蝶VPN', subtitle: '官方入口以客服返回的信息为准'),
               const Gap(24),
               SizedBox(
                 width: double.infinity,
@@ -353,7 +375,7 @@ class PremiumContactPage extends ConsumerWidget {
             children: [
               const Icon(Icons.support_agent_rounded, size: 64, color: Color(0xFF2563EB)),
               const Gap(18),
-              const Text('4376 客服支持', style: BrandDesktopText.sectionTitle),
+              const Text('蝴蝶VPN 客服支持', style: BrandDesktopText.sectionTitle),
               const Gap(6),
               Text(
                 hasCustomerService ? '如需续费、套餐、节点或账号帮助，请通过客服入口联系。' : '客服入口暂未配置，请稍后重试。',
@@ -407,13 +429,13 @@ class _PremiumAboutPageState extends ConsumerState<PremiumAboutPage> {
     final version = ref.watch(appInfoProvider).valueOrNull?.presentVersion;
     final versionText = version == null || version.trim().isEmpty ? '--' : version;
     return _PremiumScaffold(
-      title: '关于 4376',
+      title: '关于 蝴蝶VPN',
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           const Icon(Icons.bolt_rounded, size: 64, color: Color(0xFF2563EB)),
           const Gap(16),
-          const Center(child: Text('4376', style: BrandDesktopText.heroStatus)),
+          const Center(child: Text('蝴蝶VPN', style: BrandDesktopText.heroStatus)),
           const Gap(6),
           const Center(child: Text('安全、极速、无界', style: BrandDesktopText.bodySecondary)),
           const Gap(28),
@@ -486,7 +508,7 @@ class PremiumPreferencesPage extends ConsumerWidget {
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               title: const Text('全局代理模式', style: BrandDesktopText.sectionTitle),
-              subtitle: Text(isGlobalMode ? '所有流量将通过 4376 传输' : '智能分流，仅代理必要流量', style: BrandDesktopText.caption),
+              subtitle: Text(isGlobalMode ? '所有流量将通过 蝴蝶VPN 传输' : '智能分流，仅代理必要流量', style: BrandDesktopText.caption),
               activeThumbColor: const Color(0xFF2563EB),
               value: isGlobalMode,
               onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
@@ -678,7 +700,7 @@ class _CurrentPlanCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _displayText(subscription?.planName, fallback: '4376 Pro'),
+                  subscription?.displayMembershipLabel ?? '普通用户',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: BrandDesktopText.sectionTitle.copyWith(color: Colors.white, fontSize: 17),
@@ -695,67 +717,217 @@ class _CurrentPlanCard extends StatelessWidget {
 }
 
 class _PlanOptionCard extends StatelessWidget {
-  const _PlanOptionCard({required this.selected, required this.title, required this.description, required this.tag});
+  const _PlanOptionCard({required this.plan, required this.selected, required this.recommended});
 
+  final PremiumPlan plan;
   final bool selected;
-  final String title;
-  final String description;
-  final String tag;
+  final bool recommended;
 
   @override
   Widget build(BuildContext context) {
+    final highlighted = selected || recommended;
+    final tag = selected ? '当前' : (plan.tags.isNotEmpty ? plan.tags.first : (recommended ? '推荐' : '可选'));
+    final description = _displayText(plan.content, fallback: '后台套餐权益配置');
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: selected ? const Color(0xFF2563EB).withOpacity(.05) : Colors.white,
+        color: highlighted ? const Color(0xFF2563EB).withOpacity(.05) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0), width: 2),
-        boxShadow: selected ? [BoxShadow(color: const Color(0xFF2563EB).withOpacity(.10), blurRadius: 10)] : null,
+        border: Border.all(color: highlighted ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0), width: 2),
+        boxShadow: highlighted ? [BoxShadow(color: const Color(0xFF2563EB).withOpacity(.10), blurRadius: 10)] : null,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: BrandDesktopText.sectionTitle),
-                    const Gap(8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        gradient: selected
-                            ? const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)])
-                            : null,
-                        color: selected ? null : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        tag,
-                        style: BrandDesktopText.caption.copyWith(
-                          color: const Color(0xFF5C4000),
-                          fontWeight: FontWeight.w900,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            plan.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: BrandDesktopText.sectionTitle,
+                          ),
                         ),
-                      ),
+                        const Gap(8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: highlighted
+                                ? const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)])
+                                : null,
+                            color: highlighted ? null : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tag,
+                            style: BrandDesktopText.caption.copyWith(
+                              color: highlighted ? const Color(0xFF5C4000) : BrandDesktopColors.textSecondary,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Gap(4),
+                    Text(
+                      description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: BrandDesktopText.bodySecondary,
                     ),
                   ],
                 ),
-                const Gap(4),
-                Text(description, style: BrandDesktopText.bodySecondary),
-              ],
-            ),
+              ),
+              const Gap(12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    plan.priceSummary,
+                    textAlign: TextAlign.right,
+                    style: BrandDesktopText.sectionTitle.copyWith(
+                      color: highlighted ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
+                    ),
+                  ),
+                  if (!plan.isAvailable) ...[
+                    const Gap(4),
+                    Text('暂不可售', style: BrandDesktopText.caption.copyWith(color: const Color(0xFFEF4444))),
+                  ],
+                ],
+              ),
+            ],
           ),
-          Text(
-            '咨询',
-            style: BrandDesktopText.sectionTitle.copyWith(
-              color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
-            ),
+          const Gap(14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (plan.transferEnable != null) _PlanFeatureChip('${plan.transferEnable}GB 流量'),
+              _PlanFeatureChip(_planSpeedText(plan.speedLimit)),
+              _PlanFeatureChip(_planDeviceText(plan.deviceLimit)),
+              for (final price in plan.prices.skip(1).take(3))
+                _PlanFeatureChip('${price.label} ${_formatMoney(price.amountCents)}'),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+class _PlanFeatureChip extends StatelessWidget {
+  const _PlanFeatureChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(999)),
+      child: Text(label, style: BrandDesktopText.caption.copyWith(color: BrandDesktopColors.textSecondary)),
+    );
+  }
+}
+
+class _PlanListLoading extends StatelessWidget {
+  const _PlanListLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var index = 0; index < 3; index++) ...[
+          Container(
+            height: 128,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(width: 120, height: 18, decoration: _skeletonDecoration()),
+                const Gap(12),
+                Container(width: double.infinity, height: 14, decoration: _skeletonDecoration()),
+                const Gap(10),
+                Container(width: 180, height: 14, decoration: _skeletonDecoration()),
+              ],
+            ),
+          ),
+          if (index != 2) const Gap(16),
+        ],
+      ],
+    );
+  }
+}
+
+class _PlanListError extends StatelessWidget {
+  const _PlanListError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _InputCard(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+                Gap(10),
+                Text('套餐列表加载失败', style: BrandDesktopText.sectionTitle),
+              ],
+            ),
+            const Gap(8),
+            Text(message, style: BrandDesktopText.bodySecondary),
+            const Gap(12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('重新加载'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyPlanList extends StatelessWidget {
+  const _EmptyPlanList();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _SoftInfoBox(icon: Icons.inventory_2_outlined, title: '暂无可售套餐', subtitle: '后台暂未返回套餐列表，请稍后刷新或联系客服续费。');
+  }
+}
+
+BoxDecoration _skeletonDecoration() {
+  return BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(999));
+}
+
+String _planSpeedText(int? speedLimit) {
+  if (speedLimit == null || speedLimit <= 0) return '不限速';
+  return '${speedLimit}Mbps';
+}
+
+String _planDeviceText(int? deviceLimit) {
+  if (deviceLimit == null || deviceLimit <= 0) return '不限设备';
+  return '$deviceLimit 台设备';
 }
 
 class _BottomAction extends StatelessWidget {
@@ -1080,7 +1252,7 @@ String _ticketSubject(String message) {
 
 String _ticketMessage({required String message, required String contact, required String email}) {
   final contactText = contact.trim().isEmpty ? '未填写' : contact.trim();
-  return [message.trim(), '', '---', '来源：4376 APP', '账号：${_maskUser(email)}', '联系方式：$contactText'].join('\n');
+  return [message.trim(), '', '---', '来源：蝴蝶VPN APP', '账号：${_maskUser(email)}', '联系方式：$contactText'].join('\n');
 }
 
 Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {

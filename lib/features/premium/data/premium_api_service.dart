@@ -12,6 +12,8 @@ final premiumApiServiceProvider = FutureProvider<PremiumApiService>((ref) async 
 });
 
 abstract interface class PremiumApiService {
+  Future<List<PremiumPlan>> fetchPlans(String authData);
+
   Future<PremiumInviteOverview> fetchInvite(String authData);
 
   Future<void> createInviteCode(String authData);
@@ -30,6 +32,20 @@ class XBoardPremiumApiService with InfraLogger implements PremiumApiService {
 
   final DioHttpClient _httpClient;
   final String _apiBaseUrl;
+
+  @override
+  Future<List<PremiumPlan>> fetchPlans(String authData) async {
+    try {
+      final response = await _httpClient.get<Map<String, dynamic>>(
+        '$_apiBaseUrl/api/v1/user/plan/fetch',
+        headers: _jsonHeaders(authData),
+      );
+      _ensureOk(response.statusCode, response.data, fallbackMessage: '套餐列表返回异常');
+      return PremiumPlan.listFromResponse(response.data);
+    } catch (error, stackTrace) {
+      throw _toAuthFailure(error, stackTrace, action: 'plan fetch failed');
+    }
+  }
 
   @override
   Future<PremiumInviteOverview> fetchInvite(String authData) async {
@@ -140,6 +156,106 @@ class XBoardPremiumApiService with InfraLogger implements PremiumApiService {
     return AuthFailure.unexpected(error, stackTrace);
   }
 }
+
+class PremiumPlan {
+  const PremiumPlan({
+    required this.id,
+    required this.name,
+    required this.content,
+    required this.prices,
+    this.transferEnable,
+    this.speedLimit,
+    this.deviceLimit,
+    this.capacityLimit,
+    this.tags = const [],
+  });
+
+  final int id;
+  final String name;
+  final String content;
+  final List<PremiumPlanPrice> prices;
+  final int? transferEnable;
+  final int? speedLimit;
+  final int? deviceLimit;
+  final Object? capacityLimit;
+  final List<String> tags;
+
+  String get priceSummary {
+    if (prices.isEmpty) return '咨询';
+    final first = prices.first;
+    return '${_formatPlanMoney(first.amountCents)}/${first.label}';
+  }
+
+  bool get isAvailable {
+    final limit = capacityLimit;
+    if (limit == null) return true;
+    if (limit is num) return limit > 0;
+    final text = limit.toString().trim();
+    if (text.toLowerCase().contains('sold out') || text.contains('售罄')) return false;
+    final parsed = int.tryParse(text);
+    return parsed == null || parsed > 0;
+  }
+
+  factory PremiumPlan.fromJson(Object? data) {
+    final map = data is Map ? data : const <String, dynamic>{};
+    final id = _intValue(_valueByKey(map, 'id')) ?? 0;
+    final name = _stringValue(_valueByKey(map, 'name'))?.trim() ?? '未命名套餐';
+    final content = _plainText(_stringValue(_valueByKey(map, 'content'))?.trim() ?? '');
+    final prices = <PremiumPlanPrice>[
+      for (final period in _premiumPlanPeriods)
+        if (_intValue(_valueByKey(map, period.key)) != null)
+          PremiumPlanPrice(
+            periodKey: period.key,
+            label: period.label,
+            amountCents: _intValue(_valueByKey(map, period.key))!,
+          ),
+    ];
+    return PremiumPlan(
+      id: id,
+      name: name,
+      content: content,
+      prices: prices,
+      transferEnable: _intByKeys(map, const ['transfer_enable', 'transferEnable']),
+      speedLimit: _intByKeys(map, const ['speed_limit', 'speedLimit']),
+      deviceLimit: _intByKeys(map, const ['device_limit', 'deviceLimit']),
+      capacityLimit: _valueByKey(map, 'capacity_limit') ?? _valueByKey(map, 'capacityLimit'),
+      tags: _stringList(_valueByKey(map, 'tags')),
+    );
+  }
+
+  static List<PremiumPlan> listFromResponse(Object? responseData) {
+    final payload = _payload(responseData);
+    return _listPayload(
+      payload,
+    ).map(PremiumPlan.fromJson).where((plan) => plan.id > 0 && plan.name.trim().isNotEmpty).toList();
+  }
+}
+
+class PremiumPlanPrice {
+  const PremiumPlanPrice({required this.periodKey, required this.label, required this.amountCents});
+
+  final String periodKey;
+  final String label;
+  final int amountCents;
+}
+
+class _PremiumPlanPeriod {
+  const _PremiumPlanPeriod(this.key, this.label);
+
+  final String key;
+  final String label;
+}
+
+const _premiumPlanPeriods = [
+  _PremiumPlanPeriod('month_price', '月付'),
+  _PremiumPlanPeriod('quarter_price', '季付'),
+  _PremiumPlanPeriod('half_year_price', '半年付'),
+  _PremiumPlanPeriod('year_price', '年付'),
+  _PremiumPlanPeriod('two_year_price', '两年付'),
+  _PremiumPlanPeriod('three_year_price', '三年付'),
+  _PremiumPlanPeriod('onetime_price', '一次性'),
+  _PremiumPlanPeriod('reset_price', '重置流量'),
+];
 
 class PremiumInviteOverview {
   const PremiumInviteOverview({required this.codes, required this.stat});
@@ -324,13 +440,37 @@ int? _intValue(Object? value) {
   if (value is int) return value;
   if (value is double) return value.round();
   if (value is num) return value.toInt();
-  return int.tryParse(value.toString());
+  final text = value.toString().trim();
+  return int.tryParse(text) ?? double.tryParse(text)?.round();
 }
 
 String? _stringValue(Object? value) {
   if (value == null) return null;
   if (value is Map || value is Iterable) return null;
   return value.toString();
+}
+
+List<String> _stringList(Object? value) {
+  if (value is Iterable) {
+    return value.map((item) => item.toString().trim()).where((item) => item.isNotEmpty).toList();
+  }
+  final text = _stringValue(value)?.trim();
+  if (text == null || text.isEmpty) return const [];
+  return text.split(RegExp(r'[,，\s]+')).map((item) => item.trim()).where((item) => item.isNotEmpty).toList();
+}
+
+String _plainText(String value) {
+  final withoutTags = value
+      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'</p\s*>', caseSensitive: false), '\n')
+      .replaceAll(RegExp('<[^>]+>'), ' ');
+  return withoutTags.replaceAll(RegExp(r'[ \t]+'), ' ').replaceAll(RegExp(r'\n\s*\n+'), '\n').trim();
+}
+
+String _formatPlanMoney(int cents) {
+  final amount = cents / 100;
+  if (amount == amount.roundToDouble()) return '¥${amount.toStringAsFixed(0)}';
+  return '¥${amount.toStringAsFixed(2)}';
 }
 
 DateTime? _dateTimeValue(Object? value) {
