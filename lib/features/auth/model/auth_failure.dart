@@ -131,6 +131,9 @@ String? _localizedServerMessage(String? message) {
   if (normalized.contains('phone already exists')) return '手机号已被绑定';
   if (normalized.contains('incorrect email verification code')) return '邮箱验证码不正确';
   if (normalized.contains('incorrect phone verification code')) return '手机验证码不正确';
+  if (normalized.contains('the old password is wrong')) return '原密码不正确';
+  if (normalized.contains('old password cannot be empty')) return '请输入原密码';
+  if (normalized.contains('new password cannot be empty')) return '请输入新密码';
   if (normalized.contains('this phone is not registered')) return '该手机号未绑定账号';
   if (normalized.contains('this email is not registered')) return '该邮箱未注册';
   if (normalized.contains('phone format is incorrect')) return '手机号格式不正确';

@@ -83,6 +83,161 @@ class _MobileProfileBackButton extends StatelessWidget {
   }
 }
 
+class UserSecurityCenterPage extends HookConsumerWidget {
+  const UserSecurityCenterPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(translationsProvider).requireValue;
+    final authState = ref.watch(authNotifierProvider);
+
+    ref.listen(authNotifierProvider, (_, next) {
+      if (next case AsyncError(:final error)) {
+        final pair = t.presentError(error);
+        ref
+            .read(inAppNotificationControllerProvider)
+            .showErrorToast(pair.message == null ? pair.type : '${pair.type}\n${pair.message}');
+      }
+    });
+
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        leading: const _MobileProfileBackButton(),
+        toolbarHeight: 72,
+        title: const Text('安全中心'),
+        titleTextStyle: BrandText.pageTitle,
+      ),
+      body: BrandScaffoldBackground(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: _SecurityCenterContent(authState: authState, errorText: authState.readableError(t)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecurityCenterContent extends StatelessWidget {
+  const _SecurityCenterContent({required this.authState, required this.errorText});
+
+  final AsyncValue<AuthState> authState;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentState = authState.valueOrNull;
+    if (currentState?.isInitializing == true || (authState.isLoading && currentState == null)) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final session = currentState?.session;
+    if (session == null) {
+      return _SecurityLoggedOutContent(errorText: errorText);
+    }
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _SecurityIntroCard(session: session),
+            const Gap(16),
+            const _PasswordChangeCard(),
+            const Gap(16),
+            _PhoneBindCard(session: session),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SecurityLoggedOutContent extends StatelessWidget {
+  const _SecurityLoggedOutContent({required this.errorText});
+
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.shield_outlined, size: 54, color: BrandColors.signalBlue),
+            const Gap(16),
+            const Text('请先登录账号', style: BrandText.sectionTitle),
+            const Gap(8),
+            Text(
+              errorText ?? '登录后可修改密码、绑定或更换手机号。',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const Gap(20),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: _GradientButton(onPressed: () => context.goNamed('settings'), label: '去登录'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SecurityIntroCard extends StatelessWidget {
+  const _SecurityIntroCard({required this.session});
+
+  final AuthSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final boundPhone = session.phone?.trim();
+    return _PremiumCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: BrandColors.signalBlue.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.admin_panel_settings_rounded, color: BrandColors.signalBlue, size: 22),
+              ),
+              const Gap(14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('账号安全', style: BrandText.sectionTitle),
+                    const Gap(4),
+                    Text(
+                      boundPhone == null || boundPhone.isEmpty ? '建议绑定手机号，方便找回密码。' : '已绑定手机号：$boundPhone',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _UserProfileContent extends StatelessWidget {
   const _UserProfileContent({required this.authState, required this.errorText});
 
@@ -375,7 +530,7 @@ class _MemberCenter extends StatelessWidget {
                   children: [
                     _HeroMemberCard(session: session, subscription: subscription),
                     const Gap(18),
-                    _PhoneBindCard(session: session),
+                    _SecurityCenterEntryCard(session: session),
                     const Gap(16),
                     _SupportCard(subscription: subscription),
                     const Gap(16),
@@ -504,6 +659,148 @@ class _PlanBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SecurityCenterEntryCard extends StatelessWidget {
+  const _SecurityCenterEntryCard({required this.session});
+
+  final AuthSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final phone = session.phone?.trim();
+    return _PremiumCard(
+      children: [
+        _ActionTile(
+          icon: Icons.admin_panel_settings_rounded,
+          title: '安全中心',
+          subtitle: phone == null || phone.isEmpty ? '修改密码 / 绑定手机号' : '修改密码 / 更换手机号',
+          iconColor: BrandColors.signalBlue,
+          onTap: () => context.pushNamed('securityCenter'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PasswordChangeCard extends ConsumerStatefulWidget {
+  const _PasswordChangeCard();
+
+  @override
+  ConsumerState<_PasswordChangeCard> createState() => _PasswordChangeCardState();
+}
+
+class _PasswordChangeCardState extends ConsumerState<_PasswordChangeCard> {
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _submitting = false;
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final validationError = _validate();
+    if (validationError != null) {
+      setState(() => _errorText = validationError);
+      return;
+    }
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _errorText = null;
+    });
+    try {
+      await ref
+          .read(authNotifierProvider.notifier)
+          .changePassword(oldPassword: _oldPasswordController.text, newPassword: _newPasswordController.text);
+      if (!mounted) return;
+      _oldPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+    } catch (error) {
+      if (mounted) setState(() => _errorText = _presentError(error));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  String? _validate() {
+    final oldPassword = _oldPasswordController.text;
+    final newPassword = _newPasswordController.text;
+    if (oldPassword.isEmpty) return '请输入原密码';
+    if (newPassword.length < 8) return '新密码至少 8 位';
+    if (newPassword == oldPassword) return '新密码不能和原密码相同';
+    if (newPassword != _confirmPasswordController.text) return '两次输入的新密码不一致';
+    return null;
+  }
+
+  String _presentError(Object error) {
+    final t = ref.read(translationsProvider).requireValue;
+    final pair = t.presentError(error);
+    final message = pair.message?.trim();
+    return message == null || message.isEmpty ? pair.type : '${pair.type}\n$message';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _PremiumCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.lock_reset_rounded, color: BrandColors.signalBlue, size: 20),
+                  Gap(10),
+                  Expanded(child: Text('修改密码', style: BrandText.sectionTitle)),
+                ],
+              ),
+              const Gap(6),
+              Text('定期更新登录密码，保护账号和订阅安全。', style: Theme.of(context).textTheme.bodySmall),
+              const Gap(14),
+              if (_errorText != null) ...[
+                Text(_errorText!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: BrandColors.error)),
+                const Gap(10),
+              ],
+              TextField(
+                controller: _oldPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.lock_outline_rounded), hintText: '原密码'),
+              ),
+              const Gap(10),
+              TextField(
+                controller: _newPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.lock_reset_rounded), hintText: '新密码'),
+              ),
+              const Gap(10),
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.verified_user_outlined), hintText: '确认新密码'),
+                onSubmitted: (_) => _submit(),
+              ),
+              const Gap(12),
+              _GradientButton(
+                label: _submitting ? '修改中' : '修改密码',
+                isLoading: _submitting,
+                onPressed: _submitting ? null : _submit,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

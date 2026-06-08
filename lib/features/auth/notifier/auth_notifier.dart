@@ -232,6 +232,20 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     ref.read(inAppNotificationControllerProvider).showSuccessToast('手机验证码已发送');
   }
 
+  Future<void> changePassword({required String oldPassword, required String newPassword}) async {
+    final session = state.valueOrNull?.session;
+    if (session == null) {
+      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      return;
+    }
+    final loginService = await ref.read(loginServiceProvider.future);
+    await loginService
+        .changePassword(authData: session.authData, oldPassword: oldPassword, newPassword: newPassword)
+        .match((err) => throw err, (_) => unit)
+        .run();
+    ref.read(inAppNotificationControllerProvider).showSuccessToast('密码已修改');
+  }
+
   Future<void> bindPhone({required String phone, required String phoneCode}) async {
     final session = state.valueOrNull?.session;
     if (session == null) {

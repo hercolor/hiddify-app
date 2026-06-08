@@ -27,6 +27,12 @@ abstract interface class LoginService {
     required String password,
   });
 
+  TaskEither<AuthFailure, Unit> changePassword({
+    required String authData,
+    required String oldPassword,
+    required String newPassword,
+  });
+
   TaskEither<AuthFailure, String?> fetchBoundPhone({required String authData});
 
   TaskEither<AuthFailure, Unit> sendPhoneBindVerify({required String authData, required String phone});
@@ -141,6 +147,23 @@ class XBoardLoginService with InfraLogger implements LoginService {
       _ensureOk(response, fallbackMessage: '密码重置失败');
       return unit;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'reset password failed'));
+  }
+
+  @override
+  TaskEither<AuthFailure, Unit> changePassword({
+    required String authData,
+    required String oldPassword,
+    required String newPassword,
+  }) {
+    return TaskEither.tryCatch(() async {
+      final response = await _httpClient.post<Map<String, dynamic>>(
+        '$_apiBaseUrl/api/v1/user/changePassword',
+        data: {'old_password': oldPassword, 'new_password': newPassword},
+        headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': authData},
+      );
+      _ensureOk(response, fallbackMessage: '密码修改失败');
+      return unit;
+    }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'change password failed'));
   }
 
   @override
