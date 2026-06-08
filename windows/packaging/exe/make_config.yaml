@@ -1,9 +1,9 @@
 app_id: 6L903538-42B1-4596-G479-BJ779F21A65D
-publisher: 4376
+publisher: 蝴蝶加速
 publisher_url: https://api.y88.pro
-display_name: 4376
+display_name: 蝴蝶加速
 create_desktop_icon: true
-install_dir_name: "{autopf64}\\4376"
+install_dir_name: "{autopf64}\\蝴蝶加速"
 setup_icon_file: windows\runner\resources\app_icon.ico
 privileges_required: admin
 locales:

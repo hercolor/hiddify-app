@@ -108,7 +108,7 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
   Widget build(BuildContext context) {
     return _AuthFormScaffold(
       title: '注册账号',
-      subtitle: '创建 蝴蝶VPN 账号后自动完成加速准备',
+      subtitle: '创建 蝴蝶加速 账号后自动完成加速准备',
       child: Column(
         children: [
           if (_errorText != null) ...[_ErrorBanner(_errorText!), const Gap(14)],

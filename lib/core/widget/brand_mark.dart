@@ -24,7 +24,7 @@ class BrandMark extends StatelessWidget {
         mark,
         SizedBox(width: size * .28),
         Text(
-          '4376',
+          '蝴蝶加速',
           style:
               wordmarkStyle ??
               Theme.of(context).textTheme.titleLarge?.copyWith(

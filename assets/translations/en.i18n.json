@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "4376加速",
+    "appTitle": "蝴蝶加速",
     "start": "Start",
     "version": "Version",
     "ok": "OK",
@@ -86,13 +86,13 @@
     }
   },
   "intro": {
-    "banner": "4376加速 provides a stable, fast, and simple connection experience.",
+    "banner": "蝴蝶加速 provides a stable, fast, and simple connection experience.",
     "termsAndPolicyCaution(rich)": "By continuing you agree to ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "4376加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
+    "info(rich)": "蝴蝶加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
   },
   "pages": {
     "home": {
-      "title": "4376加速",
+      "title": "蝴蝶加速",
       "quickSettings": "Connection settings"
     },
     "proxies": {
@@ -173,7 +173,7 @@
       "shareAppLogs": "Share app logs"
     },
     "about": {
-      "title": "About 4376加速",
+      "title": "About 蝴蝶加速",
       "notAvailableMsg": "Already using the latest version",
       "checkForUpdate": "Check for update",
       "openWorkingDir": "Open working directory",
@@ -560,7 +560,7 @@
     },
     "noActiveProfile": {
       "title": "Import subscription",
-      "msg": "Welcome to 4376加速. Import your subscription link first, then use one-click connect.\n\nIf you do not have a subscription yet, open the user center or contact support.",
+      "msg": "Welcome to 蝴蝶加速. Import your subscription link first, then use one-click connect.\n\nIf you do not have a subscription yet, open the user center or contact support.",
       "helpBtn": {
         "label": "Open user center",
         "url": "https://api.y88.pro"

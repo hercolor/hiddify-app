@@ -34,7 +34,7 @@ class DesktopHomePage extends HookConsumerWidget {
               child: const Icon(Icons.power_settings_new_rounded, color: Color(0xFFEF4444), size: 22),
             ),
             const Gap(12),
-            const Text('退出 蝴蝶VPN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text('退出 蝴蝶加速', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           ],
         ),
         content: const Text('选择退出方式', style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
@@ -126,7 +126,7 @@ class DesktopHomePage extends HookConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _TopRoundIcon(icon: Icons.settings_outlined, onTap: () => context.pushNamed('settings')),
-                  const Text('蝴蝶VPN', style: BrandDesktopText.pageTitle),
+                  const Text('蝴蝶加速', style: BrandDesktopText.pageTitle),
                   if (PlatformUtils.isWindows)
                     _TopRoundIcon(icon: Icons.close_rounded, onTap: () => _handleClose(context))
                   else

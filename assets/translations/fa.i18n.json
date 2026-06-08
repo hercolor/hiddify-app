@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "4376加速",
+    "appTitle": "蝴蝶加速",
     "start": "شروع",
     "version": "نسخه",
     "ok": "باشه",
@@ -86,9 +86,9 @@
     }
   },
   "intro": {
-    "banner": "4376加速 provides a stable, fast, and simple connection experience.",
+    "banner": "蝴蝶加速 provides a stable, fast, and simple connection experience.",
     "termsAndPolicyCaution(rich)": "با ادامه، شما با ${tap(@:pages.about.termsAndConditions)} موافقت می‌کنید",
-    "info(rich)": "4376加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
+    "info(rich)": "蝴蝶加速 branded client - ${tap_source(Official Site)} (${tap_license(Terms)})"
   },
   "pages": {
     "home": {

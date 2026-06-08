@@ -413,7 +413,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     );
     loggy.info('subscription content parsed: nodeCount=${nodes.length}, contentLength=${content.length}');
     if (nodes.isNotEmpty) {
-      await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '蝴蝶VPN');
+      await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '蝴蝶加速');
     }
     return nodes;
   }
@@ -493,12 +493,12 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         source = 'generatedConfig';
       }
       if (nodes.isNotEmpty) {
-        await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '蝴蝶VPN');
+        await ref.read(clientNodeSelectionProvider.notifier).cacheNodes(nodes, profileName: '蝴蝶加速');
       }
       final selection =
           ref.read(clientNodeSelectionProvider).valueOrNull ??
           await ref.read(clientNodeSelectionProvider.notifier).ensureLoaded();
-      final summary = _nodeDebugFromSelection(selection.copyWith(profileName: '蝴蝶VPN'));
+      final summary = _nodeDebugFromSelection(selection.copyWith(profileName: '蝴蝶加速'));
       DiagnosticEventBuffer.add(
         'node cache parsed: source=$source, profileName=${summary.profileName}, '
         'nodeCount=${summary.nodeCount}, selectedNodeName=${summary.selectedNodeName}',

@@ -75,7 +75,7 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
         NotificationCompat.Builder(service, notificationChannel)
                 .setShowWhen(false)
                 .setOngoing(true)
-                .setContentTitle("4376加速")
+                .setContentTitle("蝴蝶加速")
                 .setOnlyAlertOnce(true)
                 .setSmallIcon(R.drawable.ic_stat_logo)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -110,13 +110,13 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Application.notification.createNotificationChannel(
                 NotificationChannel(
-                    notificationChannel, "4376加速服务", NotificationManager.IMPORTANCE_LOW
+                    notificationChannel, "蝴蝶加速服务", NotificationManager.IMPORTANCE_LOW
                 )
             )
         }
         service.startForeground(
             notificationId, notificationBuilder
-                .setContentTitle(profileName.takeIf { it.isNotBlank() } ?: "4376加速")
+                .setContentTitle(profileName.takeIf { it.isNotBlank() } ?: "蝴蝶加速")
                 .setContentText(service.getString(contentTextId)).build()
         )
     }

@@ -301,11 +301,11 @@ windows-zip-release:
 	$(YELLOW)Post-processing Windows portable$(DONE); \
 	cd "$$ZIP_DIR"; \
 	$(BLUE)Extracting and Repacking...$(DONE); \
-	mkdir -p 4376; \
-	unzip -q "$$ZIP_FILE" -d 4376/; \
+	mkdir -p 蝴蝶加速; \
+	unzip -q "$$ZIP_FILE" -d 蝴蝶加速/; \
 	rm "$$ZIP_FILE"; \
-	tar -a -cf "$$FILE_NAME.zip" 4376; \
-	rm -rf 4376; \
+	tar -a -cf "$$FILE_NAME.zip" 蝴蝶加速; \
+	rm -rf 蝴蝶加速; \
 	$(GREEN)Successful$(DONE)
 
 windows-exe-release:

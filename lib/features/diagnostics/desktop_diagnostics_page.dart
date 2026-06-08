@@ -320,7 +320,7 @@ String _buildDiagnosticText({
   required List<String> coreLogFileLines,
 }) {
   final buffer = StringBuffer()
-    ..writeln('4376加速内部诊断')
+    ..writeln('蝴蝶加速内部诊断')
     ..writeln('loginStatus=${authState.valueOrNull?.status.name ?? 'initializing'}')
     ..writeln('userId=${_diagnosticUserId(authState.valueOrNull?.session?.email)}')
     ..writeln(

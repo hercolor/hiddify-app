@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "4376加速",
+    "appTitle": "蝴蝶加速",
     "start": "开始",
     "version": "版本",
     "ok": "确定",
@@ -86,13 +86,13 @@
     }
   },
   "intro": {
-    "banner": "4376加速，为您的网络连接提供稳定、快速、简洁的使用体验。",
+    "banner": "蝴蝶加速，为您的网络连接提供稳定、快速、简洁的使用体验。",
     "termsAndPolicyCaution(rich)": "继续即表示您同意 ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "4376加速专属客户端 - ${tap_source(官方网站)} (${tap_license(服务条款)})"
+    "info(rich)": "蝴蝶加速专属客户端 - ${tap_source(官方网站)} (${tap_license(服务条款)})"
   },
   "pages": {
     "home": {
-      "title": "4376加速",
+      "title": "蝴蝶加速",
       "quickSettings": "连接设置"
     },
     "proxies": {
@@ -172,7 +172,7 @@
       "shareAppLogs": "分享应用日志"
     },
     "about": {
-      "title": "关于 4376加速",
+      "title": "关于 蝴蝶加速",
       "notAvailableMsg": "已是最新版本",
       "checkForUpdate": "检查更新",
       "openWorkingDir": "打开工作目录",
@@ -559,7 +559,7 @@
     },
     "noActiveProfile": {
       "title": "导入订阅",
-      "msg": "欢迎使用 4376加速。请先导入您的订阅链接，然后即可一键连接。\n\n如果还没有订阅，请前往用户中心获取或联系客服。",
+      "msg": "欢迎使用 蝴蝶加速。请先导入您的订阅链接，然后即可一键连接。\n\n如果还没有订阅，请前往用户中心获取或联系客服。",
       "helpBtn": {
         "label": "前往用户中心",
         "url": "https://api.y88.pro"

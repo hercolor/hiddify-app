@@ -8,7 +8,7 @@ class PrivacyPolicyPage extends StatelessWidget {
     return const _LocalLegalPage(
       title: '隐私政策',
       content: '''
-4376 隐私政策
+蝴蝶加速 隐私政策
 
 本页面为本地隐私政策占位内容，正式版本将补充我们如何收集、使用、存储和保护你的账号信息、订阅信息、设备信息与连接诊断信息。
 

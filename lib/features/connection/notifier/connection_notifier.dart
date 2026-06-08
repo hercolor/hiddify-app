@@ -538,7 +538,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       _reconnectAttempts = 0;
       _setClientState(const ClientConnectionState.connected(), reason: 'core connected');
       _enforceSelectedProxyOutbound();
-      if (previousStatus is! Connected) _showSuccess('蝴蝶VPN 已连接');
+      if (previousStatus is! Connected) _showSuccess('蝴蝶加速 已连接');
     } else if (event is Connecting) {
       if (_manualDisconnecting || _clientState.phase == ClientConnectionPhase.stopping) {
         loggy.info('core reported connecting while stop is pending; preserving stopping state');
@@ -572,7 +572,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
         _reconnectAttempts = 0;
         DiagnosticEventBuffer.addSafe('manual/core disconnect failure suppressed');
         _setClientState(const ClientConnectionState.disconnected(), reason: 'manual/core disconnected');
-        _showInfo('蝴蝶VPN 已断开');
+        _showInfo('蝴蝶加速 已断开');
       } else if (failure is MissingVpnPermission) {
         _vpnPermissionRequestedForAttempt = false;
         _vpnPermissionStartFallbackScheduled = false;
@@ -593,7 +593,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       if (_manualDisconnecting || !_userRequestedConnection) {
         _manualDisconnecting = false;
         _setClientState(_computeClientState(), reason: 'manual/core disconnected');
-        if (previousStatus is Connected || previousStatus is Disconnecting) _showInfo('蝴蝶VPN 已断开');
+        if (previousStatus is Connected || previousStatus is Disconnecting) _showInfo('蝴蝶加速 已断开');
       } else if (wasRunning) {
         _scheduleAutoReconnect();
       } else if (ClientConnectionStatePolicy.shouldPreserveReconnectDuringCoreRestart(
