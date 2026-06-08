@@ -147,9 +147,7 @@ class _SecurityCenterContent extends StatelessWidget {
           children: [
             _SecurityIntroCard(session: session),
             const Gap(16),
-            const _PasswordChangeCard(),
-            const Gap(16),
-            _PhoneBindCard(session: session),
+            _SecurityActionMenu(session: session),
           ],
         ),
       ),
@@ -236,6 +234,101 @@ class _SecurityIntroCard extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SecurityActionMenu extends StatelessWidget {
+  const _SecurityActionMenu({required this.session});
+
+  final AuthSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final phone = session.phone?.trim();
+    return _PremiumCard(
+      children: [
+        _ActionTile(
+          icon: Icons.lock_reset_rounded,
+          title: '修改密码',
+          subtitle: '更新账号登录密码',
+          iconColor: BrandColors.signalBlue,
+          onTap: () =>
+              _showSecurityActionModal(context, title: '修改密码', child: const _PasswordChangeCard(closeOnSuccess: true)),
+        ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.phone_iphone_rounded,
+          title: '绑定手机',
+          subtitle: phone == null || phone.isEmpty ? '绑定后可使用手机号登录和找回密码' : '当前手机号：$phone',
+          iconColor: const Color(0xFF10B981),
+          onTap: () => _showSecurityActionModal(
+            context,
+            title: '绑定手机',
+            child: _PhoneBindCard(session: session, closeOnSuccess: true),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Future<void> _showSecurityActionModal(BuildContext context, {required String title, required Widget child}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) {
+      final bottomInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
+      final maxHeight = MediaQuery.sizeOf(sheetContext).height * .92;
+      return AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 680, maxHeight: maxHeight),
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SingleChildScrollView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(color: BrandColors.subtle, borderRadius: BorderRadius.circular(999)),
+                      ),
+                    ),
+                    const Gap(12),
+                    Row(
+                      children: [
+                        Expanded(child: Text(title, style: BrandText.pageTitle)),
+                        IconButton(
+                          tooltip: '关闭',
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                    const Gap(8),
+                    child,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class _UserProfileContent extends StatelessWidget {
@@ -686,7 +779,9 @@ class _SecurityCenterEntryCard extends StatelessWidget {
 }
 
 class _PasswordChangeCard extends ConsumerStatefulWidget {
-  const _PasswordChangeCard();
+  const _PasswordChangeCard({this.closeOnSuccess = false});
+
+  final bool closeOnSuccess;
 
   @override
   ConsumerState<_PasswordChangeCard> createState() => _PasswordChangeCardState();
@@ -726,6 +821,9 @@ class _PasswordChangeCardState extends ConsumerState<_PasswordChangeCard> {
       _oldPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
+      if (widget.closeOnSuccess) {
+        Navigator.of(context).pop();
+      }
     } catch (error) {
       if (mounted) setState(() => _errorText = _presentError(error));
     } finally {
@@ -806,9 +904,10 @@ class _PasswordChangeCardState extends ConsumerState<_PasswordChangeCard> {
 }
 
 class _PhoneBindCard extends ConsumerStatefulWidget {
-  const _PhoneBindCard({required this.session});
+  const _PhoneBindCard({required this.session, this.closeOnSuccess = false});
 
   final AuthSession session;
+  final bool closeOnSuccess;
 
   @override
   ConsumerState<_PhoneBindCard> createState() => _PhoneBindCardState();
@@ -881,6 +980,9 @@ class _PhoneBindCardState extends ConsumerState<_PhoneBindCard> {
     try {
       await ref.read(authNotifierProvider.notifier).bindPhone(phone: phone, phoneCode: code);
       if (mounted) _codeController.clear();
+      if (mounted && widget.closeOnSuccess) {
+        Navigator.of(context).pop();
+      }
     } catch (error) {
       setState(() => _errorText = _presentError(error));
     } finally {
