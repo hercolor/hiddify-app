@@ -16,6 +16,10 @@ add_executable(${BINARY_NAME} WIN32
   "runner.exe.manifest"
 )
 
+# Keep the CMake target name ASCII for generator compatibility, but emit the
+# user-visible executable with the same Chinese product name shown on Android.
+set_target_properties(${BINARY_NAME} PROPERTIES OUTPUT_NAME "蝴蝶加速")
+
 # Apply the standard set of build settings. This can be removed for applications
 # that need different build settings.
 apply_standard_settings(${BINARY_NAME})
