@@ -5,6 +5,7 @@ abstract class Constants {
   static const appName = "蝴蝶加速";
   static const githubUrl = "https://api.y88.pro";
   static const licenseUrl = "https://api.y88.pro/terms";
+  static const clientVersionUrl = "https://api.y88.pro/api/app/v1/client-version";
   static const githubReleasesApiUrl = "https://api.y88.pro/app/releases";
   static const githubLatestReleaseUrl = "https://api.y88.pro/app/latest";
   static const appCastUrl = "https://api.y88.pro/appcast.xml";
