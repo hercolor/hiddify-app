@@ -37,7 +37,7 @@ class DesktopWindowChrome extends StatelessWidget {
             height: height,
             child: DragToMoveArea(child: SizedBox.expand()),
           ),
-          if (showCloseButton) const Positioned(top: 2, right: 2, child: _DesktopWindowCloseButton()),
+          if (showCloseButton) const Positioned(top: 10, right: 22, child: _DesktopWindowCloseButton()),
         ],
       ),
     );
@@ -56,8 +56,6 @@ class _DesktopWindowCloseButtonState extends State<_DesktopWindowCloseButton> {
 
   @override
   Widget build(BuildContext context) {
-    final background = _hovered ? const Color(0xFFFEE2E2) : Colors.white.withOpacity(.76);
-    final foreground = _hovered ? BrandDesktopColors.error : BrandDesktopColors.textMuted;
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -67,18 +65,31 @@ class _DesktopWindowCloseButtonState extends State<_DesktopWindowCloseButton> {
           behavior: HitTestBehavior.opaque,
           onTap: windowManager.close,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            width: 18,
-            height: 18,
+            duration: const Duration(milliseconds: 150),
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: background,
+              color: _hovered ? const Color(0xFFFEE2E2) : Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: _hovered ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0)),
+              border: Border.all(
+                color: _hovered ? BrandDesktopColors.error.withOpacity(.3) : const Color(0xFFF1F5F9),
+                width: 1.5,
+              ),
               boxShadow: [
-                BoxShadow(color: const Color(0xFF0F172A).withOpacity(.05), blurRadius: 8, offset: const Offset(0, 2)),
+                BoxShadow(
+                  color: _hovered
+                      ? BrandDesktopColors.error.withOpacity(.15)
+                      : const Color(0xFF0F172A).withOpacity(.03),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            child: Icon(Icons.close_rounded, size: 12, color: foreground),
+            child: Icon(
+              Icons.close_rounded,
+              size: 20,
+              color: _hovered ? BrandDesktopColors.error : const Color(0xFF0F172A),
+            ),
           ),
         ),
       ),

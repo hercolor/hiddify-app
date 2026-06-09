@@ -137,3 +137,118 @@ abstract final class BrandDesktopShadows {
     BoxShadow(color: color.withOpacity(alpha / 2), blurRadius: 72, spreadRadius: 6),
   ];
 }
+
+abstract final class BrandText {
+  static const brandTitle = TextStyle(
+    fontSize: 32,
+    fontWeight: FontWeight.w900,
+    color: BrandColors.signalBlue,
+    letterSpacing: 2,
+  );
+
+  static const pageTitle = TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: BrandColors.slate);
+
+  static const sectionTitle = TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: BrandColors.slate);
+
+  static const bodyPrimary = TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: BrandColors.slate);
+
+  static const bodySecondary = TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: BrandColors.muted);
+
+  static const caption = TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: BrandColors.muted);
+
+  static const label = TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: BrandColors.muted);
+
+  static const buttonLabel = TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white);
+
+  static const smallButton = TextStyle(fontSize: 13, fontWeight: FontWeight.w800);
+}
+
+abstract final class BrandDesktopText {
+  static const pageTitle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: BrandDesktopColors.textPrimary,
+    letterSpacing: 0.2,
+  );
+
+  static const sectionTitle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: BrandDesktopColors.textPrimary,
+  );
+
+  static const bodyPrimary = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: BrandDesktopColors.textPrimary,
+  );
+
+  static const bodySecondary = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    color: BrandDesktopColors.textSecondary,
+  );
+
+  static const caption = TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: BrandDesktopColors.textMuted);
+
+  static const heroStatus = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: BrandDesktopColors.textPrimary,
+    letterSpacing: 0.3,
+  );
+
+  static const cardValue = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    color: BrandDesktopColors.textPrimary,
+    letterSpacing: -0.3,
+  );
+
+  static const cardLabel = TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: BrandDesktopColors.textMuted);
+
+  static const buttonLabel = TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white);
+
+  static const smallButton = TextStyle(fontSize: 12, fontWeight: FontWeight.w700);
+}
+
+abstract final class BrandDesktopButtons {
+  static ButtonStyle primary({double height = 44}) => ElevatedButton.styleFrom(
+    backgroundColor: BrandDesktopColors.accent,
+    foregroundColor: Colors.white,
+    minimumSize: Size(double.infinity, height),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BrandDesktopRadii.control)),
+    elevation: 0,
+    textStyle: BrandDesktopText.buttonLabel,
+  );
+
+  static ButtonStyle secondary({double height = 44}) => OutlinedButton.styleFrom(
+    foregroundColor: BrandDesktopColors.accent,
+    minimumSize: Size(double.infinity, height),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BrandDesktopRadii.control)),
+    side: const BorderSide(color: BrandDesktopColors.accent),
+    textStyle: BrandDesktopText.buttonLabel.copyWith(color: BrandDesktopColors.accent),
+  );
+
+  static ButtonStyle small() => ElevatedButton.styleFrom(
+    backgroundColor: Colors.white.withOpacity(.10),
+    foregroundColor: const Color(0xFFFFD700),
+    minimumSize: const Size(52, 32),
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: Colors.white.withOpacity(.12)),
+    ),
+    elevation: 0,
+    textStyle: BrandDesktopText.smallButton,
+  );
+
+  static ButtonStyle danger({double height = 44}) => TextButton.styleFrom(
+    foregroundColor: BrandDesktopColors.error,
+    backgroundColor: BrandDesktopColors.error.withOpacity(.10),
+    minimumSize: Size(double.infinity, height),
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BrandDesktopRadii.control)),
+    textStyle: BrandDesktopText.buttonLabel.copyWith(color: BrandDesktopColors.error),
+  );
+}

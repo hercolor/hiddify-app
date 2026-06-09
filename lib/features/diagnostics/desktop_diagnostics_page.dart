@@ -12,9 +12,11 @@ import 'package:hiddify/features/connection/data/connection_data_providers.dart'
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/diagnostics/core_log_diagnostics.dart';
 import 'package:hiddify/features/diagnostics/core_log_file_snapshot.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_sanitizer.dart';
+import 'package:hiddify/features/diagnostics/diagnostics_probe.dart';
 import 'package:hiddify/features/log/data/log_data_providers.dart';
 import 'package:hiddify/features/log/model/log_entity.dart';
 import 'package:hiddify/features/log/overview/logs_overview_notifier.dart';
@@ -38,7 +40,11 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
     final logsState = ref.watch(logsOverviewNotifierProvider);
     final logs = logsState.logs;
     final diagnosticEvents = DiagnosticEventBuffer.recent();
-    final coreLogFileLines = CoreLogFileSnapshot.readTail(ref.watch(logPathResolverProvider).coreFile());
+    final coreLogFileLines = [
+      ...CoreLogDiagnostics.statusLines(),
+      ...CoreLogFileSnapshot.readTail(ref.watch(logPathResolverProvider).coreFile()),
+    ];
+    final probeResults = ref.watch(diagnosticsProbeProvider);
     final text = _buildDiagnosticText(
       authState: authState,
       nodeSelection: nodeSelection,
@@ -49,6 +55,7 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
       logs: logs,
       diagnosticEvents: diagnosticEvents,
       coreLogFileLines: coreLogFileLines,
+      probeResults: probeResults,
     );
 
     return DesktopPageScaffold(
@@ -79,6 +86,10 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
             clientState: clientState,
           );
           final config = _ConfigPanel(options: activeOptions);
+          final probePanel = _ProbePanel(
+            probeResults: probeResults,
+            onRun: () => ref.read(diagnosticsProbeProvider.notifier).run(),
+          );
           final logPanel = _LogPanel(
             logs: logs,
             diagnosticEvents: diagnosticEvents,
@@ -91,6 +102,8 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
                 SizedBox(height: 360, child: summary),
                 const Gap(16),
                 SizedBox(height: 360, child: config),
+                const Gap(16),
+                SizedBox(height: 360, child: probePanel),
                 const Gap(16),
                 SizedBox(height: 420, child: logPanel),
               ],
@@ -106,6 +119,8 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
                     Expanded(child: summary),
                     const Gap(16),
                     Expanded(child: config),
+                    const Gap(16),
+                    Expanded(child: probePanel),
                   ],
                 ),
               ),
@@ -184,6 +199,57 @@ class _ConfigPanel extends StatelessWidget {
           const _InfoRow(label: 'outbound tag', value: LockedCoreConfig.outboundTag),
           _InfoRow(label: 'IPv6 snapshot', value: options.ipv6Mode.key),
           _InfoRow(label: 'rules', value: options.rules.isEmpty ? 'disabled' : '${options.rules.length} rule(s)'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProbePanel extends StatelessWidget {
+  const _ProbePanel({required this.probeResults, required this.onRun});
+
+  final AsyncValue<List<DiagProbeResult>> probeResults;
+  final Future<List<DiagProbeResult>> Function() onRun;
+
+  @override
+  Widget build(BuildContext context) {
+    return DesktopCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.alt_route_rounded),
+            title: const Text('分流探测'),
+            subtitle: const Text('分别用 direct / proxy 拉取测试地址，判断规则到底有没有命中。'),
+            trailing: OutlinedButton(
+              onPressed: () async {
+                await onRun();
+              },
+              child: const Text('运行探测'),
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: probeResults.when(
+              data: (items) {
+                if (items.isEmpty) return const Center(child: Text('尚未运行探测'));
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: items.length,
+                  separatorBuilder: (_, _) => const Divider(height: 14),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return SelectableText(
+                      '${item.label} [${item.mode}] ok=${item.ok} ${item.elapsedMs}ms\n${item.summary}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    );
+                  },
+                );
+              },
+              error: (error, _) => Center(child: Text(DiagnosticSanitizer.sanitize(error.toString()))),
+              loading: () => const Center(child: CircularProgressIndicator()),
+            ),
+          ),
         ],
       ),
     );
@@ -318,6 +384,7 @@ String _buildDiagnosticText({
   required AsyncValue<List<LogEntity>> logs,
   required List<String> diagnosticEvents,
   required List<String> coreLogFileLines,
+  required AsyncValue<List<DiagProbeResult>> probeResults,
 }) {
   final buffer = StringBuffer()
     ..writeln('蝴蝶加速内部诊断')
@@ -340,6 +407,19 @@ String _buildDiagnosticText({
     ..writeln('dnsMode=${LockedCoreConfig.dnsMode}')
     ..writeln('tunDnsServer=${DiagnosticSanitizer.sanitize(options.remoteDnsAddress)}')
     ..writeln('logs:');
+  final probeLines = probeResults.when(
+    data: (items) => items
+        .map(
+          (item) =>
+              'diagProbe ${item.label} mode=${item.mode} ok=${item.ok} elapsedMs=${item.elapsedMs} summary=${item.summary}',
+        )
+        .toList(growable: false),
+    error: (error, _) => ['diagProbe error=${DiagnosticSanitizer.sanitize(error.toString())}'],
+    loading: () => const ['diagProbe loading'],
+  );
+  for (final line in probeLines) {
+    buffer.writeln(DiagnosticSanitizer.sanitize(line));
+  }
   for (final event in diagnosticEvents.take(120)) {
     buffer.writeln(DiagnosticSanitizer.sanitize(event));
   }

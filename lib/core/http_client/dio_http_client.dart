@@ -53,6 +53,10 @@ class DioHttpClient with InfraLogger {
 
   int port = 0;
 
+  int get proxyPort => port;
+
+  String get diagnosticRouteProxyEndpoint => port > 0 ? "localhost:$port" : "localhost:unset";
+
   String userAgent;
   // bool isPortOpen(String host, int port, {Duration timeout = const Duration(milliseconds: 200)}) async{
   //   try {
@@ -90,12 +94,9 @@ class DioHttpClient with InfraLogger {
     ({String username, String password})? credentials,
     Map<String, dynamic>? headers,
     bool proxyOnly = false,
-  }) async {
-    final mode = proxyOnly
-        ? "proxy"
-        : await isPortOpen("127.0.0.1", port)
-        ? "both"
-        : "direct";
+    bool directOnly = false,
+  }) {
+    final mode = _mode(proxyOnly: proxyOnly, directOnly: directOnly);
     final dio = _dio[mode]!;
 
     return dio.get<T>(
@@ -113,12 +114,9 @@ class DioHttpClient with InfraLogger {
     ({String username, String password})? credentials,
     Map<String, dynamic>? headers,
     bool proxyOnly = false,
-  }) async {
-    final mode = proxyOnly
-        ? "proxy"
-        : await isPortOpen("127.0.0.1", port)
-        ? "both"
-        : "direct";
+    bool directOnly = false,
+  }) {
+    final mode = _mode(proxyOnly: proxyOnly, directOnly: directOnly);
     final dio = _dio[mode]!;
 
     return dio.post<T>(
@@ -137,12 +135,9 @@ class DioHttpClient with InfraLogger {
     ({String username, String password})? credentials,
     Map<String, dynamic>? headers,
     bool proxyOnly = false,
-  }) async {
-    final mode = proxyOnly
-        ? "proxy"
-        : await isPortOpen("127.0.0.1", port)
-        ? "both"
-        : "direct";
+    bool directOnly = false,
+  }) {
+    final mode = _mode(proxyOnly: proxyOnly, directOnly: directOnly);
     final dio = _dio[mode]!;
     return dio.download(
       url,
@@ -150,6 +145,12 @@ class DioHttpClient with InfraLogger {
       cancelToken: cancelToken,
       options: _options(url, userAgent: userAgent, credentials: credentials, headers: headers),
     );
+  }
+
+  String _mode({required bool proxyOnly, required bool directOnly}) {
+    if (proxyOnly) return "proxy";
+    if (directOnly) return "direct";
+    return "both";
   }
 
   Options _options(

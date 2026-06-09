@@ -141,13 +141,7 @@ class DesktopPageScaffold extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            title,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: BrandDesktopColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          Text(title, style: BrandDesktopText.pageTitle),
                           if (subtitle != null) ...[
                             const Gap(4),
                             Text(

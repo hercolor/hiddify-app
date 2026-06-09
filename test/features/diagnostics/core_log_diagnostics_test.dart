@@ -10,7 +10,7 @@ void main() {
         isTrue,
       );
       expect(CoreLogDiagnostics.shouldCapture('dns: exchanged ip.cn A record', level: 'DEBUG'), isTrue);
-      expect(CoreLogDiagnostics.shouldCapture('ordinary connection opened', level: 'INFO'), isFalse);
+      expect(CoreLogDiagnostics.shouldCapture('background heartbeat tick', level: 'INFO'), isFalse);
     });
 
     test('captures warnings and errors even without keywords', () {

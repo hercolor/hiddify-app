@@ -13,10 +13,14 @@ class DesktopShell extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentLocation = GoRouterState.of(context).uri.toString();
+    final isHomePage = currentLocation == '/' || currentLocation == '/home';
+
     return DesktopTheme(
       child: Material(
         color: BrandDesktopColors.background,
         child: DesktopWindowChrome(
+          showCloseButton: isHomePage,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: BrandDesktopWindow.contentMaxWidth),
