@@ -1,13 +1,13 @@
-display_name: 4376
+display_name: 蝴蝶加速
 
 icon: ..\..\assets\images\windows.ico
 
 keywords:
-  - 4376
+  - 蝴蝶加速
   - Proxy
   - VPN
 
-generic_name: 4376
+generic_name: 蝴蝶加速
 
 actions:
   - name: Start

@@ -89,7 +89,7 @@ proxy-groups:
           ClientNode(id: '日本-02', name: '日本-02'),
         ],
         selectedNodeId: '香港-IPEL',
-        profileName: '4376',
+        profileName: '蝴蝶加速',
       );
 
       final merged = selection.mergeRuntimeNodes([const ClientNode(id: '香港-IPEL', name: '香港-IPEL', delay: 123)]);
@@ -98,7 +98,7 @@ proxy-groups:
       expect(merged.nodes.first.delay, 123);
       expect(merged.nodes.last.delay, isNull);
       expect(merged.effectiveSelectedNodeId, '香港-IPEL');
-      expect(merged.profileName, '4376');
+      expect(merged.profileName, '蝴蝶加速');
     });
 
     test('uses runtime nodes when no subscription nodes are cached yet', () {

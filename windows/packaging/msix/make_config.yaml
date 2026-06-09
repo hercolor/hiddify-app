@@ -1,11 +1,11 @@
 display_name: 蝴蝶加速
 publisher_display_name: 蝴蝶加速
-identity_name: Client4376.Desktop
+identity_name: HuDieJiaSu.Desktop
 msix_version: 4.1.2.0
 logo_path: windows\runner\resources\app_icon.ico
 capabilities: internetClient, internetClientServer, privateNetworkClientServer
 languages: ar, en-us, es-es, fa-ir, fr-fr, id-id, pt-br, ru-ru, tr-tr, zh-cn, zh-tw
-protocol_activation: client4376, v2ray, v2rayn, v2rayng, clash, clashmeta, sing-box
+protocol_activation: hudiejiasu, v2ray, v2rayn, v2rayng, clash, clashmeta, sing-box
 execution_alias: 蝴蝶加速
 certificate_path: windows\sign.pfx
 certificate_password:
@@ -16,6 +16,6 @@ startup_task:
   parameters: --autostart
 
 # For testing with a self-signed certificate
-# publisher: CN=4376-Test
+# publisher: CN=HuDieJiaSu-Test
 # certificate_password: "1234"
 # install_certificate: "true"

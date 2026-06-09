@@ -1,11 +1,11 @@
 {
-    "name": "Hiddify",
-    "short_name": "Hiddify",
+    "name": "蝴蝶加速",
+    "short_name": "蝴蝶加速",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Hiddify",
+    "description": "蝴蝶加速",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -9,7 +9,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>4376</string>
+		<string>蝴蝶加速</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -29,7 +29,7 @@
 			<dict>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<string>app4376</string>
+					<string>hudiejiasu</string>
 					<string>v2ray</string>
 					<string>v2rayn</string>
 					<string>v2rayng</string>
@@ -40,7 +40,7 @@
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
 				<key>CFBundleURLName</key>
-				<string>pro.y88.client4376</string>
+				<string>pro.y88.hudiejiasu</string>
 			</dict>
 		</array>
 		<key>FlutterDeepLinkingEnabled</key>

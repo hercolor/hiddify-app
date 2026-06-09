@@ -20,7 +20,7 @@ abstract final class DiagnosticEventBuffer {
     final time = DateTime.now().toIso8601String().split('T').last.split('.').first;
     final event = '$time diagVersion=$diagnosticVersion $message';
     _events.addFirst(event);
-    debugPrint('4376diag $event');
+    debugPrint('hudiejiasu_diag $event');
     while (_events.length > _maxEvents) {
       _events.removeLast();
     }

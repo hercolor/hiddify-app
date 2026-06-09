@@ -16,12 +16,12 @@ abstract class LinkParser {
       query: uri.query,
       fragment: name ?? uri.fragment,
     );
-    // return 'client4376://import/$modifiedUri';
+    // return 'hudiejiasu://import/$modifiedUri';
     return '$modifiedUri';
   }
 
   // protocols schemas
-  static const protocols = ['client4376', 'hiddify', 'v2ray', 'v2rayn', 'v2rayng', 'clash', 'clashmeta', 'sing-box'];
+  static const protocols = ['hudiejiasu', 'hiddify', 'v2ray', 'v2rayn', 'v2rayng', 'clash', 'clashmeta', 'sing-box'];
 
   static ProfileLink? parse(String link) {
     return simple(link) ?? deep(link);
@@ -38,7 +38,7 @@ abstract class LinkParser {
     if (uri == null || !uri.hasScheme || !uri.hasAuthority) return null;
     final queryParams = uri.queryParameters;
     switch (uri.scheme) {
-      case 'client4376' || 'hiddify':
+      case 'hudiejiasu' || 'hiddify':
         if (queryParams.containsKey('url')) {
           return (url: queryParams['url']!, name: queryParams['name'] ?? '');
         } else {

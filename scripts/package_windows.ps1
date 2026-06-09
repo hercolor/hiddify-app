@@ -10,7 +10,6 @@ Get-ChildItem -Recurse -File -Path "dist" -Filter "*windows.msix" | Copy-Item -D
 
 # windows portable
 xcopy "build\windows\x64\runner\Release" "dist\tmp\蝴蝶加速" /E/H/C/I/Y
-xcopy ".github\help\mac-windows\*.url" "dist\tmp\蝴蝶加速" /E/H/C/I/Y
 Compress-Archive -Force -Path "dist\tmp\蝴蝶加速" -DestinationPath "out\蝴蝶加速-Windows-Portable-x64.zip" -ErrorAction SilentlyContinue
 
 Remove-Item -Path "$HOME\.pub-cache\git\cache\flutter_circle_flags*" -Force -Recurse -ErrorAction SilentlyContinue

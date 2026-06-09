@@ -9,7 +9,7 @@ void main() {
       expect(customerServiceUri('   '), isNull);
       expect(customerServiceUri('javascript:alert(1)'), isNull);
       expect(customerServiceUri('file:///tmp/support'), isNull);
-      expect(customerServiceUri('4376 support'), isNull);
+      expect(customerServiceUri('蝴蝶加速 support'), isNull);
       expect(customerServiceUri('https://'), isNull);
     });
 

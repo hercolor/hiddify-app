@@ -206,7 +206,7 @@ class ProfileTileMain extends HookConsumerWidget {
       return uri.pathSegments.lastWhere((e) => e.isNotEmpty, orElse: () => '');
     }
     if (host.endsWith('hiddify.com')) {
-      return "Hiddify";
+      return "蝴蝶加速";
     }
     return uri.host;
   }

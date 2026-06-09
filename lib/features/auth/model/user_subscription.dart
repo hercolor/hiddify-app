@@ -41,19 +41,40 @@ class UserSubscription {
 
   bool get isTrafficExhausted => remainingTraffic != null && remainingTraffic! <= 0;
 
-  bool get isNormalUser => membershipStatus == 'normal';
+  String? get _normalizedMembershipStatus => membershipStatus?.trim().toLowerCase();
+
+  String? get _normalizedSubscriptionStatus => subscriptionStatus?.trim().toLowerCase();
+
+  bool get isNormalUser => _normalizedMembershipStatus == 'normal';
+
+  bool get isBanned => _normalizedSubscriptionStatus == 'banned';
+
+  bool get isSubscriptionExpired =>
+      _normalizedMembershipStatus == 'expired' || _normalizedSubscriptionStatus == 'expired' || isExpired;
+
+  bool get isTrafficUnavailable => isTrafficExhausted || _normalizedSubscriptionStatus == 'traffic_exhausted';
+
+  bool get isMembershipUnavailable {
+    final membership = _normalizedMembershipStatus;
+    final subscription = _normalizedSubscriptionStatus;
+    return membership == 'normal' ||
+        membership == 'expired' ||
+        subscription == 'expired' ||
+        subscription == 'banned' ||
+        subscription == 'traffic_exhausted';
+  }
 
   bool get hasActiveMembership =>
-      (const {'month', 'quarter', 'year'}.contains(membershipStatus) ||
+      (const {'month', 'quarter', 'year'}.contains(_normalizedMembershipStatus) ||
           (membershipStatus == null && planName?.trim().isNotEmpty == true)) &&
       !isExpired;
 
   String get displayMembershipLabel {
     final label = membershipLabel?.trim();
     if (label != null && label.isNotEmpty) return label;
-    if (membershipStatus == 'expired' || isExpired) return '会员到期';
-    if (membershipStatus == 'normal' || planId == null) return '普通用户';
-    return switch (membershipStatus) {
+    if (isSubscriptionExpired) return '会员到期';
+    if (isNormalUser || planId == null) return '普通用户';
+    return switch (_normalizedMembershipStatus) {
       'month' => '蝴蝶月卡',
       'quarter' => '蝴蝶季卡',
       'year' => '蝴蝶年卡',
@@ -62,8 +83,11 @@ class UserSubscription {
   }
 
   bool get canConnect {
-    if (serverCanConnect != null) return serverCanConnect! && !isExpired && !isTrafficExhausted;
-    return !isNormalUser && !isExpired && !isTrafficExhausted;
+    if (isMembershipUnavailable) return false;
+    if (serverCanConnect != null) {
+      return serverCanConnect! && !isSubscriptionExpired && !isTrafficUnavailable;
+    }
+    return !isSubscriptionExpired && !isTrafficUnavailable && hasActiveMembership;
   }
 
   UserSubscription copyWith({

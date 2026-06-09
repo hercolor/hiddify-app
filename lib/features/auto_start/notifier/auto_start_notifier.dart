@@ -19,7 +19,7 @@ class AutoStartNotifier extends _$AutoStartNotifier with InfraLogger {
     launchAtStartup.setup(
       appName: appInfo.name,
       appPath: Platform.resolvedExecutable,
-      packageName: "Client4376.Desktop",
+      packageName: "HuDieJiaSu.Desktop",
     );
     final isEnabled = await launchAtStartup.isEnabled();
     loggy.info("auto start is [${isEnabled ? "Enabled" : "Disabled"}]");

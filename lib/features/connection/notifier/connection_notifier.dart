@@ -613,6 +613,11 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   void _scheduleAutoReconnect() {
     if (_autoReconnectRunning) return;
     if (_manualDisconnecting || !_userRequestedConnection) return;
+    final unavailableMessage = _subscriptionUnavailableMessage();
+    if (unavailableMessage != null) {
+      unawaited(_fail(unavailableMessage, reason: 'auto reconnect blocked by subscription unavailable'));
+      return;
+    }
     if (_reconnectAttempts >= _reconnectDelays.length) {
       unawaited(_fail(ConnectionErrorMapper.nodeUnstable, reason: 'auto reconnect exhausted'));
       return;
@@ -791,15 +796,14 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     final subscription = ref.read(authNotifierProvider).valueOrNull?.session?.subscription;
     if (subscription == null) return null;
     if (!subscription.canConnect) {
-      if (subscription.membershipStatus == 'normal') return '请先开通会员';
-      if (subscription.membershipStatus == 'expired' || subscription.isExpired) return '会员已到期，请开通会员后再连接';
-      if (subscription.isTrafficExhausted || subscription.subscriptionStatus == 'traffic_exhausted') {
-        return '套餐流量已用尽，请续费后再连接';
-      }
+      if (subscription.isNormalUser) return '请先开通会员';
+      if (subscription.isSubscriptionExpired) return '会员已到期，请开通会员后再连接';
+      if (subscription.isTrafficUnavailable) return '套餐流量已用尽，请续费后再连接';
+      if (subscription.isBanned) return '账号不可用，请联系客服';
       return '请先开通会员';
     }
-    if (subscription.isExpired) return '会员已到期，请开通会员后再连接';
-    if (subscription.isTrafficExhausted) return '套餐流量已用尽，请续费后再连接';
+    if (subscription.isSubscriptionExpired) return '会员已到期，请开通会员后再连接';
+    if (subscription.isTrafficUnavailable) return '套餐流量已用尽，请续费后再连接';
     return null;
   }
 

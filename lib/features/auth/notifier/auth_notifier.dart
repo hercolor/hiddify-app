@@ -604,14 +604,10 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   }
 
   String _subscriptionAccessFailureMessage(UserSubscription subscription) {
-    if (subscription.membershipStatus == 'normal') return '请先开通会员';
-    if (subscription.membershipStatus == 'expired' || subscription.isExpired) {
-      return '会员已到期，请开通会员后再连接';
-    }
-    if (subscription.isTrafficExhausted || subscription.subscriptionStatus == 'traffic_exhausted') {
-      return '套餐流量已用尽，请续费后再连接';
-    }
-    if (subscription.subscriptionStatus == 'banned') return '账号不可用，请联系客服';
+    if (subscription.isNormalUser) return '请先开通会员';
+    if (subscription.isSubscriptionExpired) return '会员已到期，请开通会员后再连接';
+    if (subscription.isTrafficUnavailable) return '套餐流量已用尽，请续费后再连接';
+    if (subscription.isBanned) return '账号不可用，请联系客服';
     return '请先开通会员';
   }
 
