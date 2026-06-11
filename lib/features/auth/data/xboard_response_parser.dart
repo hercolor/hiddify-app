@@ -1,7 +1,11 @@
 import 'dart:convert';
 
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
+
+final _fallbackAuthText = AppLocale.en.buildSync();
+Translations get _authText => _fallbackAuthText;
 
 class XBoardResponseParser {
   const XBoardResponseParser._();
@@ -10,7 +14,7 @@ class XBoardResponseParser {
     final data = _decodeIfString(responseData);
     final authData = _findStringByKeys(data, const ['auth_data', 'authData', 'authorization']);
     if (authData == null || authData.trim().isEmpty) {
-      throw const AuthFailure.badResponse('登录成功但未返回 auth_data');
+      throw AuthFailure.badResponse(_authText.errors.auth.authDataMissing);
     }
     return _normalizeBearer(authData.trim());
   }
@@ -48,7 +52,7 @@ class XBoardResponseParser {
     final subscribeUrl = parseSubscribeUrl(data, fallbackSubscribeUrl: fallbackSubscribeUrl, baseUrl: baseUrl);
     final serverCanConnect = _findBoolByKeys(data, const ['can_connect', 'canConnect']);
     if ((subscribeUrl == null || subscribeUrl.trim().isEmpty) && serverCanConnect != false) {
-      throw const AuthFailure.serverMessage('订阅信息为空，请联系客服');
+      throw AuthFailure.serverMessage(_authText.errors.auth.subscriptionEmpty);
     }
 
     return UserSubscription(

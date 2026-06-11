@@ -1,11 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/http_client/dio_http_client.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/auth/data/xboard_response_parser.dart';
 import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
+
+final _fallbackAuthText = AppLocale.en.buildSync();
+Translations get _authText => _fallbackAuthText;
 
 abstract interface class LoginService {
   TaskEither<AuthFailure, AuthSession> login({required String account, required String password});
@@ -62,7 +66,11 @@ class XBoardLoginService with InfraLogger implements LoginService {
           data: _loginPayload(account: trimmedAccount, password: password),
           headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
         );
-        return _sessionFromResponse(response, account: trimmedAccount, fallbackMessage: '登录接口返回异常');
+        return _sessionFromResponse(
+          response,
+          account: trimmedAccount,
+          fallbackMessage: _authText.errors.auth.loginBadResponse,
+        );
       },
       (error, stackTrace) {
         if (error is AuthFailure) return error;
@@ -95,7 +103,11 @@ class XBoardLoginService with InfraLogger implements LoginService {
         },
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       );
-      return _sessionFromResponse(response, account: email.trim(), fallbackMessage: '注册接口返回异常');
+      return _sessionFromResponse(
+        response,
+        account: email.trim(),
+        fallbackMessage: _authText.errors.auth.registerBadResponse,
+      );
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'register request failed'));
   }
 
@@ -108,7 +120,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
         data: _accountPayload(trimmedAccount),
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       );
-      _ensureOk(response, fallbackMessage: '验证码发送失败');
+      _ensureOk(response, fallbackMessage: _authText.errors.auth.emailVerifyFailed);
       return unit;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'send email verify failed'));
   }
@@ -122,7 +134,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
         data: _accountPayload(trimmedAccount),
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       );
-      _ensureOk(response, fallbackMessage: '手机验证码发送失败');
+      _ensureOk(response, fallbackMessage: _authText.errors.auth.phoneVerifyFailed);
       return unit;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'send phone verify failed'));
   }
@@ -144,7 +156,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
         },
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       );
-      _ensureOk(response, fallbackMessage: '密码重置失败');
+      _ensureOk(response, fallbackMessage: _authText.errors.auth.resetPasswordFailed);
       return unit;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'reset password failed'));
   }
@@ -161,7 +173,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
         data: {'old_password': oldPassword, 'new_password': newPassword},
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': authData},
       );
-      _ensureOk(response, fallbackMessage: '密码修改失败');
+      _ensureOk(response, fallbackMessage: _authText.errors.auth.changePasswordFailed);
       return unit;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'change password failed'));
   }
@@ -173,7 +185,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
         '$_apiBaseUrl/api/v1/user/info',
         headers: {'Accept': 'application/json', 'Authorization': authData},
       );
-      _ensureOk(response, fallbackMessage: '用户信息返回异常');
+      _ensureOk(response, fallbackMessage: _authText.errors.auth.userInfoBadResponse);
       return XBoardResponseParser.parsePhone(response.data);
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'fetch bound phone failed'));
   }
@@ -186,7 +198,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
         data: {'phone': phone.trim()},
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': authData},
       );
-      _ensureOk(response, fallbackMessage: '手机验证码发送失败');
+      _ensureOk(response, fallbackMessage: _authText.errors.auth.phoneVerifyFailed);
       return unit;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'send bind phone verify failed'));
   }
@@ -204,7 +216,7 @@ class XBoardLoginService with InfraLogger implements LoginService {
         data: {'phone': normalizedPhone, 'phone_code': phoneCode.trim()},
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': authData},
       );
-      _ensureOk(response, fallbackMessage: '手机号绑定失败');
+      _ensureOk(response, fallbackMessage: _authText.errors.auth.bindPhoneFailed);
       return XBoardResponseParser.parsePhone(response.data) ?? normalizedPhone;
     }, (error, stackTrace) => _toAuthFailure(error, stackTrace, action: 'bind phone failed'));
   }

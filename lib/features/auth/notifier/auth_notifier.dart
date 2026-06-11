@@ -24,8 +24,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_notifier.g.dart';
 
+final _fallbackAuthText = AppLocale.en.buildSync();
+
 @Riverpod(keepAlive: true)
 class AuthNotifier extends _$AuthNotifier with AppLogger {
+  Translations get _authText => ref.read(translationsProvider).valueOrNull ?? _fallbackAuthText;
+
   @override
   Future<AuthState> build() async {
     final bootstrapWatch = Stopwatch()..start();
@@ -66,7 +70,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
           .match((err) => throw err, (session) => session)
           .run();
 
-      return _completeAuthenticatedSession(session, successMessage: '登录成功', fallbackSuccessMessage: '已登录');
+      return _completeAuthenticatedSession(
+        session,
+        successMessage: _authText.errors.auth.loginSuccess,
+        fallbackSuccessMessage: _authText.errors.auth.loggedIn,
+      );
     });
   }
 
@@ -85,7 +93,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
           .match((err) => throw err, (session) => session)
           .run();
 
-      return _completeAuthenticatedSession(session, successMessage: '注册成功', fallbackSuccessMessage: '已注册');
+      return _completeAuthenticatedSession(
+        session,
+        successMessage: _authText.errors.auth.registerSuccess,
+        fallbackSuccessMessage: _authText.errors.auth.registered,
+      );
     });
   }
 
@@ -130,7 +142,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   Future<String?> ensureSubscriptionAccessForConnect() async {
     final current = state.valueOrNull?.session;
     if (current == null) {
-      return '请先登录账号';
+      return _authText.errors.auth.notLoggedIn;
     }
 
     try {
@@ -143,7 +155,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
       final subscription = session.subscription;
       if (subscription == null) {
-        return '请先开通会员';
+        return _authText.errors.auth.openMembership;
       }
       if (!subscription.canConnect) {
         await _clearSubscriptionAccessCache(session: session, reason: 'membership unavailable before connect');
@@ -151,11 +163,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       }
       if (subscription.isExpired) {
         await _clearSubscriptionAccessCache(session: session, reason: 'expired before connect');
-        return '会员已到期，请开通会员后再连接';
+        return _authText.errors.auth.membershipExpired;
       }
       if (subscription.isTrafficExhausted) {
         await _clearSubscriptionAccessCache(session: session, reason: 'traffic exhausted before connect');
-        return '套餐流量已用尽，请续费后再连接';
+        return _authText.errors.auth.trafficExhausted;
       }
       return null;
     } catch (error, stackTrace) {
@@ -171,14 +183,14 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       if (cachedSubscription != null && !cachedSubscription.canConnect) {
         return _subscriptionAccessFailureMessage(cachedSubscription);
       }
-      return '获取会员状态失败，请稍后重试';
+      return _authText.errors.auth.accessCheckFailed;
     }
   }
 
   Future<bool> syncNodes({bool showSuccessToast = true, bool showFailureToast = true}) async {
     final current = state.valueOrNull?.session;
     if (current == null) {
-      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      ref.read(inAppNotificationControllerProvider).showErrorToast(_authText.errors.auth.notLoggedIn);
       return false;
     }
 
@@ -191,7 +203,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       await _logAuthDebug(nextState, userInfoLoaded: true);
       if (showSuccessToast) {
         if (result.nodesSynced) {
-          ref.read(inAppNotificationControllerProvider).showSuccessToast('节点已同步');
+          ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.nodesSynced);
         }
       }
       return result.nodesSynced;
@@ -223,13 +235,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     await ref.read(clientNodeSelectionProvider.notifier).clear();
     state = const AsyncData(AuthState.loggedOut());
     await _logAuthDebug(const AuthState.loggedOut(), userInfoLoaded: false);
-    ref.read(inAppNotificationControllerProvider).showSuccessToast('已退出登录');
+    ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.loggedOut);
   }
 
   Future<void> sendPhoneBindVerify(String phone) async {
     final session = state.valueOrNull?.session;
     if (session == null) {
-      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      ref.read(inAppNotificationControllerProvider).showErrorToast(_authText.errors.auth.notLoggedIn);
       return;
     }
     final loginService = await ref.read(loginServiceProvider.future);
@@ -237,13 +249,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         .sendPhoneBindVerify(authData: session.authData, phone: phone)
         .match((err) => throw err, (_) => unit)
         .run();
-    ref.read(inAppNotificationControllerProvider).showSuccessToast('手机验证码已发送');
+    ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.phoneVerifySent);
   }
 
   Future<void> changePassword({required String oldPassword, required String newPassword}) async {
     final session = state.valueOrNull?.session;
     if (session == null) {
-      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      ref.read(inAppNotificationControllerProvider).showErrorToast(_authText.errors.auth.notLoggedIn);
       return;
     }
     final loginService = await ref.read(loginServiceProvider.future);
@@ -251,13 +263,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         .changePassword(authData: session.authData, oldPassword: oldPassword, newPassword: newPassword)
         .match((err) => throw err, (_) => unit)
         .run();
-    ref.read(inAppNotificationControllerProvider).showSuccessToast('密码已修改');
+    ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.passwordChanged);
   }
 
   Future<void> bindPhone({required String phone, required String phoneCode}) async {
     final session = state.valueOrNull?.session;
     if (session == null) {
-      ref.read(inAppNotificationControllerProvider).showErrorToast('请先登录账号');
+      ref.read(inAppNotificationControllerProvider).showErrorToast(_authText.errors.auth.notLoggedIn);
       return;
     }
     final loginService = await ref.read(loginServiceProvider.future);
@@ -268,7 +280,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     final nextSession = session.copyWith(phone: boundPhone);
     await ref.read(authTokenStorageProvider).save(nextSession);
     state = AsyncData(AuthState.loggedIn(nextSession));
-    ref.read(inAppNotificationControllerProvider).showSuccessToast('手机号已绑定');
+    ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.phoneBound);
   }
 
   Future<({AuthSession session, bool nodesSynced})> _fetchSubscriptionAndImport(
@@ -288,7 +300,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     syncUserWatch.stop();
     final subscriptionUrl = subscription.subscribeUrl.trim();
     if (subscriptionUrl.isEmpty && subscription.canConnect) {
-      throw const AuthFailure.serverMessage('订阅信息为空，请联系客服');
+      throw AuthFailure.serverMessage(_authText.errors.auth.subscriptionEmpty);
     }
     var syncedSession = session.copyWith(subscription: subscription);
     final boundPhone = await _safeFetchBoundPhone(syncedSession.authData);
@@ -370,7 +382,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     if (!nodesSynced && showNodeFailureToast) {
       ref
           .read(inAppNotificationControllerProvider)
-          .showErrorToast(cachedAfter.nodeCount > 0 ? '节点同步失败，正在使用本地缓存' : '获取节点失败，请稍后重试');
+          .showErrorToast(
+            cachedAfter.nodeCount > 0
+                ? _authText.errors.auth.nodeSyncFailedUsingCache
+                : _authText.errors.auth.fetchNodesFailed,
+          );
     }
     syncNodesWatch.stop();
     loggy.info(
@@ -578,15 +594,15 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     return switch (error) {
       AuthServerMessageFailure(:final message) => message,
       AuthBadResponseFailure(:final message?) when message.trim().isNotEmpty => message,
-      _ => '登录成功，用户信息同步失败，请稍后重试',
+      _ => _authText.errors.auth.loginSyncFailed,
     };
   }
 
   String _nodeSyncErrorMessage(Object error, {required bool hasCachedNodes}) {
     return switch (error) {
       AuthServerMessageFailure(:final message) => message,
-      _ when hasCachedNodes => '节点同步失败，正在使用本地缓存',
-      _ => '获取节点失败，请稍后重试',
+      _ when hasCachedNodes => _authText.errors.auth.nodeSyncFailedUsingCache,
+      _ => _authText.errors.auth.fetchNodesFailed,
     };
   }
 
@@ -597,18 +613,18 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     final text = _safeError(error).toLowerCase();
     final looksExpired = text.contains('到期') || text.contains('过期') || text.contains('expired');
     final looksTraffic = text.contains('流量') || text.contains('traffic');
-    if (looksExpired && looksTraffic) return '请先开通或续费会员后再连接';
-    if (looksTraffic) return '套餐流量已用尽，请续费后再连接';
-    if (looksExpired) return '会员已到期，请开通会员后再连接';
-    return '请先开通会员';
+    if (looksExpired && looksTraffic) return _authText.errors.auth.membershipExpiredOrTraffic;
+    if (looksTraffic) return _authText.errors.auth.trafficExhausted;
+    if (looksExpired) return _authText.errors.auth.membershipExpired;
+    return _authText.errors.auth.openMembership;
   }
 
   String _subscriptionAccessFailureMessage(UserSubscription subscription) {
-    if (subscription.isNormalUser) return '请先开通会员';
-    if (subscription.isSubscriptionExpired) return '会员已到期，请开通会员后再连接';
-    if (subscription.isTrafficUnavailable) return '套餐流量已用尽，请续费后再连接';
-    if (subscription.isBanned) return '账号不可用，请联系客服';
-    return '请先开通会员';
+    if (subscription.isNormalUser) return _authText.errors.auth.openMembership;
+    if (subscription.isSubscriptionExpired) return _authText.errors.auth.membershipExpired;
+    if (subscription.isTrafficUnavailable) return _authText.errors.auth.trafficExhausted;
+    if (subscription.isBanned) return _authText.errors.auth.badResponse;
+    return _authText.errors.auth.openMembership;
   }
 
   bool _isSubscriptionUnavailable(Object error) {
@@ -647,7 +663,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     return subscription.copyWith(
       expiredAt: DateTime.now(),
       membershipStatus: 'expired',
-      membershipLabel: '会员到期',
+      membershipLabel: _authText.errors.auth.membershipExpiredLabel,
       subscriptionStatus: 'expired',
       serverCanConnect: false,
     );

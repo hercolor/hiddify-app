@@ -1,10 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/http_client/dio_http_client.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/features/auth/data/xboard_response_parser.dart';
 import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
+
+final _fallbackAuthText = AppLocale.en.buildSync();
+Translations get _authText => _fallbackAuthText;
 
 abstract interface class UserSubscriptionService {
   TaskEither<AuthFailure, UserSubscription> fetchSubscription(
@@ -41,7 +45,7 @@ class XBoardUserSubscriptionService with InfraLogger implements UserSubscription
         );
 
         if ((response.statusCode ?? 0) >= 400 || response.data == null) {
-          throw const AuthFailure.badResponse('订阅接口返回异常');
+          throw AuthFailure.badResponse(_authText.errors.auth.subscriptionBadResponse);
         }
 
         loggy.debug('subscription response keys: ${_sanitizedKeys(response.data).join(',')}');
