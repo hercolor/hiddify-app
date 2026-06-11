@@ -243,7 +243,7 @@ class _ConnectionHero extends StatelessWidget {
     final connected = state.phase == ClientConnectionPhase.connected;
     final busy = state.isBusy;
     final failed = state.phase == ClientConnectionPhase.failed;
-    final failedMessage = failed ? _connectionFailureLabel(state) : null;
+    final failedMessage = failed ? _connectionFailureSubtitle(state) : null;
 
     return Container(
       width: double.infinity,
@@ -271,9 +271,7 @@ class _ConnectionHero extends StatelessWidget {
                   : busy
                   ? '正在建立安全连接'
                   : failed
-                  ? failedMessage == status.label
-                        ? '请处理后重试'
-                        : failedMessage ?? '请处理后重试'
+                  ? failedMessage ?? '请处理后重试'
                   : state.phase == ClientConnectionPhase.loggedOut
                   ? '登录后开启加速服务'
                   : '畅享 VIP 高速专线',
@@ -622,20 +620,16 @@ _StatusInfo _statusInfo(ClientConnectionState state) {
     ),
     ClientConnectionPhase.reconnecting => const _StatusInfo('重连中...', Color(0xFFF59E0B), Icons.restart_alt_rounded),
     ClientConnectionPhase.stopping => const _StatusInfo('停止中...', Color(0xFFF59E0B), Icons.power_settings_new_rounded),
-    ClientConnectionPhase.failed => _StatusInfo(
-      _connectionFailureLabel(state),
-      const Color(0xFFEF4444),
-      Icons.error_rounded,
-    ),
+    ClientConnectionPhase.failed => const _StatusInfo('连接失败', Color(0xFFEF4444), Icons.error_rounded),
     ClientConnectionPhase.loggedOut => const _StatusInfo('未登录', Color(0xFF0F172A), Icons.person_off_rounded),
     ClientConnectionPhase.initializing => const _StatusInfo('初始化中...', Color(0xFF64748B), Icons.hourglass_top_rounded),
     _ => const _StatusInfo('未连接', Color(0xFF0F172A), Icons.radio_button_unchecked_rounded),
   };
 }
 
-String _connectionFailureLabel(ClientConnectionState state) {
+String _connectionFailureSubtitle(ClientConnectionState state) {
   final message = state.message?.trim();
-  return message == null || message.isEmpty ? '连接异常' : message;
+  return message == null || message.isEmpty ? '请检查网络或会员状态后重试' : message;
 }
 
 String _nodeFlagFor(String name) {

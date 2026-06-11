@@ -168,8 +168,8 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       }
 
       final cachedSubscription = current.subscription;
-      if (cachedSubscription != null && cachedSubscription.canConnect && cachedSubscription.expiredAt != null) {
-        return null;
+      if (cachedSubscription != null && !cachedSubscription.canConnect) {
+        return _subscriptionAccessFailureMessage(cachedSubscription);
       }
       return '获取会员状态失败，请稍后重试';
     }

@@ -47,13 +47,13 @@ class AppUpdateNotifier extends _$AppUpdateNotifier with AppLogger {
   Future<AppUpdateState> check() async {
     loggy.debug("checking for update");
     state = const AppUpdateState.checking();
-    final appInfo = ref.watch(appInfoProvider).requireValue;
-    if (!appInfo.release.allowCustomUpdateChecker) {
+    final appInfo = ref.read(appInfoProvider).requireValue;
+    if (PlatformUtils.isIOS || !appInfo.release.allowCustomUpdateChecker) {
       loggy.debug("custom update checkers are not allowed for [${appInfo.release.name}] release");
       return state = const AppUpdateState.disabled();
     }
     return ref
-        .watch(appUpdateRepositoryProvider)
+        .read(appUpdateRepositoryProvider)
         .getLatestVersion()
         .match(
           (err) {
