@@ -148,6 +148,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     try {
       final result = await _fetchSubscriptionAndImport(current, showNodeFailureToast: false);
       final session = result.session;
+      if (!_isCurrentSession(current)) return _authText.errors.auth.notLoggedIn;
       await ref.read(authTokenStorageProvider).save(session);
       final nextState = AuthState.loggedIn(session);
       state = AsyncData(nextState);
@@ -197,6 +198,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     try {
       final result = await _fetchSubscriptionAndImport(current, showNodeFailureToast: showSuccessToast);
       final session = result.session;
+      if (!_isCurrentSession(current)) return false;
       await ref.read(authTokenStorageProvider).save(session);
       final nextState = AuthState.loggedIn(session);
       state = AsyncData(nextState);
@@ -213,6 +215,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       if (_isSubscriptionUnavailable(error)) {
         await _markSubscriptionUnavailable(current, reason: _safeError(error));
       }
+      if (!_isCurrentSession(current)) return false;
       final nextState = AuthState.loggedIn(state.valueOrNull?.session ?? current);
       state = AsyncData(nextState);
       await _logAuthDebug(nextState, userInfoLoaded: nextState.session?.subscription != null);
@@ -639,6 +642,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   }
 
   Future<void> _markSubscriptionUnavailable(AuthSession session, {required String reason}) async {
+    if (!_isCurrentSession(session)) return;
     await _clearSubscriptionAccessCache(session: session, reason: reason);
     final unavailableSubscription = _subscriptionMarkedUnavailable(session.subscription, reason: reason);
     final unavailableSession = unavailableSubscription == null

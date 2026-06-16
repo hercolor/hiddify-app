@@ -20,11 +20,9 @@ class AuthRegisterPage extends ConsumerStatefulWidget {
 
 class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
   final _emailController = TextEditingController();
-  final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _inviteCodeController = TextEditingController();
-  bool _sendingCode = false;
   bool _submitting = false;
   bool _acceptedTerms = false;
   String? _errorText;
@@ -32,42 +30,26 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
   @override
   void dispose() {
     _emailController.dispose();
-    _codeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _inviteCodeController.dispose();
     super.dispose();
   }
 
-  Future<void> _sendEmailCode() async {
-    final email = _emailController.text.trim();
-    if (!_looksLikeEmail(email)) {
-      setState(() => _errorText = '请先输入正确的邮箱');
-      return;
-    }
-    if (_sendingCode) return;
-    setState(() {
-      _sendingCode = true;
-      _errorText = null;
-    });
-    try {
-      final service = await ref.read(loginServiceProvider.future);
-      await service.sendEmailVerify(account: email).match((err) => throw err, (_) {}).run();
-      ref.read(inAppNotificationControllerProvider).showSuccessToast('验证码已发送');
-    } catch (error) {
-      setState(() => _errorText = _authErrorMessage(error));
-    } finally {
-      if (mounted) setState(() => _sendingCode = false);
-    }
-  }
-
   Future<void> _submit() async {
+    if (_submitting) return;
+    if (!_acceptedTerms) {
+      final accepted = await _confirmTermsAcceptance();
+      if (accepted != true) return;
+      if (!mounted) return;
+      setState(() => _acceptedTerms = true);
+    }
+
     final validationError = _validate();
     if (validationError != null) {
       setState(() => _errorText = validationError);
       return;
     }
-    if (_submitting) return;
     setState(() {
       _submitting = true;
       _errorText = null;
@@ -78,7 +60,6 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
           .register(
             email: _emailController.text.trim(),
             password: _passwordController.text,
-            emailCode: _emptyToNull(_codeController.text),
             inviteCode: _emptyToNull(_inviteCodeController.text),
           );
       final authState = ref.read(authNotifierProvider);
@@ -100,8 +81,21 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
     if (!_looksLikeEmail(email)) return '请输入正确的邮箱';
     if (password.length < 8) return '密码至少 8 位';
     if (password != _confirmPasswordController.text) return '两次输入的密码不一致';
-    if (!_acceptedTerms) return '请先同意用户协议和隐私政策';
     return null;
+  }
+
+  Future<bool?> _confirmTermsAcceptance() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('请确认协议'),
+        content: const Text('注册前需要阅读并同意《用户协议》和《隐私政策》。点击确定后将自动勾选并继续注册。'),
+        actions: [
+          TextButton(onPressed: () => context.pop(false), child: const Text('取消')),
+          FilledButton(onPressed: () => context.pop(true), child: const Text('确定')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -109,6 +103,7 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
     return _AuthFormScaffold(
       title: '注册账号',
       subtitle: '创建 蝴蝶加速 账号后自动完成加速准备',
+      showHeader: false,
       child: Column(
         children: [
           if (_errorText != null) ...[_ErrorBanner(_errorText!), const Gap(14)],
@@ -116,29 +111,6 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded), hintText: '邮箱'),
-          ),
-          const Gap(12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _codeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.verified_outlined),
-                    hintText: '邮箱验证码（按后台配置填写）',
-                  ),
-                ),
-              ),
-              const Gap(10),
-              SizedBox(
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: _sendingCode ? null : _sendEmailCode,
-                  child: Text(_sendingCode ? '发送中' : '获取验证码'),
-                ),
-              ),
-            ],
           ),
           const Gap(12),
           TextField(
@@ -158,20 +130,7 @@ class _AuthRegisterPageState extends ConsumerState<AuthRegisterPage> {
             decoration: const InputDecoration(prefixIcon: Icon(Icons.card_giftcard_rounded), hintText: '邀请码（如需要）'),
           ),
           const Gap(12),
-          CheckboxListTile(
-            value: _acceptedTerms,
-            onChanged: (value) => setState(() => _acceptedTerms = value ?? false),
-            contentPadding: EdgeInsets.zero,
-            title: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                const Text('我已阅读并同意'),
-                TextButton(onPressed: () => context.pushNamed('termsOfService'), child: const Text('用户协议')),
-                const Text('和'),
-                TextButton(onPressed: () => context.pushNamed('privacyPolicy'), child: const Text('隐私政策')),
-              ],
-            ),
-          ),
+          _TermsAgreementRow(accepted: _acceptedTerms, onChanged: (value) => setState(() => _acceptedTerms = value)),
           const Gap(18),
           _PrimaryAuthButton(label: '注册并登录', isLoading: _submitting, onPressed: _submitting ? null : _submit),
           const Gap(12),
@@ -235,12 +194,12 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     final validationError = _validate();
     if (validationError != null) {
       setState(() => _errorText = validationError);
       return;
     }
-    if (_submitting) return;
     setState(() {
       _submitting = true;
       _errorText = null;
@@ -329,44 +288,121 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
 }
 
 class _AuthFormScaffold extends StatelessWidget {
-  const _AuthFormScaffold({required this.title, required this.subtitle, required this.child});
+  const _AuthFormScaffold({required this.title, required this.subtitle, required this.child, this.showHeader = true});
 
   final String title;
   final String subtitle;
   final Widget child;
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context) {
-    final form = Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 430),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+    final content = SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.fromLTRB(24, showHeader ? 24 : 18, 24, 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showHeader) ...[
               const BrandMark(size: 64),
               const Gap(18),
               Text(title, style: PlatformUtils.isDesktop ? BrandDesktopText.pageTitle : BrandText.pageTitle),
               const Gap(6),
               Text(subtitle, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
               const Gap(26),
-              child,
             ],
-          ),
+            child,
+          ],
         ),
       ),
     );
+    final form = Align(alignment: showHeader ? Alignment.center : Alignment.topCenter, child: content);
 
     if (PlatformUtils.isDesktop) {
+      if (!showHeader) {
+        return DesktopTheme(
+          child: DesktopBackdrop(
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  Positioned(left: 20, top: 18, child: DesktopBackButton(onPressed: () => context.pop())),
+                  Padding(padding: const EdgeInsets.only(top: 46), child: form),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
       return DesktopTheme(
         child: DesktopPageScaffold(title: title, subtitle: subtitle, leading: const DesktopBackButton(), child: form),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: form,
+      appBar: showHeader ? AppBar(title: Text(title)) : null,
+      body: SafeArea(child: form),
+    );
+  }
+}
+
+class _TermsAgreementRow extends StatelessWidget {
+  const _TermsAgreementRow({required this.accepted, required this.onChanged});
+
+  final bool accepted;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final linkStyle = TextButton.styleFrom(
+      minimumSize: Size.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12, fontWeight: FontWeight.w700),
+    );
+    final textStyle = Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12, height: 1.25);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => onChanged(!accepted),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 34,
+              height: 34,
+              child: Checkbox(
+                value: accepted,
+                onChanged: (value) => onChanged(value ?? false),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const Gap(4),
+            Expanded(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 2,
+                children: [
+                  Text('我已阅读并同意', style: textStyle),
+                  TextButton(
+                    style: linkStyle,
+                    onPressed: () => context.pushNamed('termsOfService'),
+                    child: const Text('用户协议'),
+                  ),
+                  Text('和', style: textStyle),
+                  TextButton(
+                    style: linkStyle,
+                    onPressed: () => context.pushNamed('privacyPolicy'),
+                    child: const Text('隐私政策'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -667,7 +667,7 @@
       "registered": "Registered",
       "loginSyncFailed": "Login succeeded, but user info sync failed. Please try again later",
       "openMembership": "Please activate a membership first",
-      "membershipExpired": "Membership expired. Please renew before connecting",
+      "membershipExpired": "Please activate a membership",
       "trafficExhausted": "Plan traffic is used up. Please renew before connecting",
       "membershipExpiredOrTraffic": "Please activate or renew your membership before connecting",
       "accessCheckFailed": "Failed to check membership status. Please try again later",

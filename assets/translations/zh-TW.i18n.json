@@ -664,7 +664,7 @@
       "registered": "已註冊",
       "loginSyncFailed": "登入成功，使用者資訊同步失敗，請稍後再試",
       "openMembership": "請先開通會員",
-      "membershipExpired": "會員已到期，請開通會員後再連線",
+      "membershipExpired": "請開通會員",
       "trafficExhausted": "套餐流量已用盡，請續費後再連線",
       "membershipExpiredOrTraffic": "請先開通或續費會員後再連線",
       "accessCheckFailed": "取得會員狀態失敗，請稍後再試",
