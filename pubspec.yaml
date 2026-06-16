@@ -193,11 +193,8 @@ flutter_gen:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: assets/logo.png
-  android_gravity: center
   android_12:
     color: "#ffffff"
-    image: assets/logo.png
 
 ffigen:
   name: "HiddifyCoreNativeLibrary"

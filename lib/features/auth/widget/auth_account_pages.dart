@@ -237,6 +237,7 @@ class _AuthForgotPasswordPageState extends ConsumerState<AuthForgotPasswordPage>
     return _AuthFormScaffold(
       title: '忘记密码',
       subtitle: '通过账号绑定邮箱验证码重置密码',
+      showHeader: false,
       child: Column(
         children: [
           if (_errorText != null) ...[_ErrorBanner(_errorText!), const Gap(14)],
@@ -327,7 +328,7 @@ class _AuthFormScaffold extends StatelessWidget {
             child: SafeArea(
               child: Stack(
                 children: [
-                  Positioned(left: 20, top: 18, child: DesktopBackButton(onPressed: () => context.pop())),
+                  Positioned(left: 20, top: 18, child: DesktopBackButton(onPressed: () => _goBackToLogin(context))),
                   Padding(padding: const EdgeInsets.only(top: 46), child: form),
                 ],
               ),
@@ -341,9 +342,25 @@ class _AuthFormScaffold extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: showHeader ? AppBar(title: Text(title)) : null,
+      appBar: AppBar(
+        title: showHeader ? Text(title) : null,
+        leading: showHeader
+            ? null
+            : IconButton(
+                onPressed: () => _goBackToLogin(context),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+              ),
+      ),
       body: SafeArea(child: form),
     );
+  }
+}
+
+void _goBackToLogin(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.goNamed('settings');
   }
 }
 

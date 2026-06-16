@@ -671,6 +671,7 @@ class _HeroMemberCard extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final planLabel = _membershipBadgeLabel(subscription);
     final deviceText = _accountDeviceText(subscription);
     return Container(
       padding: const EdgeInsets.all(24),
@@ -724,6 +725,8 @@ class _HeroMemberCard extends HookConsumerWidget {
                   ],
                 ),
               ),
+              const Gap(12),
+              _PlanBadge(label: planLabel),
             ],
           ),
           const Gap(32),
@@ -738,6 +741,39 @@ class _HeroMemberCard extends HookConsumerWidget {
               const Gap(8),
               _SmallLightButton(label: '升级', onTap: () => context.pushNamed('premiumRenewal')),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanBadge extends StatelessWidget {
+  const _PlanBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          const Gap(4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: BrandText.caption.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -1216,7 +1252,7 @@ class _LogoutButton extends ConsumerWidget {
           ? null
           : () async {
               await ref.read(authNotifierProvider.notifier).logout();
-              if (context.mounted) context.goNamed('home');
+              if (context.mounted) context.goNamed('settings');
             },
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1226,6 +1262,10 @@ class _LogoutButton extends ConsumerWidget {
       child: Text('退出登录', style: BrandText.buttonLabel.copyWith(color: BrandColors.error)),
     );
   }
+}
+
+String _membershipBadgeLabel(UserSubscription? subscription) {
+  return subscription?.displayMembershipLabel ?? '普通用户';
 }
 
 String? _accountDeviceText(UserSubscription? subscription) {

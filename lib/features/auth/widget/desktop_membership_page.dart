@@ -327,6 +327,7 @@ class _PlanCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final planName = _displayText(subscription?.planName);
     return DesktopCard(
       gradient: const LinearGradient(
         colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
@@ -374,6 +375,8 @@ class _PlanCard extends ConsumerWidget {
                   ],
                 ),
               ),
+              const Gap(12),
+              _DesktopPlanBadge(label: planName),
             ],
           ),
           const Gap(32),
@@ -388,6 +391,39 @@ class _PlanCard extends ConsumerWidget {
               const Gap(8),
               _SmallPlanButton(label: '升级', onPressed: () => context.pushNamed('premiumRenewal')),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopPlanBadge extends StatelessWidget {
+  const _DesktopPlanBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          const Gap(4),
+          Text(
+            label == '--' ? '蝴蝶加速 Pro' : label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: BrandDesktopText.bodyPrimary.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -557,7 +593,7 @@ class _DesktopLogoutButton extends ConsumerWidget {
           ? null
           : () async {
               await ref.read(authNotifierProvider.notifier).logout();
-              if (context.mounted) context.goNamed('home');
+              if (context.mounted) context.goNamed('settings');
             },
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -576,6 +612,12 @@ String _formatDeviceLimit(UserSubscription? subscription) {
   final max = subscription?.maxDevices;
   if (max == null || max <= 0) return '--';
   return '最多 $max 台';
+}
+
+String _displayText(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return '--';
+  return trimmed;
 }
 
 String _formatExpiredAt(DateTime? expiredAt) {
