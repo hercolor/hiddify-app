@@ -4,7 +4,7 @@ on:
     types: [released]
 
 env:
-    IDENTIFIER: ${{ endsWith(github.event.release.tag_name, 'dev') && 'Hiddify.Next.Beta' || 'Hiddify.Next' }}
+    IDENTIFIER: ${{ endsWith(github.event.release.tag_name, 'dev') && 'Y88.ButterflyAccelerator.Beta' || 'Y88.ButterflyAccelerator' }}
 
 jobs:
   publish:

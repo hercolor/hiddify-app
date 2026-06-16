@@ -93,7 +93,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
         options: ChannelOptions(credentials: channelOption),
       ),
     );
-    // await start("/sdcard/Android/data/app.hiddify.com/files/configs/cdc633e9-8cfc-4a67-948d-009f779a5c91.json", "hiddify");
+    // await start("/sdcard/Android/data/pro.y88.accelerator/files/configs/cdc633e9-8cfc-4a67-948d-009f779a5c91.json", "hiddify");
     return "";
   }
 

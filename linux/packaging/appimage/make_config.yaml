@@ -1,9 +1,9 @@
-display_name: Hiddify
+display_name: 蝴蝶加速
 
 icon: assets/images/source/ic_launcher_border.png
 
 keywords:
-  - Hiddify
+  - 蝴蝶加速
   - Proxy
   - VPN
   - V2ray
@@ -12,7 +12,7 @@ keywords:
   - Psiphon
   - OpenVPN
 
-generic_name: Hiddify
+generic_name: 蝴蝶加速
 
 actions:
   - name: Start
@@ -51,4 +51,4 @@ supported_mime_type:
 #   - libcurl.so.4
 include: []
 
-metainfo: linux/packaging/app.hiddify.com.appdata.xml
+metainfo: linux/packaging/pro.y88.hudiejiasu.appdata.xml

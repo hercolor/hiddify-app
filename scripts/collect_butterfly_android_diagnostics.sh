@@ -9,10 +9,10 @@ OUT_FILE=""
 
 usage() {
   cat <<'EOF'
-Collect filtered 4376 Android routing diagnostics from adb logcat.
+Collect filtered 蝴蝶加速 Android routing diagnostics from adb logcat.
 
 Usage:
-  scripts/collect_4376_android_diagnostics.sh [options]
+  scripts/collect_butterfly_android_diagnostics.sh [options]
 
 Options:
   --apk PATH       Install this APK before collecting logs.
@@ -23,10 +23,10 @@ Options:
 
 Typical flow:
   1. Install the latest APK:
-     scripts/collect_4376_android_diagnostics.sh --apk out/4376-android-release-YYYYMMDD-HHMMSS.apk --clear
-  2. Open 4376, connect, open hidden diagnostics, run "分流探测".
+     scripts/collect_butterfly_android_diagnostics.sh --apk out/蝴蝶加速-android-release-YYYYMMDD-HHMMSS.apk --clear
+  2. Open 蝴蝶加速, connect, open hidden diagnostics, run "分流探测".
   3. Collect evidence:
-     scripts/collect_4376_android_diagnostics.sh --out /tmp/4376-diag.log
+     scripts/collect_butterfly_android_diagnostics.sh --out /tmp/butterfly-diag.log
 
 The script filters for diagnostic evidence only and redacts common token/URL
 patterns before writing output.

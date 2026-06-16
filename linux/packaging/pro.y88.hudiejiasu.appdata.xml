@@ -1,48 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Hiddify AppStream Metadata
+  蝴蝶加速 AppStream Metadata
   Place this file at: linux/packaging/myappid.appdata.xml
 -->
 <component type="desktop-application">
-  <id>app.hiddify.com</id>
+  <id>pro.y88.hudiejiasu</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <name>Hiddify</name>
+  <name>蝴蝶加速</name>
   <summary>Modern Proxy and VPN Manager for Linux</summary>
 
-  <developer_name>Hiddify</developer_name>
-  <update_contact>linux@hiddify.com</update_contact>
+  <developer_name>蝴蝶加速</developer_name>
+  <update_contact>support@y88.pro</update_contact>
 
   <description>
     <p>
-      Hiddify is an advanced proxy and VPN client built for privacy and control. 
+      蝴蝶加速 is a branded network acceleration client built for stable and simple connectivity. 
       It supports multiple backend protocols including V2Ray, Xray, Clash, and Sing-box, 
       providing flexibility and performance for all kinds of network configurations.
     </p>
     <p>
-      Designed with simplicity in mind, Hiddify helps users connect securely and 
+      Designed with simplicity in mind, 蝴蝶加速 helps users connect securely and 
       manage complex proxy configurations through a clean graphical interface.
     </p>
   </description>
 
   <screenshots>
     <screenshot type="default">
-      <image>https://hiddify.com/assets/hiddify-next-mobile.svg</image>
-      <caption>Main Interface of Hiddify</caption>
+      <image>https://y88.pro</image>
+      <caption>Main Interface of 蝴蝶加速</caption>
     </screenshot>
   </screenshots>
 
-  <launchable type="desktop-id">hiddify.desktop</launchable>
+  <launchable type="desktop-id">hudiejiasu.desktop</launchable>
 
-  <icon type="stock">hiddify</icon>
+  <icon type="stock">hudiejiasu</icon>
 
   <categories>
     <category>Network</category>
   </categories>
 
   <keywords>
-    <keyword>Hiddify</keyword>
+    <keyword>蝴蝶加速</keyword>
     <keyword>Proxy</keyword>
     <keyword>VPN</keyword>
     <keyword>V2Ray</keyword>
@@ -62,26 +62,26 @@
     <mime-type>x-scheme-handler/sing-box</mime-type>
   </mime-types>
 
-  <url type="homepage">https://hiddify.com</url>
-  <url type="bugtracker">https://github.com/hiddify/hiddify-app/issues</url>
-  <url type="help">https://docs.hiddify.com</url>
+  <url type="homepage">https://y88.pro</url>
+  <url type="bugtracker">https://y88.pro</url>
+  <url type="help">https://y88.pro</url>
 
   <provides>
-    <binary>hiddify</binary>
+    <binary>hudiejiasu</binary>
   </provides>
 
   <releases>
     <release version="1.0.0" date="2025-10-25">
       <description>
-        <p>Initial Linux release of Hiddify with multi-protocol support and modern UI.</p>
+        <p>Initial Linux release of 蝴蝶加速 with modern UI.</p>
       </description>
     </release>
   </releases>
 
-  <translation type="gettext">hiddify</translation>
+  <translation type="gettext">hudiejiasu</translation>
 
   <custom>
-    <value key="PackageName">hiddify</value>
+    <value key="PackageName">hudiejiasu</value>
     <value key="Priority">optional</value>
     <value key="Section">x11</value>
     <value key="InstalledSize">6604</value>

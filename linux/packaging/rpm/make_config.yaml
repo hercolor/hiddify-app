@@ -8,17 +8,17 @@
 # - Successful builds do not guarantee runtime stability on Red Hat-based systems.
 
 
-# display_name: Hiddify
-# url: https://github.com/hiddify/hiddify-app
+# display_name: 蝴蝶加速
+# url: https://y88.pro
 # license: Other
 
-# packager: hiddify
-# packagerEmail: linux@hiddify.com
+# packager: y88
+# packagerEmail: support@y88.pro
 
 # icon: assets/images/source/ic_launcher_border.png
 
 # keywords:
-#   - Hiddify
+#   - 蝴蝶加速
 #   - Proxy
 #   - VPN
 #   - V2ray
@@ -27,7 +27,7 @@
 #   - Psiphon
 #   - OpenVPN
 
-# generic_name: Hiddify
+# generic_name: 蝴蝶加速
 
 # requires:
 #   - libayatana-appindicator-gtk3
