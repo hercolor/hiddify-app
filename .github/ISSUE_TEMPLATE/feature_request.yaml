@@ -1,14 +1,47 @@
-name: Feature Request
-description: Request a new feature
-title: '[FR] '
+name: 蝴蝶加速功能需求
+description: 提交蝴蝶加速客户端功能需求
+title: '[需求] '
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        # Only English
-  - type: textarea
+        请描述当前蝴蝶加速业务需要的用户价值、适用平台和验收标准。普通用户界面不得暴露订阅地址、节点真实地址、协议、端口、DNS 等技术细节。
+  - type: dropdown
+    id: platform
     attributes:
-      label: Feature description
-      description: Please provide a clear and concise description of what you want to happen and what problem will this solve.
+      label: 平台
+      multiple: true
+      options:
+        - Android
+        - Windows
+        - iOS
+        - macOS
+        - 后端/API
+        - 打包/发布
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 需求背景
+      description: 当前遇到什么问题，为什么需要这个功能？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 希望用户界面或流程如何变化？
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      placeholder: |
+        - Android ...
+        - Windows ...
+        - 普通用户/会员到期/会员有效状态分别 ...
     validations:
       required: true

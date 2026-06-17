@@ -1,128 +1,37 @@
-# Contributor Covenant Code of Conduct
+# 蝴蝶加速客户端协作规范
 
-## Our Pledge
+本项目按商业客户端二次开发维护，协作目标是稳定、可审计、可发布。
 
-We as members, contributors, and leaders pledge to make participation in our
-community a harassment-free experience for everyone, regardless of age, body
-size, visible or invisible disability, ethnicity, sex characteristics, gender
-identity and expression, level of experience, education, socio-economic status,
-nationality, personal appearance, race, religion, or sexual identity
-and orientation.
+## 基本要求
 
-We pledge to act and interact in ways that contribute to an open, welcoming,
-diverse, inclusive, and healthy community.
+- 尊重事实和验证结果，避免未经验证就宣称完成。
+- 对用户账号、token、订阅地址、节点信息和日志保持最小暴露。
+- 不提交生产密钥、个人凭据、短信平台密钥或用户隐私数据。
+- 不实现隐藏流量、反检测、绕过审核等非本项目目标的能力。
+- 讨论问题时聚焦复现步骤、影响范围、原因和修复方案。
 
-## Our Standards
+## 代码与文档协作
 
-Examples of behavior that contributes to a positive environment for our
-community include:
+- 修改普通用户 UI 时，必须遵守品牌和信息隐藏规则：只展示蝴蝶加速业务需要的信息。
+- 修改登录、会员、连接状态、版本升级时，需要同步检查 Android 和 Windows。
+- 文档必须以当前二开产品为准，不再引用旧上游下载地址、社区入口或发布说明作为主流程。
+- 旧核心运行时名称只能作为内部实现说明出现，不得作为对外品牌呈现。
 
-* Demonstrating empathy and kindness toward other people
-* Being respectful of differing opinions, viewpoints, and experiences
-* Giving and gracefully accepting constructive feedback
-* Accepting responsibility and apologizing to those affected by our mistakes,
-  and learning from the experience
-* Focusing on what is best not just for us as individuals, but for the
-  overall community
+## 问题处理
 
-Examples of unacceptable behavior include:
+发现问题时优先提供：
 
-* The use of sexualized language or imagery, and sexual attention or
-  advances of any kind
-* Trolling, insulting or derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information, such as a physical or email
-  address, without their explicit permission
-* Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+1. 复现环境和版本。
+2. 账号状态：普通用户、会员有效、会员到期或流量耗尽。
+3. 实际表现和预期表现。
+4. 相关日志，且必须脱敏。
+5. 已尝试的验证步骤。
 
-## Enforcement Responsibilities
+## 处理边界
 
-Community leaders are responsible for clarifying and enforcing our standards of
-acceptable behavior and will take appropriate and fair corrective action in
-response to any behavior that they deem inappropriate, threatening, offensive,
-or harmful.
+维护者可以拒绝或回退以下内容：
 
-Community leaders have the right and responsibility to remove, edit, or reject
-comments, commits, code, wiki edits, issues, and other contributions that are
-not aligned to this Code of Conduct, and will communicate reasons for moderation
-decisions when appropriate.
-
-## Scope
-
-This Code of Conduct applies within all community spaces, and also applies when
-an individual is officially representing the community in public spaces.
-Examples of representing our community include using an official e-mail address,
-posting via an official social media account, or acting as an appointed
-representative at an online or offline event.
-
-## Enforcement
-
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-https://t.me/hiddify.
-All complaints will be reviewed and investigated promptly and fairly.
-
-All community leaders are obligated to respect the privacy and security of the
-reporter of any incident.
-
-## Enforcement Guidelines
-
-Community leaders will follow these Community Impact Guidelines in determining
-the consequences for any action they deem in violation of this Code of Conduct:
-
-### 1. Correction
-
-**Community Impact**: Use of inappropriate language or other behavior deemed
-unprofessional or unwelcome in the community.
-
-**Consequence**: A private, written warning from community leaders, providing
-clarity around the nature of the violation and an explanation of why the
-behavior was inappropriate. A public apology may be requested.
-
-### 2. Warning
-
-**Community Impact**: A violation through a single incident or series
-of actions.
-
-**Consequence**: A warning with consequences for continued behavior. No
-interaction with the people involved, including unsolicited interaction with
-those enforcing the Code of Conduct, for a specified period of time. This
-includes avoiding interactions in community spaces as well as external channels
-like social media. Violating these terms may lead to a temporary or
-permanent ban.
-
-### 3. Temporary Ban
-
-**Community Impact**: A serious violation of community standards, including
-sustained inappropriate behavior.
-
-**Consequence**: A temporary ban from any sort of interaction or public
-communication with the community for a specified period of time. No public or
-private interaction with the people involved, including unsolicited interaction
-with those enforcing the Code of Conduct, is allowed during this period.
-Violating these terms may lead to a permanent ban.
-
-### 4. Permanent Ban
-
-**Community Impact**: Demonstrating a pattern of violation of community
-standards, including sustained inappropriate behavior,  harassment of an
-individual, or aggression toward or disparagement of classes of individuals.
-
-**Consequence**: A permanent ban from any sort of public interaction within
-the community.
-
-## Attribution
-
-This Code of Conduct is adapted from the [Contributor Covenant][homepage],
-version 2.0, available at
-https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
-
-Community Impact Guidelines were inspired by [Mozilla's code of conduct
-enforcement ladder](https://github.com/mozilla/diversity).
-
-[homepage]: https://www.contributor-covenant.org
-
-For answers to common questions about this code of conduct, see the FAQ at
-https://www.contributor-covenant.org/faq. Translations are available at
-https://www.contributor-covenant.org/translations.
+- 泄露密钥、订阅地址、用户隐私或节点敏感信息的提交。
+- 破坏当前品牌、登录、会员、连接权限或版本更新流程的修改。
+- 未经验证的大范围重写。
+- 与当前产品目标无关的旧上游通用客户端功能回灌。

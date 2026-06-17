@@ -1,202 +1,130 @@
-<div dir="ltr" align=center>
-    
-[**![Lang_farsi](https://user-images.githubusercontent.com/125398461/234186932-52f1fa82-52c6-417f-8b37-08fe9250a55f.png) فارسی**](README_fa.md) / [**Русский 🇷🇺**](README_ru.md) / [**简体中文 🇨🇳**](README_cn.md) / [**日本語 🇯🇵**](README_ja.md) / [**Portugês-BR 🇧🇷**](README_br.md)
+# 蝴蝶加速 Client
 
-</div>
-<br>
+蝴蝶加速客户端是基于 Flutter 二次开发的商业加速客户端，面向 Android、Windows、iOS、macOS 等平台。当前仓库已经不再作为原 Hiddify 通用开源客户端维护，文档、发布包、UI、账号体系和后端集成都以蝴蝶加速业务为准。
 
-<p align="center"><img src="https://github.com/hiddify/hiddify.com/blob/main/docs/assets/hiddify-app-logo.svg" width=56% /></p>
-<br>
+## 当前定位
 
-<div align="center">
+- 产品名称：蝴蝶加速
+- 后端面板：`https://api.y88.pro`
+- 账号系统：XBoard 用户体系
+- 节点系统：XBoard 订阅 + Xboard-Node
+- 客户端版本：见 `pubspec.yaml` 的 `version`
+- 普通用户入口：主页、节点、会员/我的账号
+- 技术/诊断入口：仅用于内部排查，不作为普通用户功能展示
 
-<!--
-![Hiddify logo + text](https://github.com/hiddify/hiddify-app/assets/125398461/d821cfe0-b4c4-441f-be4e-eb9209f59542)
-    -->
-    
-[![GP-Intalls](https://img.shields.io/endpoint?color=green&logo=google-play&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dapp.hiddify.com%26l%3DGoogle%2520Play%26m%3D%24shortinstalls&style=flat-square)](https://play.google.com/store/apps/details?id=app.hiddify.com) [![Downloads](https://img.shields.io/github/downloads/hiddify/hiddify-next/total?style=flat-square&logo=github)](https://github.com/hiddify/hiddify-app/releases/)[![Last Version](https://img.shields.io/github/release/hiddify/hiddify-next/all.svg?style=flat-square)](https://github.com/hiddify/hiddify-app/releases/)[![Last Release Date](https://img.shields.io/github/release-date/hiddify/hiddify-next.svg?style=flat-square)](https://github.com/hiddify/hiddify-app/releases/)[![commits](https://img.shields.io/github/commit-activity/m/hiddify/hiddify-next?style=flat-square)](https://github.com/hiddify/hiddify-app/)
-[![Youtube](https://img.shields.io/youtube/channel/views/UCxrmeMvVryNfB4XL35lXQNg?label=Youtube&style=flat-square&logo=youtube)](https://www.youtube.com/@hiddify)[![Telegram Channel](https://img.shields.io/endpoint?label=Channel&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fhiddify&color=blue)](https://telegram.dog/hiddify)[![Telegram Group](https://img.shields.io/endpoint?color=neon&label=Support%20Group&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fhiddify_board)](https://telegram.dog/hiddify_board/5)
+## 已完成的二次开发能力
 
-</div>
+### 账号与会员
 
+- 邮箱/手机号登录。
+- 注册页对接后端注册 API。
+- 忘记密码与验证码重置。
+- 登录后自动同步订阅节点。
+- 我的账号页展示会员套餐、到期时间、设备数量、安全中心。
+- 安全中心包含修改密码、绑定/更换手机。
+- 非会员、过期、流量耗尽状态会阻止连接并提示开通/续费会员。
 
+### 连接与节点
 
+- 登录成功后从 XBoard 返回的订阅地址同步节点。
+- 支持节点列表、当前节点显示、节点切换。
+- 支持一键连接/断开。
+- 连接前刷新会员状态，避免到期账号继续连接。
+- 客户端隐藏订阅地址、节点协议、服务端地址、端口、DNS 等普通用户不需要看到的技术信息。
 
-## What is Hiddify app?
+### UI 与品牌
 
-<p dir="ltr" style="font-size: 16px">A multi-platform proxy client based on <a href="https://github.com/SagerNet/sing-box">Sing-box</a> universal proxy tool-chain. Hiddify offers a wide range of capabilities, like automatic node selection, TUN mode, remote profiles etc. Hiddify is ad-free and open-source. With support for a wide range of protocols, it provides a secure and private way for accessing free internet.</p>
+- 品牌统一为“蝴蝶加速”。
+- Android / Windows / iOS / macOS / Web 图标已替换为项目根目录 `icon.png` 派生资源。
+- Android 和 Windows 使用一致的登录、注册、会员、安全中心、关闭弹窗设计。
+- 启动页当前保持白屏，后续有正式启动页设计后再加入品牌动效或图片。
 
-<div align=center>
-<img width=90% alt="English Demo" src="https://github.com/hiddify/hiddify-app/assets/125398461/ffe5346d-3404-470f-b5e0-4364e23743d2">
+### 更新与发布
 
-</div>
+- 客户端版本检查对接 `https://api.y88.pro/api/app/v1/client-version`。
+- Windows 支持安装包和便携包。
+- Android 支持 release APK 打包。
+- iOS 需要在 macOS/Xcode 环境下使用开发者账号签名打包。
 
-## 🚀 Main features
+## 重要目录
 
-✈️ Multi-platform: Android, iOS, Windows, macOS and Linux
+| 路径 | 说明 |
+| --- | --- |
+| `lib/features/auth/` | 登录、注册、会员、账号、安全中心 |
+| `lib/features/home/` | 主页与一键连接入口 |
+| `lib/features/proxy/` | 节点列表、节点选择、延迟显示 |
+| `lib/features/connection/` | 连接状态机和连接前权限/会员检查 |
+| `lib/core/model/constants.dart` | 后端 API、更新地址、协议/隐私链接 |
+| `assets/config/app_config.json` | XBoard API 基础地址 |
+| `android/` | Android 原生壳、包名、图标、启动页 |
+| `windows/` | Windows 原生壳、安装包配置、图标 |
+| `ios/` | iOS App 与 Network Extension 配置 |
+| `docs/` | 当前二开客户端文档 |
+| `out/` | 本地构建产物输出目录 |
 
-⭐ Intuitive and accessible UI
+## 构建要求
 
-🔍 Delay based node selection
+基础要求：
 
-🟡 Wide range of protocols:
-Vless, Vmess, Reality, TUIC, Hysteria, Wireguard, SSH etc.
+- Flutter 3.41.9 或当前项目锁定的兼容版本。
+- Dart 3.11.x。
+- Android 构建需要 Android SDK / JDK / Gradle 环境。
+- Windows 安装包需要 Windows 主机、Visual Studio C++ 工具链、Inno Setup。
+- iOS 需要 macOS、Xcode、Apple Developer 账号或本机测试签名能力。
 
-🟡 Subscription link and configuration formats: Sing-box, V2ray, Clash, Clash meta
+常用命令：
 
-🔄 Automatic subscription update
+```bash
+flutter pub get
+flutter analyze
+flutter build apk --release
+```
 
-🔎 Display profile information including remaining days and traffic usage
+Windows 在 Windows 主机或 WSL 调用 Windows 工具链时执行：
 
-🛡 Open source, secure and community driven
+```powershell
+flutter build windows --release --target lib/main_prod.dart
+fastforge --no-version-check package --platform windows --targets exe --skip-clean --build-target lib/main_prod.dart
+```
 
-🌙 Dark and light modes
+更多构建说明见：[`docs/build-release.md`](docs/build-release.md)。
 
-⚙ Compatible with all proxy management panels
+## 发布产物命名
 
-⭐ Appropriate configuration for Iran, China, Russia and other countries
+当前本地发布产物建议统一放到 `out/`：
 
-📱 Available on official stores
+- `蝴蝶加速-Android-*.apk`
+- `蝴蝶加速-Windows-Setup-x64.exe`
+- `蝴蝶加速-Windows-Portable-x64.zip`
+- `蝴蝶加速-Windows-x64.msix`（如启用 MSIX）
 
-## 🛍️ Get It On Stores
-<a href="https://apps.apple.com/us/app/hiddify-proxy-vpn/id6596777532?platform=iphone"><img height=50px src="https://github.com/user-attachments/assets/a7c62126-07ce-4f18-8197-bbb672f6d8be"></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=app.hiddify.com"><img height=50px src="https://github.com/hiddify/hiddify-next/blob/main/docs/google-play-badge.png"></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://apps.microsoft.com/detail/Hiddify/9pdfnl3qv2s5?mode=mini" target="_blank"><img height=50px src="https://github.com/hiddify/hiddify-next/assets/125398461/620750bb-4459-41b5-9f86-ba82119345b8" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+每个产物建议同步生成 `.sha256` 校验文件。
 
+## 后端接口概览
 
-## 📥 Direct Download
+客户端依赖 XBoard 兼容 API：
 
-<div align=left>
-<table>
-    <thead align=left>
-        <tr>
-            <th>OS</th>
-            <th>Download</th>
-        </tr>
-    </thead>
-    <tbody align=left>
-        <tr>
-        <td>iOS</td>
-            <td>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-iOS.ipa"><img src="https://img.shields.io/badge/IPA-Universal-c0c0c0.svg?logo=ios"></a>
-            </td>
-        </tr>
-        <tr>
-        <td>Android</td>
-            <td>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Android-universal.apk"><img src="https://img.shields.io/badge/APK-Universal-044d29.svg?logo=android"></a><br>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Android-arm64.apk"><img src="https://img.shields.io/badge/APK-ARMv8-168039.svg?logo=android"></a><br>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Android-arm7.apk"><img src="https://img.shields.io/badge/APK-ARMv7-45bf55.svg?logo=android"></a><br>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Android-x86_64.apk"><img src="https://img.shields.io/badge/APK-x64-96ed89.svg?logo=android"></a>
-            </td>
-        </tr>
-        <tr>
-            <td>Windows</td>
-            <td>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Windows-Setup-x64.Msix"><img src="https://img.shields.io/badge/OfficialSetup-x64-0078d7.svg?logo=windows"></a><br>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Windows-Setup-x64.exe"><img src="https://img.shields.io/badge/Setup-x64-2d7d9a.svg?logo=windows"></a><br>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Windows-Portable-x64.zip"><img src="https://img.shields.io/badge/Portable-x64-67b7d1.svg?logo=windows"></a>
-            </td>
-        </tr>
-        <tr>
-            <td>macOS</td>
-            <td>
-                <a href="https://apps.apple.com/us/app/hiddify-proxy-vpn/id6596777532"><img src="https://img.shields.io/badge/IPA-ARM-D33A54.svg?logo=apple"></a><br>
-                <a href="https://github.com/hiddify/hiddify-next/releases/latest/download/Hiddify-MacOS.dmg"><img src="https://img.shields.io/badge/DMG-Universal-ea005e.svg?logo=apple"></a><br>
-                <a href="https://github.com/hiddify/hiddify-next/releases/latest/download/Hiddify-MacOS-Installer.pkg"><img src="https://img.shields.io/badge/PKG-Universal-bc544b.svg?logo=apple" /></a>
-            </td>
-        </tr>
-        <tr>
-            <td>Linux</td>
-            <td>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Linux-x64.AppImage"><img src="https://img.shields.io/badge/AppImage-x64-f84e29.svg?logo=linux"> </a><br>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Debian-x64.deb"><img src="https://img.shields.io/badge/DebPackage-x64-FF9966.svg?logo=debian"> </a><br>
-                <a href="https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-rpm-x64.rpm"><img src="https://img.shields.io/badge/RpmPackage-x64-F1B42F.svg?logo=redhat"> </a>
-            </td>
-        </tr>
-    </tbody>
-</table>
+- 登录：`/api/v1/passport/auth/login`
+- 注册：`/api/v1/passport/auth/register`
+- 忘记密码：`/api/v1/passport/auth/forget`
+- 用户信息：`/api/v1/user/info`
+- 版本检查：`/api/app/v1/client-version`
+- 规则集/更新相关地址：由 `lib/core/model/constants.dart` 和 `lib/core/config/locked_core_config.dart` 控制
 
+详细集成说明见：[`docs/backend-integration.md`](docs/backend-integration.md)。
 
-</div>
+## 文档索引
 
-## ⚙️ Installation and tutorials
+- [`docs/client-overview.md`](docs/client-overview.md)：客户端二开总览。
+- [`docs/backend-integration.md`](docs/backend-integration.md)：XBoard/API/订阅同步说明。
+- [`docs/build-release.md`](docs/build-release.md)：Android、Windows、iOS 打包说明。
+- [`docs/butterfly_accelerator_UI_UX_Design_Spec.md`](docs/butterfly_accelerator_UI_UX_Design_Spec.md)：早期 UI/UX 设计稿，仅作为历史参考。
 
-**Find tutorial information on our wiki page by clicking on image below.**
+## 维护规则
 
-<div align="center">
-
-[![Tutorials on Wiki](https://github.com/hiddify/hiddify-app/assets/125398461/95bb5cf8-c143-4934-87d6-b9d4c31e035e)](https://hiddify.com/app/)
-
-
-</div>
-
-## 🌎 Translations
-
-    
-You can improve existing languages or contribute new ones either by editing the JSON files in `/assets/translations` or [![Translate with Inlang](https://img.shields.io/badge/%20-%20-3ECF8E?logo=i18next&logoColor=white)](https://fink.inlang.com/github.com/hiddify/hiddify-app) by using [Inlang online editor](https://fink.inlang.com/github.com/hiddify/hiddify-app).    
-
-
-## ✏️ Acknowledgements
-
-We would like to express our sincere appreciation to the contributors of the following projects, whose robust foundation and innovative features have significantly enhanced the success and functionality of this project.
-
-- [Sing-box](https://github.com/SagerNet/sing-box)
-- [Sing-box for Android](https://github.com/SagerNet/sing-box-for-android)
-- [Sing-box for Apple](https://github.com/SagerNet/sing-box-for-apple)
-- [Clash](https://github.com/Dreamacro/clash)
-- [Clash Meta](https://github.com/MetaCubeX/Clash.Meta)
-- [FClash](https://github.com/Fclash/Fclash)
-- [Vazirmatn Font by Saber Rastikerdar](https://github.com/rastikerdar/vazirmatn)
-- [Others](./pubspec.yaml)
-
-## 🎯 Donation and Support
-
-The easiest way to support us is to click on the star (⭐) at the top of this page.
-
-<div align=center>
-    
-<a href="https://next.ossinsight.io/widgets/official/analyze-repo-stars-history?repo_id=643504282" target="_blank" style="display: block" align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://next.ossinsight.io/widgets/official/analyze-repo-stars-history/thumbnail.png?repo_id=643504282&image_size=auto&color_scheme=dark" width="721" height="auto">
-    <img alt="Star History of hiddify/hiddify-app" src="https://next.ossinsight.io/widgets/official/analyze-repo-stars-history/thumbnail.png?repo_id=643504282&image_size=auto&color_scheme=light" width="721" height="auto">
-  </picture>
-</a>
-
-</div>
-
-We also need financial support for our services. All of our activities are done voluntarily and financial support will be spent on the development of the project. You can view our support addresses [here](https://hiddify.com/donation-and-support/).
-
-## 👩‍🏫 Collaboration and Contact Information
-
-Hiddify is a community driven project. If you're interested in contributing, please read the [contribution guidelines](./CONTRIBUTING.md). We would specially appreciate any help we can get in these areas: **Flutter, Go, iOS development (Swift), Android development (Kotlin).**
-
-<div align=center>
-
-<br>
-
-[![Email](https://img.shields.io/badge/Email-contribute@hiddify.com-005FF9?style=flat-square&logo=mail.ru)](mailto:contribute@hiddify.com)
-[![Telegram Channel](https://img.shields.io/endpoint?label=Channel&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fhiddify&color=blue)](https://telegram.dog/hiddify)
-[![Telegram Group](https://img.shields.io/endpoint?color=neon&label=Support%20Group&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fhiddify_board)](https://telegram.dog/hiddify_board)
-[![Youtube](https://img.shields.io/youtube/channel/views/UCxrmeMvVryNfB4XL35lXQNg?label=Youtube&style=flat-square&logo=youtube)](https://www.youtube.com/@hiddify)
-[![Twitter](https://img.shields.io/twitter/follow/hiddify_com?color=%231DA1F2&logo=twitter&logoColor=1DA1F2&style=flat-square)](https://twitter.com/intent/follow?screen_name=hiddify_com)
-
-</div>
-
-<p align=center>
- We appreciate all people who are participating in this project. Some people here and many many more outside of Github. It means a lot to us. ♥
- </p>
- 
-<p align=center> 
-<a href="https://github.com/hiddify/hiddify-app/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=hiddify/hiddify-next" />
-</a>
-</p>
-<p align=center>
- Made with <a rel="" target="_blank" href="https://contrib.rocks">Contrib.Rocks</a> 
-</p>
-
-
-
-
-
-
+- 不在普通 UI 展示订阅地址、节点真实地址、端口、协议、DNS、fake-ip、IPv6 等技术细节。
+- 不在日志中输出完整 `authData`、token、订阅地址、节点密码或完整服务端地址。
+- Android `applicationId` 当前保留为 `pro.y88.accelerator`，不要随意修改，避免影响已安装用户覆盖升级。
+- iOS 当前主 App Bundle ID 为 `pro.y88.hudiejiasu`，Network Extension 为 `pro.y88.hudiejiasu.PacketTunnel`。
+- 正常用户页面以 Home / Nodes / Membership 为主；技术设置仅作为内部诊断或隐藏功能。
 
