@@ -360,7 +360,7 @@ void _goBackToLogin(BuildContext context) {
   if (context.canPop()) {
     context.pop();
   } else {
-    context.goNamed('settings');
+    context.goNamed('membership');
   }
 }
 

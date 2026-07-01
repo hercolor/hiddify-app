@@ -21,12 +21,7 @@ class DesktopMembershipPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentState = authState.valueOrNull;
     if (currentState?.isInitializing == true || (authState.isLoading && currentState == null)) {
-      return const DesktopPageScaffold(
-        title: '会员中心',
-        subtitle: '正在恢复账号状态',
-        leading: DesktopBackButton(),
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
     final session = currentState?.session;
     if (session == null) return _DesktopLogin(errorText: errorText);
@@ -113,15 +108,17 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                       children: [
                         const _DesktopLoginMark(),
                         const Gap(24),
-                        Text(
-                          '蝴蝶加速',
-                          style: BrandDesktopText.heroStatus.copyWith(
-                            color: BrandDesktopColors.accent,
-                            letterSpacing: 2,
+                        Transform.translate(
+                          offset: const Offset(-2, 0),
+                          child: Image.asset(
+                            'assets/images/logo_text.png',
+                            width: 220,
+                            height: 55,
+                            fit: BoxFit.contain,
                           ),
                         ),
                         const Gap(8),
-                        Text('安全、极速、无界', style: Theme.of(context).textTheme.bodyMedium),
+                        Text('Fast, Secure, Borderless', style: Theme.of(context).textTheme.bodyMedium),
                         const Gap(42),
                         if (_showExternalError && widget.errorText != null) ...[
                           Text(
@@ -199,11 +196,6 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                   ),
                 ),
               ),
-              Positioned(
-                top: 10,
-                left: 22,
-                child: _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.goNamed('home')),
-              ),
             ],
           ),
         ),
@@ -217,20 +209,7 @@ class _DesktopLoginMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Container(
-        width: 100,
-        height: 100,
-        decoration: BoxDecoration(
-          color: BrandDesktopColors.cardSolid,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: BrandDesktopColors.accent.withOpacity(.15), blurRadius: 30, offset: const Offset(0, 10)),
-          ],
-        ),
-        child: const Center(child: Icon(Icons.shield_rounded, size: 52, color: BrandDesktopColors.accent)),
-      ),
-    );
+    return RepaintBoundary(child: Image.asset('assets/images/app_icon.png', width: 100, height: 100));
   }
 }
 
@@ -243,6 +222,9 @@ class _DesktopMemberCenter extends StatelessWidget {
   Widget build(BuildContext context) {
     final subscription = session.subscription;
     final plan = _PlanCard(session: session, subscription: subscription);
+    final traffic = subscription != null && subscription.hasTrafficInfo
+        ? _TrafficCard(subscription: subscription)
+        : null;
     const actions = _MemberActions();
 
     return DesktopTheme(
@@ -256,7 +238,7 @@ class _DesktopMemberCenter extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.pop()),
+                    _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.goNamed('home')),
                     const Text('我的账号', style: BrandDesktopText.pageTitle),
                     const SizedBox(width: 38, height: 38),
                   ],
@@ -275,7 +257,14 @@ class _DesktopMemberCenter extends StatelessWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [plan, const Gap(18), actions, const Gap(16), const _DesktopLogoutButton()],
+                              children: [
+                                plan,
+                                const Gap(18),
+                                if (traffic != null) ...[traffic, const Gap(18)],
+                                actions,
+                                const Gap(16),
+                                const _DesktopLogoutButton(),
+                              ],
                             ),
                           ),
                         ),
@@ -330,12 +319,12 @@ class _PlanCard extends ConsumerWidget {
     final planName = _displayText(subscription?.planName);
     return DesktopCard(
       gradient: const LinearGradient(
-        colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
+        colors: [Color(0xFF0EA5E9), Color(0xFF0284C7), Color(0xFF0369A1)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      borderColor: Colors.white10,
-      padding: const EdgeInsets.all(18),
+      borderColor: const Color(0xFF38BDF8).withOpacity(.3),
+      padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -346,10 +335,20 @@ class _PlanCard extends ConsumerWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
-                      child: const Icon(Icons.person_rounded, color: Colors.white),
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFF0EA5E9)]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0EA5E9).withOpacity(.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
                     ),
                     const Gap(16),
                     Expanded(
@@ -360,14 +359,14 @@ class _PlanCard extends ConsumerWidget {
                             _maskUser(session.email),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: BrandDesktopText.sectionTitle.copyWith(color: Colors.white),
+                            style: BrandDesktopText.sectionTitle.copyWith(color: Colors.white, fontSize: 15),
                           ),
                           const Gap(4),
                           Text(
                             '设备：${_formatDeviceLimit(subscription)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFFBAE6FD)),
                           ),
                         ],
                       ),
@@ -379,7 +378,7 @@ class _PlanCard extends ConsumerWidget {
               _DesktopPlanBadge(label: planName),
             ],
           ),
-          const Gap(32),
+          const Gap(36),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -406,24 +405,28 @@ class _DesktopPlanBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        gradient: const LinearGradient(colors: [Color(0xFFF0F9FF), Color(0xFFE0F2FE), Color(0xFFBAE6FD)]),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(.12), blurRadius: 8, offset: const Offset(0, 3)),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
-          const Gap(4),
+          const Icon(Icons.workspace_premium_rounded, size: 18, color: Color(0xFF0369A1)),
+          const Gap(5),
           Text(
             label == '--' ? '蝴蝶加速 Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandDesktopText.bodyPrimary.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
+            style: BrandDesktopText.bodyPrimary.copyWith(
+              color: const Color(0xFF0369A1),
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
+            ),
           ),
         ],
       ),
@@ -471,12 +474,12 @@ class _SmallPlanButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = ButtonStyle(
-      minimumSize: const WidgetStatePropertyAll(Size(52, 34)),
-      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
-      foregroundColor: const WidgetStatePropertyAll(Color(0xFFFFD700)),
-      backgroundColor: WidgetStatePropertyAll(Colors.white.withOpacity(.10)),
-      side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withOpacity(.12))),
-      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+      minimumSize: const WidgetStatePropertyAll(Size(56, 36)),
+      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 12)),
+      foregroundColor: const WidgetStatePropertyAll(Colors.white),
+      backgroundColor: WidgetStatePropertyAll(Colors.white.withOpacity(.22)),
+      side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withOpacity(.2))),
+      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
     );
     final child = Text(label, style: BrandDesktopText.smallButton);
     return OutlinedButton(onPressed: onPressed, style: style, child: child);
@@ -532,7 +535,7 @@ class _DesktopActionDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 1, indent: 56, endIndent: 24, color: Color(0xFFF5F7FA));
+    return const Divider(height: 1, indent: 20, endIndent: 20, color: Color(0xFFF1F5F9));
   }
 }
 
@@ -549,15 +552,22 @@ class _ActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: iconColor.withOpacity(.10), borderRadius: BorderRadius.circular(10)),
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: iconColor.withOpacity(.15)),
+                ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
               const Gap(14),
@@ -565,15 +575,20 @@ class _ActionRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: BrandDesktopText.sectionTitle),
+                    Text(title, style: BrandDesktopText.sectionTitle.copyWith(fontSize: 14)),
                     if (subtitle != null) ...[
-                      const Gap(4),
+                      const Gap(3),
                       Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: BrandDesktopColors.textMuted),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.chevron_right_rounded, color: BrandDesktopColors.textMuted, size: 16),
+              ),
             ],
           ),
         ),
@@ -593,16 +608,165 @@ class _DesktopLogoutButton extends ConsumerWidget {
           ? null
           : () async {
               await ref.read(authNotifierProvider.notifier).logout();
-              if (context.mounted) context.goNamed('settings');
+              if (context.mounted) context.goNamed('membership');
             },
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        backgroundColor: BrandDesktopColors.error.withOpacity(.10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        backgroundColor: BrandDesktopColors.error.withOpacity(.06),
+        foregroundColor: BrandDesktopColors.error,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: BrandDesktopColors.error.withOpacity(.15)),
+        ),
       ),
-      child: const Text(
-        '退出登录',
-        style: TextStyle(color: BrandDesktopColors.error, fontWeight: FontWeight.w700),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.logout_rounded, size: 18),
+          SizedBox(width: 8),
+          Text(
+            '退出登录',
+            style: TextStyle(color: BrandDesktopColors.error, fontWeight: FontWeight.w700, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrafficCard extends StatelessWidget {
+  const _TrafficCard({required this.subscription});
+
+  final UserSubscription subscription;
+
+  @override
+  Widget build(BuildContext context) {
+    final used = subscription.usedTraffic;
+    final remaining = subscription.remainingTraffic ?? 0;
+    final total = subscription.transferEnable;
+    final ratio = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
+    final isExhausted = subscription.isTrafficExhausted;
+
+    return DesktopCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('流量使用', style: BrandDesktopText.sectionTitle),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isExhausted
+                      ? BrandDesktopColors.error.withOpacity(.08)
+                      : BrandDesktopColors.accent.withOpacity(.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isExhausted
+                        ? BrandDesktopColors.error.withOpacity(.15)
+                        : BrandDesktopColors.accent.withOpacity(.15),
+                  ),
+                ),
+                child: Text(
+                  isExhausted ? '已用尽' : '${(ratio * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isExhausted ? BrandDesktopColors.error : BrandDesktopColors.accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Gap(14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 8,
+              backgroundColor: const Color(0xFFE2E8F0),
+              valueColor: AlwaysStoppedAnimation(isExhausted ? BrandDesktopColors.error : BrandDesktopColors.accent),
+            ),
+          ),
+          const Gap(16),
+          Row(
+            children: [
+              Expanded(
+                child: _TrafficField(
+                  icon: Icons.cloud_download_rounded,
+                  label: '已使用',
+                  value: _formatBytes(used),
+                  color: isExhausted ? BrandDesktopColors.error : const Color(0xFF0F172A),
+                ),
+              ),
+              Container(width: 1, height: 40, color: const Color(0xFFE2E8F0)),
+              Expanded(
+                child: _TrafficField(
+                  icon: Icons.data_usage_rounded,
+                  label: '剩余',
+                  value: isExhausted ? '0 GB' : _formatBytes(remaining),
+                  color: isExhausted ? BrandDesktopColors.textMuted : BrandDesktopColors.success,
+                ),
+              ),
+              Container(width: 1, height: 40, color: const Color(0xFFE2E8F0)),
+              Expanded(
+                child: _TrafficField(
+                  icon: Icons.all_inclusive_rounded,
+                  label: '总量',
+                  value: _formatBytes(total),
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatBytes(int bytes) {
+  if (bytes <= 0) return '0 GB';
+  final gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return '${gb.toStringAsFixed(2)} GB';
+  final mb = bytes / (1024 * 1024);
+  return '${mb.toStringAsFixed(1)} MB';
+}
+
+class _TrafficField extends StatelessWidget {
+  const _TrafficField({required this.icon, required this.label, required this.value, required this.color});
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: color.withOpacity(.6)),
+              const Gap(3),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: BrandDesktopColors.textMuted),
+              ),
+            ],
+          ),
+          const Gap(4),
+          Text(
+            value,
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color),
+          ),
+        ],
       ),
     );
   }

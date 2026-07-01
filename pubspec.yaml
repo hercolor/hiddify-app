@@ -70,6 +70,7 @@ dependencies:
   watcher: ^1.1.0
   go_router: ^16.2.4
   flutter_animate: ^4.5.0
+  google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
   gap: ^3.0.1
   # percent_indicator_premium: ^0.0.2
@@ -147,7 +148,7 @@ dev_dependencies:
   drift_dev: ^2.21.0
   ffigen: ^19.1.0
   slang_build_runner: ^4.4.0
-  flutter_gen_runner: ^5.4.0
+  # flutter_gen_runner: ^5.4.0
   dart_mappable_builder: ^4.2.1
   flutter_test:
     sdk: flutter
@@ -174,6 +175,10 @@ flutter:
     - assets/images/disconnect_norouz.PNG
     - assets/images/world_map.png
     - assets/images/source/ic_launcher_border.png
+    - assets/images/butterfly_outline.png
+    - assets/images/butterfly_filled.png
+    - assets/images/app_icon.png
+    - assets/images/logo_text.png
 
   fonts:
     - family: Shabnam

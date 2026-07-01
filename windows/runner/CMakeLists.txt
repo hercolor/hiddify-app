@@ -16,9 +16,10 @@ add_executable(${BINARY_NAME} WIN32
   "runner.exe.manifest"
 )
 
-# Keep the CMake target name ASCII for generator compatibility, but emit the
-# user-visible executable with the same Chinese product name shown on Android.
-set_target_properties(${BINARY_NAME} PROPERTIES OUTPUT_NAME "蝴蝶加速")
+# The BINARY_NAME from the top-level CMakeLists.txt is used as both the CMake
+# target name and the on-disk executable name, so `flutter run` can find it.
+# The user-visible product name ("蝴蝶加速") is set in Runner.rc metadata,
+# window title, tray menu, and notifications.
 
 # Apply the standard set of build settings. This can be removed for applications
 # that need different build settings.

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -9,7 +10,9 @@ import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/dev_mode/dev_mode_providers.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
+
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -185,6 +188,31 @@ class _CachedDesktopNodes extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDevMode = ref.watch(devModeProvider);
+
+    if (isDevMode) {
+      final mockSelection = ref.watch(mockClientNodeSelectionProvider);
+      final nodes = mockSelection.nodes
+          .where((node) {
+            if (search.isEmpty) return true;
+            return safeNodeDisplayName(node.name).toLowerCase().contains(search);
+          })
+          .toList(growable: false);
+      if (nodes.isEmpty) return const _EmptyNodesPanel();
+      return _NodesList(
+        itemCount: nodes.length,
+        itemBuilder: (context, index) {
+          final node = nodes[index];
+          return _DesktopNodeTile(
+            name: safeNodeDisplayName(node.name),
+            delay: node.delay,
+            selected: mockSelection.effectiveSelectedNodeId == node.id,
+            onTap: () => _selectMockNode(ref, node.id, mockSelection.effectiveSelectedNodeId == node.id),
+          );
+        },
+      );
+    }
+
     final selection = ref.watch(clientNodeSelectionProvider);
     return selection.when(
       data: (state) {
@@ -212,6 +240,11 @@ class _CachedDesktopNodes extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
+}
+
+Future<void> _selectMockNode(WidgetRef ref, String nodeId, bool selected) async {
+  if (selected) return;
+  ref.read(mockClientNodeSelectionProvider.notifier).selectNode(nodeId);
 }
 
 class _NodesList extends StatelessWidget {
@@ -249,52 +282,69 @@ class _DesktopNodeTile extends StatelessWidget {
     final delayColor = _delayColor(delay);
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? BrandDesktopColors.accent.withOpacity(.05) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? BrandDesktopColors.accent : const Color(0xFFF1F5F9), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: selected ? BrandDesktopColors.accent.withOpacity(.1) : const Color(0xFF0F172A).withOpacity(.03),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        scale: selected ? 1.0 : 0.985,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? BrandDesktopColors.accent.withOpacity(.06) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? BrandDesktopColors.accent.withOpacity(.30) : const Color(0xFFF1F5F9),
+              width: 1.5,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            _NodeFlag(name: name, selected: selected),
-            const Gap(10),
-            Expanded(
-              child: Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: BrandDesktopText.bodyPrimary.copyWith(
-                  color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
-                  fontWeight: FontWeight.w600,
+            boxShadow: [
+              BoxShadow(
+                color: selected
+                    ? BrandDesktopColors.accent.withOpacity(.12)
+                    : const Color(0xFF0F172A).withOpacity(.025),
+                blurRadius: selected ? 16 : 10,
+                offset: Offset(0, selected ? 5.0 : 3.0),
+              ),
+              if (selected)
+                BoxShadow(
+                  color: BrandDesktopColors.accent.withOpacity(.06),
+                  blurRadius: 32,
+                  offset: const Offset(0, 10),
+                ),
+            ],
+          ),
+          child: Row(
+            children: [
+              _NodeFlag(name: name, selected: selected),
+              const Gap(10),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: BrandDesktopText.bodyPrimary.copyWith(
+                    color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            const Gap(8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: delayColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-              child: Text(
-                delayText,
-                style: BrandDesktopText.caption.copyWith(color: delayColor, fontWeight: FontWeight.w700),
+              const Gap(8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: delayColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text(
+                  delayText,
+                  style: BrandDesktopText.caption.copyWith(color: delayColor, fontWeight: FontWeight.w700),
+                ),
               ),
-            ),
-            const Gap(8),
-            Icon(
-              selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
-              color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
-              size: 16,
-            ),
-          ],
+              const Gap(8),
+              Icon(
+                selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+                color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textMuted,
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -309,6 +359,7 @@ class _NodeFlag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final countryCode = _extractCountryCode(name);
     return Container(
       width: 32,
       height: 32,
@@ -318,13 +369,9 @@ class _NodeFlag extends StatelessWidget {
         border: Border.all(color: selected ? BrandDesktopColors.accent.withOpacity(0.3) : const Color(0xFFE2E8F0)),
       ),
       child: Center(
-        child: Text(
-          _nodeFlagFor(name),
-          style: BrandDesktopText.bodyPrimary.copyWith(
-            fontWeight: FontWeight.w700,
-            color: selected ? BrandDesktopColors.accent : BrandDesktopColors.textPrimary,
-          ),
-        ),
+        child: countryCode != null
+            ? CircleFlag(countryCode, size: 22)
+            : const Icon(Icons.public_rounded, color: BrandDesktopColors.textMuted, size: 16),
       ),
     );
   }
@@ -378,15 +425,32 @@ Color _delayColor(int? delay) {
   return BrandDesktopColors.error;
 }
 
-String _nodeFlagFor(String name) {
-  if (name.contains('香港')) return 'HK';
-  if (name.contains('台湾') || name.contains('台灣')) return 'TW';
-  if (name.contains('日本') || name.contains('东京') || name.contains('東京')) return 'JP';
-  if (name.contains('新加坡')) return 'SG';
-  if (name.contains('美国') || name.contains('美國') || name.contains('洛杉矶') || name.contains('洛杉磯')) return 'US';
-  if (name.contains('英国') || name.contains('英國') || name.contains('伦敦') || name.contains('倫敦')) return 'UK';
-  if (name.contains('韩国') || name.contains('韓國') || name.contains('首尔') || name.contains('首爾')) return 'KR';
-  if (name.contains('德国') || name.contains('德國')) return 'DE';
-  if (name.contains('法国') || name.contains('法國')) return 'FR';
-  return 'GL';
+String? _extractCountryCode(String nodeName) {
+  final name = nodeName.toLowerCase();
+  const map = {
+    'us': ['美国', 'usa', 'united states', 'us-'],
+    'jp': ['日本', 'japan', 'jp-'],
+    'cn': ['中国', 'china', 'cn-'],
+    'hk': ['香港', 'hong kong', 'hk-'],
+    'tw': ['台湾', 'taiwan', 'tw-'],
+    'sg': ['新加坡', 'singapore', 'sg-'],
+    'kr': ['韩国', 'korea', 'kr-'],
+    'gb': ['英国', 'uk', 'united kingdom', 'gb-'],
+    'de': ['德国', 'germany', 'de-'],
+    'fr': ['法国', 'france', 'fr-'],
+    'ru': ['俄罗斯', 'russia', 'ru-'],
+    'au': ['澳大利亚', 'australia', 'au-'],
+    'ca': ['加拿大', 'canada', 'ca-'],
+    'nl': ['荷兰', 'netherlands', 'nl-'],
+    'in': ['印度', 'india', 'in-'],
+    'br': ['巴西', 'brazil', 'br-'],
+    'it': ['意大利', 'italy', 'it-'],
+    'es': ['西班牙', 'spain', 'es-'],
+  };
+  for (final entry in map.entries) {
+    for (final keyword in entry.value) {
+      if (name.contains(keyword)) return entry.key;
+    }
+  }
+  return null;
 }

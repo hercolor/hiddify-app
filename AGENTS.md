@@ -1,9 +1,11 @@
 # Project Instructions
 
 ## Product Goal
+
 We are building a branded legal proxy/VPN-style client that connects to our XBoard backend.
 
 ## Backend
+
 - Panel URL: https://api.y88.pro
 - Subscription system: XBoard
 - Node backend: Xboard-Node
@@ -12,7 +14,9 @@ We are building a branded legal proxy/VPN-style client that connects to our XBoa
 - Do not hardcode production secrets.
 
 ## Initial Scope
+
 Phase 1:
+
 - Rebrand app name, logo, colors, package name.
 - Replace default landing page copy.
 - Add custom subscription import page.
@@ -21,6 +25,7 @@ Phase 1:
 - Add support/contact page.
 
 Phase 2:
+
 - Login with XBoard account.
 - Fetch subscription URL from API after login.
 - Display node list.
@@ -29,12 +34,14 @@ Phase 2:
 - Show traffic usage.
 
 ## Safety / Compliance
+
 - Do not implement stealth, censorship evasion, or anti-detection logic.
 - Do not add code that hides traffic from platform review.
 - Keep privacy policy and data collection text visible.
 - Do not log user browsing content.
 
 ## Code Rules
+
 - Make small commits.
 - Do not rewrite unrelated modules.
 - Before editing, explain which files will change.
@@ -42,6 +49,7 @@ Phase 2:
 - If a build fails, explain the exact error and fix only related files.
 
 ## Commands
+
 - Flutter: flutter pub get && flutter analyze
 - Android: ./gradlew assembleDebug
 - Node: npm install && npm run build
@@ -49,15 +57,19 @@ Phase 2:
 # 蝴蝶加速 Windows Client Rules
 
 ## Product
+
 This is the Windows desktop client for 蝴蝶加速, a commercial VPN-style proxy client connected to XBoard and Xboard-Node.
 
 ## Branding
+
 - User-visible product name must be 蝴蝶加速.
 - Do not show XBoard, Hiddify, proxy core names, protocol names, server addresses, ports, ciphers, DNS, fake-ip, IPv6, or subscription URL in normal UI.
 - XBoard may only remain in internal API class names if needed.
 
 ## Pages
+
 Normal user pages:
+
 - Home
 - Nodes
 - Membership
@@ -66,6 +78,7 @@ No normal Settings page.
 Technical details are only allowed in hidden diagnostics.
 
 ## Auth
+
 - Login API returns authData and subscribe_url.
 - Use authData for Authorization.
 - Save subscribe_url securely or in local app storage.
@@ -73,12 +86,14 @@ Technical details are only allowed in hidden diagnostics.
 - On app startup, restore auth state before enabling connect button.
 
 ## Subscription
+
 - Do not show subscription URL.
 - Do not show import subscription, copy subscription, refresh subscription, or sync nodes in normal UI.
 - Login automatically syncs nodes.
 - If node cache exists, use cache while background sync runs.
 
 ## Core Config
+
 - fake-ip disabled.
 - IPv6 disabled.
 - DNS real-ip.
@@ -86,6 +101,7 @@ Technical details are only allowed in hidden diagnostics.
 - Users cannot edit DNS, TUN, fake-ip, IPv6, inbound ports, or custom core config.
 
 ## Windows Behavior
+
 - Support system tray.
 - Minimize to tray if enabled.
 - Tray menu should show 蝴蝶加速, Connect/Disconnect, Current node, Open app, Quit.
@@ -94,11 +110,13 @@ Technical details are only allowed in hidden diagnostics.
 - Start/stop core must be idempotent.
 
 ## Safety
+
 - Never log full authData, token, subscribe_url, node password, or full server address.
 - Logs must be sanitized.
 - Diagnostic page must not expose secrets.
 
 ## Workflow
+
 - Before modifying code, list files to change.
 - Make small changes.
 - Run formatter and build check.

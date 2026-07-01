@@ -63,7 +63,7 @@ class DesktopDiagnosticsPage extends HookConsumerWidget {
       subtitle: '只读排查信息，复制前自动脱敏',
       actions: [
         OutlinedButton.icon(
-          onPressed: () => context.canPop() ? context.pop() : context.goNamed('settings'),
+          onPressed: () => context.canPop() ? context.pop() : context.goNamed('membership'),
           icon: const Icon(Icons.arrow_back_rounded),
           label: const Text('返回'),
         ),

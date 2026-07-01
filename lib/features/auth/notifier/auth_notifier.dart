@@ -70,11 +70,15 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
           .match((err) => throw err, (session) => session)
           .run();
 
-      return _completeAuthenticatedSession(
-        session,
-        successMessage: _authText.errors.auth.loginSuccess,
-        fallbackSuccessMessage: _authText.errors.auth.loggedIn,
-      );
+      // 先保存 token 并立即进入已登录状态
+      await ref.read(authTokenStorageProvider).save(session);
+      final nextState = AuthState.loggedIn(session);
+      await _logAuthDebug(nextState, userInfoLoaded: false);
+      ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.loginSuccess);
+
+      // 订阅同步放到后台
+      unawaited(_syncSubscriptionAfterLogin(session));
+      return nextState;
     });
   }
 
@@ -93,46 +97,41 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
           .match((err) => throw err, (session) => session)
           .run();
 
-      return _completeAuthenticatedSession(
-        session,
-        successMessage: _authText.errors.auth.registerSuccess,
-        fallbackSuccessMessage: _authText.errors.auth.registered,
-      );
+      // 先保存 token 并立即进入已登录状态
+      await ref.read(authTokenStorageProvider).save(session);
+      final nextState = AuthState.loggedIn(session);
+      await _logAuthDebug(nextState, userInfoLoaded: false);
+      ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.registerSuccess);
+
+      // 订阅同步放到后台
+      unawaited(_syncSubscriptionAfterLogin(session));
+      return nextState;
     });
   }
 
-  Future<AuthState> _completeAuthenticatedSession(
-    AuthSession session, {
-    required String successMessage,
-    required String fallbackSuccessMessage,
-  }) async {
-    await ref.read(authTokenStorageProvider).save(session);
-    var syncedSession = session;
-    var userInfoSynced = false;
-    Object? syncError;
+  /// 登录/注册成功后，在后台同步订阅信息和节点
+  Future<void> _syncSubscriptionAfterLogin(AuthSession session) async {
     try {
       final result = await _fetchSubscriptionAndImport(session);
-      syncedSession = result.session;
-      userInfoSynced = true;
+      final syncedSession = result.session;
+      if (!_isCurrentSession(session)) return;
+      await ref.read(authTokenStorageProvider).save(syncedSession);
+      final nextState = AuthState.loggedIn(syncedSession);
+      state = AsyncData(nextState);
+      await _logAuthDebug(nextState, userInfoLoaded: syncedSession.subscription != null);
     } catch (error, stackTrace) {
-      syncError = error;
       loggy.warning('failed to sync user info after auth', error, stackTrace);
       DiagnosticEventBuffer.add('user info sync after auth failed: ${_safeError(error)}');
+      if (!_isCurrentSession(session)) return;
       if (_isSubscriptionUnavailable(error)) {
         await _clearSubscriptionAccessCache(session: session, reason: _safeError(error));
-        syncedSession = session.copyWith(clearSubscription: true);
+        final clearedSession = session.copyWith(clearSubscription: true);
+        await ref.read(authTokenStorageProvider).save(clearedSession);
+        state = AsyncData(AuthState.loggedIn(clearedSession));
+        await _logAuthDebug(AuthState.loggedIn(clearedSession), userInfoLoaded: false);
       }
       ref.read(inAppNotificationControllerProvider).showErrorToast(_loginSyncErrorMessage(error));
     }
-    await ref.read(authTokenStorageProvider).save(syncedSession);
-    if (syncError == null) {
-      ref
-          .read(inAppNotificationControllerProvider)
-          .showSuccessToast(userInfoSynced ? successMessage : fallbackSuccessMessage);
-    }
-    final nextState = AuthState.loggedIn(syncedSession);
-    await _logAuthDebug(nextState, userInfoLoaded: syncedSession.subscription != null);
-    return nextState;
   }
 
   Future<void> refreshSubscription({bool showSuccessToast = true, bool showFailureToast = true}) async {
@@ -234,8 +233,16 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   }
 
   Future<void> logout() async {
-    await ref.read(authTokenStorageProvider).clear();
-    await ref.read(clientNodeSelectionProvider.notifier).clear();
+    try {
+      await ref.read(authTokenStorageProvider).clear().timeout(const Duration(seconds: 2));
+    } catch (error, stackTrace) {
+      loggy.warning('logout: failed to clear auth storage: ${_safeError(error)}', error, stackTrace);
+    }
+    try {
+      await ref.read(clientNodeSelectionProvider.notifier).clear().timeout(const Duration(seconds: 2));
+    } catch (error, stackTrace) {
+      loggy.warning('logout: failed to clear node selection: ${_safeError(error)}', error, stackTrace);
+    }
     state = const AsyncData(AuthState.loggedOut());
     await _logAuthDebug(const AuthState.loggedOut(), userInfoLoaded: false);
     ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.loggedOut);

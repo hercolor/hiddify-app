@@ -6,7 +6,7 @@ enum TransitionType { slide, fade }
 CustomTransitionPage<dynamic> customTransition(TransitionType transition, LocalKey pageKey, Widget child) =>
     CustomTransitionPage(
       key: pageKey,
-      child: child,
+      child: Material(child: child),
       transitionDuration: const Duration(milliseconds: 150),
       reverseTransitionDuration: const Duration(milliseconds: 100),
       transitionsBuilder: (context, animation, _, child) => switch (transition) {

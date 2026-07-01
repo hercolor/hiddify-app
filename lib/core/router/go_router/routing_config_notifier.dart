@@ -4,6 +4,7 @@ import 'package:hiddify/core/router/adaptive_layout/my_adaptive_layout.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
+import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/auth_account_pages.dart';
 import 'package:hiddify/features/auth/widget/user_profile_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostics_page.dart';
@@ -13,7 +14,6 @@ import 'package:hiddify/features/legal/privacy_policy_page.dart';
 import 'package:hiddify/features/legal/terms_of_service_page.dart';
 import 'package:hiddify/features/premium/premium_screens.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_page.dart';
-import 'package:hiddify/features/settings/overview/settings_page.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -22,9 +22,8 @@ part 'routing_config_notifier.g.dart';
 // each branch in go router has its own focus scope
 final branchesScope = <String, FocusScopeNode>{
   'home': FocusScopeNode(),
-  'profiles': FocusScopeNode(),
   'proxies': FocusScopeNode(),
-  'settings': FocusScopeNode(),
+  'membership': FocusScopeNode(),
 };
 
 // when the routing config is not yet initialized, this config is used
@@ -32,24 +31,29 @@ final loadingConfig = RoutingConfig(
   routes: <RouteBase>[GoRoute(path: '/home', builder: (context, state) => const Material())],
 );
 
-String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) => isMobileBreakpoint
-    ? ['home', 'proxies', 'settings'][index]
-    : ['home', if (showProfilesAction) 'profiles', 'proxies', 'settings'][index];
+String getNameOfBranch(bool isMobileBreakpoint, int index) => ['home', 'proxies', 'membership'][index];
 
-int getIndexOfBranch(bool isMobileBreakpoint, bool showProfilesAction, String name) => isMobileBreakpoint
-    ? ['home', 'proxies', 'settings'].indexOf(name)
-    : ['home', if (showProfilesAction) 'profiles', 'proxies', 'settings'].indexOf(name);
+int getIndexOfBranch(bool isMobileBreakpoint, String name) => ['home', 'proxies', 'membership'].indexOf(name);
 
 @Riverpod(keepAlive: true)
 class RoutingConfigNotifier extends _$RoutingConfigNotifier {
   @override
   RoutingConfig build() {
     final isMobileBreakpoint = ref.watch(isMobileBreakpointProvider);
-    const showProfilesAction = false;
+    // watch auth so RoutingConfig rebuilds when login state changes
+    ref.watch(authNotifierProvider);
     if (isMobileBreakpoint == null) return loadingConfig;
     return RoutingConfig(
       redirect: (context, state) {
-        final isIntro = state.matchedLocation == '/intro';
+        final isLoggedIn = ref.read(authNotifierProvider).valueOrNull?.isLoggedIn == true;
+        final matched = state.matchedLocation;
+
+        // 未登录时，/home 和 /proxies 重定向到 /membership，但注册/忘记密码页放行
+        if (!isLoggedIn && matched != '/membership' && matched != '/auth/register' && matched != '/auth/forgot-password') {
+          return '/membership';
+        }
+
+        final isIntro = matched == '/intro';
         // fix path-parameters for deep link
         String? url;
         if (LinkParser.protocols.contains(state.uri.scheme)) {
@@ -70,11 +74,8 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
       },
       routes: <RouteBase>[
         StatefulShellRoute.indexedStack(
-          builder: (_, _, navigationShell) => MyAdaptiveLayout(
-            navigationShell: navigationShell,
-            isMobileBreakpoint: isMobileBreakpoint,
-            showProfilesAction: showProfilesAction,
-          ),
+          builder: (_, _, navigationShell) =>
+              MyAdaptiveLayout(navigationShell: navigationShell, isMobileBreakpoint: isMobileBreakpoint),
           branches: <StatefulShellBranch>[
             StatefulShellBranch(
               routes: <GoRoute>[
@@ -82,10 +83,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                   name: 'home',
                   path: '/home',
                   builder: (_, _) => FocusScope(node: branchesScope['home'], child: const HomePage()),
-                  routes: <GoRoute>[
-                    if (isMobileBreakpoint)
-                      GoRoute(name: 'profileDetails', path: '/profile-details/:id', redirect: (_, _) => '/settings'),
-                  ],
                 ),
               ],
             ),
@@ -105,29 +102,9 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
             StatefulShellBranch(
               routes: <GoRoute>[
                 GoRoute(
-                  name: 'settings',
-                  path: '/settings',
-                  pageBuilder: (_, state) => customTransition(
-                    TransitionType.slide,
-                    state.pageKey,
-                    FocusScope(node: branchesScope['settings'], child: const SettingsPage()),
-                  ),
-                  routes: <GoRoute>[
-                    GoRoute(name: 'general', path: '/general', redirect: (_, _) => '/settings'),
-                    GoRoute(name: 'userProfile', path: '/user-profile', redirect: (_, _) => '/settings'),
-                    GoRoute(
-                      name: 'routeOptions',
-                      path: '/route-options',
-                      redirect: (_, _) => '/settings',
-                      routes: <GoRoute>[
-                        GoRoute(name: 'perAppProxy', path: '/per-app-proxy', redirect: (_, _) => '/settings'),
-                      ],
-                    ),
-                    GoRoute(name: 'dnsOptions', path: '/dns-options', redirect: (_, _) => '/settings'),
-                    GoRoute(name: 'inboundOptions', path: '/inbound-options', redirect: (_, _) => '/settings'),
-                    GoRoute(name: 'tlsTricks', path: '/tls-tricks', redirect: (_, _) => '/settings'),
-                    GoRoute(name: 'warpOptions', path: '/warp-options', redirect: (_, _) => '/settings'),
-                  ],
+                  name: 'membership',
+                  path: '/membership',
+                  builder: (_, _) => FocusScope(node: branchesScope['membership'], child: const UserProfilePage()),
                 ),
               ],
             ),

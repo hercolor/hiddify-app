@@ -22,7 +22,21 @@ typedef StopFunc = Pointer<Utf8> Function();
 typedef StopFuncDart = Pointer<Utf8> Function();
 
 class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
-  static final HiddifyCoreNativeLibrary _box = _gen();
+  static HiddifyCoreNativeLibrary? _box;
+  static bool _boxInitFailed = false;
+
+  static HiddifyCoreNativeLibrary? _getBox() {
+    if (_box != null) return _box;
+    if (_boxInitFailed) return null;
+    try {
+      _box = _gen();
+      return _box;
+    } catch (e) {
+      _boxInitFailed = true;
+      _logger.warning('Failed to load hiddify-core.dll, UI-only mode: $e');
+      return null;
+    }
+  }
 
   static HiddifyCoreNativeLibrary _gen() {
     String fullPath = "";
@@ -39,10 +53,6 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
 
     _logger.debug('hiddify-core native libs path: "$fullPath"');
     final lib = DynamicLibrary.open(fullPath);
-    // final stopFunc = lib.lookup<NativeFunction<StopFunc>>('stop').asFunction<StopFunc>();
-    // final errPtr2 = stopFunc();
-    // final err = errPtr2.cast<Utf8>().toDartString();
-
     return HiddifyCoreNativeLibrary(lib);
   }
 
@@ -85,7 +95,9 @@ class CoreInterfaceDesktop extends CoreInterface with InfraLogger {
     } catch (e) {
       //core is not started yet
 
-      final errPtr = _box.setup(
+      final box = _getBox();
+      if (box == null) return "hiddify-core.dll not found";
+      final errPtr = box.setup(
         directories.baseDir.path.toNativeUtf8().cast(),
         directories.workingDir.path.toNativeUtf8().cast(),
         directories.tempDir.path.toNativeUtf8().cast(),

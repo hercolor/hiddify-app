@@ -68,7 +68,7 @@ class DiagnosticsPage extends HookConsumerWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.goNamed('settings');
+              context.goNamed('membership');
             }
           },
         ),

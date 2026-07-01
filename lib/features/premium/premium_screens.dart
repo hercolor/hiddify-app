@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
@@ -433,11 +434,20 @@ class _PremiumAboutPageState extends ConsumerState<PremiumAboutPage> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Icon(Icons.bolt_rounded, size: 64, color: Color(0xFF2563EB)),
+          Image.asset('assets/images/app_icon.png', width: 64, height: 64),
           const Gap(16),
-          const Center(child: Text('蝴蝶加速', style: BrandDesktopText.heroStatus)),
+          Center(
+            child: Image.asset(
+              'assets/images/logo_text.png',
+              width: 220,
+              height: 55,
+              fit: BoxFit.contain,
+            ),
+          ),
           const Gap(6),
-          const Center(child: Text('安全、极速、无界', style: BrandDesktopText.bodySecondary)),
+          const Center(
+            child: Text('Fast, Secure, Borderless', style: BrandDesktopText.bodySecondary),
+          ),
           const Gap(28),
           _InputCard(
             child: Column(
@@ -653,7 +663,7 @@ class _LoginRequiredPanel extends StatelessWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () => context.goNamed('settings'),
+                onPressed: () => context.goNamed('membership'),
                 style: _primaryButtonStyle(),
                 child: const Text('去登录', style: _buttonTextStyle),
               ),

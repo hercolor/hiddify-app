@@ -22,7 +22,7 @@ class ConnectionButton extends HookConsumerWidget {
         if (clientState.phase == ClientConnectionPhase.loggedOut) {
           ref.read(connectionNotifierProvider.notifier).connectRequested();
           if (context.mounted) {
-            context.goNamed('settings');
+            context.goNamed('membership');
           }
           return;
         }

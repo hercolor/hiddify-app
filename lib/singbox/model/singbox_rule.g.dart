@@ -13,8 +13,12 @@ _$SingboxRuleImpl _$$SingboxRuleImplFromJson(Map<String, dynamic> json) =>
       ip: _commaTextFromJson(json['ip']),
       port: _commaTextFromJson(json['port']),
       protocol: _commaTextFromJson(json['protocol']),
-      network: _networkFromJson(json['network']),
-      outbound: _outboundFromJson(json['outbound']),
+      network: json['network'] == null
+          ? RuleNetwork.tcpAndUdp
+          : _networkFromJson(json['network']),
+      outbound: json['outbound'] == null
+          ? RuleOutbound.proxy
+          : _outboundFromJson(json['outbound']),
     );
 
 Map<String, dynamic> _$$SingboxRuleImplToJson(_$SingboxRuleImpl instance) =>

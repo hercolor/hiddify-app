@@ -42,6 +42,8 @@ class UserProfilePage extends HookConsumerWidget {
     useEffect(() {
       final authData = session?.authData.trim();
       if (authData == null || authData.isEmpty) return null;
+      final subscription = session?.subscription;
+      if (subscription != null && !subscription.canConnect) return null;
 
       var disposed = false;
       Future<void> refresh() async {
@@ -204,7 +206,7 @@ class _SecurityLoggedOutContent extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 52,
-              child: _GradientButton(onPressed: () => context.goNamed('settings'), label: '去登录'),
+              child: _GradientButton(onPressed: () => context.goNamed('membership'), label: '去登录'),
             ),
           ],
         ),
@@ -482,9 +484,14 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                   const SizedBox(height: 42),
                   const _LoginMark(),
                   const Gap(24),
-                  const Text('蝴蝶加速', style: BrandText.brandTitle),
+                  Image.asset(
+                    'assets/images/logo_text.png',
+                    width: 220,
+                    height: 55,
+                    fit: BoxFit.contain,
+                  ),
                   const Gap(8),
-                  Text('安全、极速、无界', style: theme.textTheme.bodyMedium),
+                  Text('Fast, Secure, Borderless', style: theme.textTheme.bodyMedium),
                   const Gap(48),
                   if (_showExternalError && widget.errorText != null) ...[
                     Text(
@@ -758,22 +765,23 @@ class _PlanBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        gradient: const LinearGradient(colors: [Color(0xFFFFF3B0), Color(0xFFFFD700)]),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEAB308), width: 1.5),
         boxShadow: [
-          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: const Color(0xFFEAB308).withOpacity(.5), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF854D0E)),
           const Gap(4),
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandText.caption.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
+            style: BrandText.caption.copyWith(color: const Color(0xFF854D0E), fontWeight: FontWeight.w900, fontSize: 12),
           ),
         ],
       ),
@@ -1252,7 +1260,7 @@ class _LogoutButton extends ConsumerWidget {
           ? null
           : () async {
               await ref.read(authNotifierProvider.notifier).logout();
-              if (context.mounted) context.goNamed('settings');
+              if (context.mounted) context.goNamed('membership');
             },
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),

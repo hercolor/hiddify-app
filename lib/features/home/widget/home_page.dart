@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hiddify/features/home/widget/desktop_home_page.dart';
+import 'package:hiddify/features/home/widget/mobile_home_page.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class HomePage extends HookConsumerWidget {
@@ -7,6 +9,9 @@ class HomePage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return const DesktopHomePage();
+    if (PlatformUtils.isWindows) {
+      return const DesktopHomePage();
+    }
+    return const MobileHomePage();
   }
 }

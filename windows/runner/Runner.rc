@@ -92,9 +92,9 @@ BEGIN
             VALUE "CompanyName", "蝴蝶加速" "\0"
             VALUE "FileDescription", "蝴蝶加速" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "蝴蝶加速" "\0"
+            VALUE "InternalName", "hudiejiasu" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 蝴蝶加速. All rights reserved." "\0"
-            VALUE "OriginalFilename", "蝴蝶加速.exe" "\0"
+            VALUE "OriginalFilename", "hudiejiasu.exe" "\0"
             VALUE "ProductName", "蝴蝶加速" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
