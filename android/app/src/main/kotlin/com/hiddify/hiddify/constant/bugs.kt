@@ -2,7 +2,7 @@ package com.hiddify.hiddify.constant
 
 
 import android.os.Build
-import com.hiddify.hiddify.BuildConfig
+import com.hudie.jiasuqi.BuildConfig
 
 
 object Bugs {

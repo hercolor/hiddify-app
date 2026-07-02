@@ -14,7 +14,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import com.hiddify.hiddify.Application
-import com.hiddify.hiddify.R
+import com.hudie.jiasuqi.R
 import com.hiddify.hiddify.Settings
 import com.hiddify.hiddify.constant.Action
 import com.hiddify.hiddify.constant.Alert
@@ -31,7 +31,7 @@ import com.hiddify.core.libbox.CommandServerHandler
 import com.hiddify.core.libbox.Notification
 import com.hiddify.core.libbox.PlatformInterface
 import com.hiddify.core.libbox.SystemProxyStatus
-import com.hiddify.hiddify.BuildConfig
+import com.hudie.jiasuqi.BuildConfig
 import com.hiddify.hiddify.constant.Bugs
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers

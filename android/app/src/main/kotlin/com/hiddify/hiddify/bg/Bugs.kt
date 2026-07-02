@@ -1,7 +1,7 @@
 package com.hiddify.hiddify.bg
 
 import android.os.Build
-import com.hiddify.hiddify.BuildConfig
+import com.hudie.jiasuqi.BuildConfig
 
 
 object Bugs {

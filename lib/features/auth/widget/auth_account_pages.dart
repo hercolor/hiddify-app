@@ -3,7 +3,6 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
-import 'package:hiddify/core/widget/brand_mark.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
 import 'package:hiddify/features/auth/data/auth_data_providers.dart';
 import 'package:hiddify/features/auth/model/auth_failure.dart';
@@ -307,7 +306,7 @@ class _AuthFormScaffold extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (showHeader) ...[
-              const BrandMark(size: 64),
+              Image.asset('assets/images/app_icon.png', width: 80, height: 80),
               const Gap(18),
               Text(title, style: PlatformUtils.isDesktop ? BrandDesktopText.pageTitle : BrandText.pageTitle),
               const Gap(6),
@@ -443,11 +442,63 @@ class _PrimaryAuthButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 54,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        child: isLoading
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-            : Text(label),
+      child: _MobileGradientButton(label: label, isLoading: isLoading, onPressed: onPressed),
+    );
+  }
+}
+
+class _MobileGradientButton extends StatelessWidget {
+  const _MobileGradientButton({required this.label, required this.isLoading, required this.onPressed});
+
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: 54,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: onPressed == null
+                  ? [const Color(0xFF94A3B8), const Color(0xFF64748B)]
+                  : [const Color(0xFF0EA5E9), const Color(0xFF0284C7), const Color(0xFF0369A1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: onPressed != null
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF0EA5E9).withOpacity(.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                  )
+                : Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }

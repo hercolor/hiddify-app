@@ -12,6 +12,7 @@ import androidx.core.graphics.drawable.IconCompat
 import com.hiddify.hiddify.bg.BoxService
 import com.hiddify.hiddify.bg.ServiceConnection
 import com.hiddify.hiddify.constant.Status
+import com.hudie.jiasuqi.R
 
 class ShortcutActivity : Activity(), ServiceConnection.Callback {
 

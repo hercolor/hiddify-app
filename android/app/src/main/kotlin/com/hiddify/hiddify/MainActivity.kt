@@ -12,7 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
-import com.hiddify.hiddify.BuildConfig
+import com.hudie.jiasuqi.BuildConfig
 import com.hiddify.hiddify.bg.ServiceConnection
 import com.hiddify.hiddify.bg.ServiceNotification
 import com.hiddify.hiddify.constant.Alert

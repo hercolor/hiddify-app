@@ -1,10 +1,11 @@
-import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final devModeProvider = Provider<bool>((ref) {
-  return kDebugMode;
+  // 临时启用测试模式，让 release 版本也能显示测试节点
+  // 正式发布前改回: return kDebugMode;
+  return true;
 });
 
 final mockClientNodeSelectionProvider = StateNotifierProvider<MockClientNodeSelectionNotifier, ClientNodeSelection>(

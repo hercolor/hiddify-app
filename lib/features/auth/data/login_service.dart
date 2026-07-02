@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/http_client/dio_http_client.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -60,6 +61,30 @@ class XBoardLoginService with InfraLogger implements LoginService {
   TaskEither<AuthFailure, AuthSession> login({required String account, required String password}) {
     return TaskEither.tryCatch(
       () async {
+        // Debug 模式下使用模拟登录
+        if (kDebugMode) {
+          return AuthSession(
+            authData: 'Bearer mock_test_token_12345',
+            email: account.trim(),
+            createdAt: DateTime.now(),
+            subscribeToken: 'mock_subscribe_token',
+            subscription: UserSubscription(
+              subscribeUrl: 'https://mock.api.y88.pro/api/v1/client/subscribe?token=mock_token',
+              expiredAt: DateTime.now().add(const Duration(days: 365)),
+              upload: 0,
+              download: 0,
+              transferEnable: 1099511627776, // 1TB
+              planId: 1,
+              planName: '测试年卡',
+              membershipStatus: 'year',
+              membershipLabel: '蝴蝶年卡',
+              subscriptionStatus: 'normal',
+              serverCanConnect: true,
+              maxDevices: 5,
+            ),
+          );
+        }
+
         final trimmedAccount = account.trim();
         final response = await _httpClient.post<Map<String, dynamic>>(
           '$_apiBaseUrl/api/v1/passport/auth/login',

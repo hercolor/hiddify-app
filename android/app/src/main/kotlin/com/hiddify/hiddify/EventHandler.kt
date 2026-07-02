@@ -2,7 +2,7 @@ package com.hiddify.hiddify
 
 import android.util.Log
 import androidx.lifecycle.Observer
-import com.hiddify.hiddify.BuildConfig
+import com.hudie.jiasuqi.BuildConfig
 import com.hiddify.hiddify.Settings
 import com.hiddify.hiddify.constant.Alert
 import com.hiddify.hiddify.constant.Status

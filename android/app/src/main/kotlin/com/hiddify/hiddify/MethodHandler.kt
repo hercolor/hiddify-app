@@ -12,6 +12,7 @@ import com.hiddify.core.libbox.Libbox
 import com.hiddify.core.mobile.Mobile
 import com.hiddify.core.mobile.SetupOptions
 import com.hiddify.hiddify.bg.Bugs
+import com.hudie.jiasuqi.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope

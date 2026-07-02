@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartx/dartx.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/http_client/http_client_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -76,8 +77,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       await _logAuthDebug(nextState, userInfoLoaded: false);
       ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.loginSuccess);
 
-      // 订阅同步放到后台
-      unawaited(_syncSubscriptionAfterLogin(session));
+      // Debug 模式下跳过真实的订阅同步
+      if (!kDebugMode) {
+        // 订阅同步放到后台
+        unawaited(_syncSubscriptionAfterLogin(session));
+      }
       return nextState;
     });
   }
@@ -103,8 +107,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       await _logAuthDebug(nextState, userInfoLoaded: false);
       ref.read(inAppNotificationControllerProvider).showSuccessToast(_authText.errors.auth.registerSuccess);
 
-      // 订阅同步放到后台
-      unawaited(_syncSubscriptionAfterLogin(session));
+      // Debug 模式下跳过真实的订阅同步
+      if (!kDebugMode) {
+        // 订阅同步放到后台
+        unawaited(_syncSubscriptionAfterLogin(session));
+      }
       return nextState;
     });
   }
@@ -135,6 +142,11 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   }
 
   Future<void> refreshSubscription({bool showSuccessToast = true, bool showFailureToast = true}) async {
+    // Debug 模式下跳过订阅刷新，避免无限循环
+    if (kDebugMode) {
+      loggy.debug('debug mode: skipping subscription refresh');
+      return;
+    }
     await syncNodes(showSuccessToast: showSuccessToast, showFailureToast: showFailureToast);
   }
 
@@ -188,6 +200,12 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   }
 
   Future<bool> syncNodes({bool showSuccessToast = true, bool showFailureToast = true}) async {
+    // Debug 模式下跳过节点同步，避免无限循环
+    if (kDebugMode) {
+      loggy.debug('debug mode: skipping node sync');
+      return false;
+    }
+
     final current = state.valueOrNull?.session;
     if (current == null) {
       ref.read(inAppNotificationControllerProvider).showErrorToast(_authText.errors.auth.notLoggedIn);
@@ -297,6 +315,13 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     AuthSession session, {
     bool showNodeFailureToast = true,
   }) async {
+    // Debug 模式下使用模拟数据，不调用真实后端，且不触发状态更新
+    if (kDebugMode) {
+      loggy.debug('debug mode: skipping real subscription sync');
+      // 返回当前 session，不做任何更新
+      return (session: session, nodesSynced: false);
+    }
+
     final subscriptionService = await ref.read(userSubscriptionServiceProvider.future);
     final syncUserWatch = Stopwatch()..start();
     final subscription = await subscriptionService

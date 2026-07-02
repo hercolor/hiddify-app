@@ -88,11 +88,13 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                   darkTheme: theme.darkTheme(darkColorScheme),
                   title: Constants.appName,
                   builder: (context, child) {
-                    final effectiveChild = UpgradeAlert(
-                      upgrader: upgrader,
-                      navigatorKey: router.routerDelegate.navigatorKey,
-                      child: child ?? const SizedBox(),
-                    );
+                    // 暂时禁用 UpgradeAlert 以避免 UI 晃动
+                    final effectiveChild = child ?? const SizedBox();
+                    // final effectiveChild = UpgradeAlert(
+                    //   upgrader: upgrader,
+                    //   navigatorKey: router.routerDelegate.navigatorKey,
+                    //   child: child ?? const SizedBox(),
+                    // );
                     if (kDebugMode && _debugAccessibility) {
                       return AccessibilityTools(checkFontOverflows: true, child: effectiveChild);
                     }

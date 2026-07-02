@@ -579,20 +579,7 @@ class _LoginMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Container(
-        width: 100,
-        height: 100,
-        decoration: BoxDecoration(
-          color: BrandColors.card,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(color: BrandColors.signalBlue.withOpacity(.15), blurRadius: 30, offset: const Offset(0, 10)),
-          ],
-        ),
-        child: const Center(child: Icon(Icons.shield_rounded, size: 52, color: BrandColors.signalBlue)),
-      ),
-    );
+    return RepaintBoundary(child: Image.asset('assets/images/app_icon.png', width: 100, height: 100));
   }
 }
 
@@ -684,12 +671,13 @@ class _HeroMemberCard extends HookConsumerWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
+          colors: [Color(0xFF0EA5E9), Color(0xFF0284C7), Color(0xFF0369A1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: BrandColors.slate.withOpacity(.26), blurRadius: 22, offset: const Offset(0, 12))],
+        border: Border.all(color: const Color(0xFF38BDF8).withOpacity(.3)),
+        boxShadow: [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(.25), blurRadius: 22, offset: const Offset(0, 12))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,10 +689,20 @@ class _HeroMemberCard extends HookConsumerWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
-                      child: const Icon(Icons.person_rounded, color: Colors.white),
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFF0EA5E9)]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0EA5E9).withOpacity(.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
                     ),
                     const Gap(16),
                     Expanded(

@@ -14,7 +14,7 @@ import android.os.IBinder
 import android.os.RemoteException
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import com.hiddify.hiddify.BuildConfig
+import com.hudie.jiasuqi.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext

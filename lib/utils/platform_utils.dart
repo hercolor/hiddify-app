@@ -3,9 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 abstract class PlatformUtils {
-  static bool get isWindows => !kIsWeb && (Platform.isWindows);
-
-  static bool get isDesktop => !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+  static bool get isWindows => false; // TEMP: force mobile layout for Android UI preview
+  static bool get isDesktop => false; // TEMP: force mobile layout for Android UI preview
 
   static bool get isInAppStore => !kIsWeb && (Platform.isIOS);
 
