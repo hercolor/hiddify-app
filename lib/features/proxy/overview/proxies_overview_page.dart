@@ -14,6 +14,7 @@ import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/model/client_node.dart';
 import 'package:hiddify/features/proxy/overview/desktop_nodes_page.dart';
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
+import 'package:hiddify/features/proxy/utils/country_code.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -25,7 +26,7 @@ class ProxiesOverviewPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (PlatformUtils.isWindows) return const DesktopNodesPage();
+    if (PlatformUtils.isWindows || PlatformUtils.isAndroid) return const DesktopNodesPage();
 
     final isDevMode = ref.watch(devModeProvider);
     final search = ref.watch(_nodeSearchProvider).trim().toLowerCase();
@@ -361,7 +362,7 @@ class _NodeTile extends StatelessWidget {
         : '$delay ms';
     final delayColor = _delayColor(delay);
     final name = safeNodeDisplayName(node.name);
-    final countryCode = _extractCountryCode(name);
+    final countryCode = extractCountryCode(name);
 
     return GestureDetector(
       onTap: onTap,
@@ -476,42 +477,6 @@ Color _delayColor(int? delay) {
   return const Color(0xFFFF3B30);
 }
 
-String? _extractCountryCode(String nodeName) {
-  final name = nodeName.toLowerCase();
-  const map = {
-    'us': ['美国', 'usa', 'united states', 'us-', 'us '],
-    'jp': ['日本', 'japan', 'jp-', 'jp '],
-    'cn': ['中国', 'china', 'cn-', 'cn '],
-    'hk': ['香港', 'hong kong', 'hk-', 'hk '],
-    'tw': ['台湾', 'taiwan', 'tw-', 'tw '],
-    'sg': ['新加坡', 'singapore', 'sg-', 'sg '],
-    'kr': ['韩国', 'korea', 'kr-', 'kr '],
-    'gb': ['英国', 'uk', 'united kingdom', 'gb-', 'gb '],
-    'de': ['德国', 'germany', 'de-', 'de '],
-    'fr': ['法国', 'france', 'fr-', 'fr '],
-    'ru': ['俄罗斯', 'russia', 'ru-', 'ru '],
-    'au': ['澳大利亚', 'australia', 'au-', 'au '],
-    'ca': ['加拿大', 'canada', 'ca-', 'ca '],
-    'nl': ['荷兰', 'netherlands', 'nl-', 'nl '],
-    'in': ['印度', 'india', 'in-', 'in '],
-    'br': ['巴西', 'brazil', 'br-', 'br '],
-    'it': ['意大利', 'italy', 'it-', 'it '],
-    'es': ['西班牙', 'spain', 'es-', 'es '],
-    'th': ['泰国', 'thailand', 'th-', 'th '],
-    'my': ['马来西亚', 'malaysia', 'my-', 'my '],
-    'ph': ['菲律宾', 'philippines', 'ph-', 'ph '],
-    'id': ['印尼', 'indonesia', 'id-', 'id '],
-    'vn': ['越南', 'vietnam', 'vn-', 'vn '],
-    'tr': ['土耳其', 'turkey', 'tr-', 'tr '],
-    'ae': ['阿联酋', 'uae', 'ae-', 'ae '],
-  };
-  for (final entry in map.entries) {
-    for (final keyword in entry.value) {
-      if (name.contains(keyword)) return entry.key;
-    }
-  }
-  return null;
-}
 
 Future<void> _selectCachedNode(WidgetRef ref, String nodeId, bool selected) async {
   if (selected) return;

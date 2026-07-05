@@ -41,11 +41,12 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
   RoutingConfig build() {
     final isMobileBreakpoint = ref.watch(isMobileBreakpointProvider);
     // watch auth so RoutingConfig rebuilds when login state changes
-    ref.watch(authNotifierProvider);
+    final isLoggedIn = ref.watch(
+      authNotifierProvider.select((a) => a.valueOrNull?.isLoggedIn == true),
+    );
     if (isMobileBreakpoint == null) return loadingConfig;
     return RoutingConfig(
       redirect: (context, state) {
-        final isLoggedIn = ref.read(authNotifierProvider).valueOrNull?.isLoggedIn == true;
         final matched = state.matchedLocation;
 
         // 未登录时，/home 和 /proxies 重定向到 /membership，但注册/忘记密码页放行

@@ -118,7 +118,10 @@ class _PremiumInvitePageState extends ConsumerState<PremiumInvitePage> {
   }
 
   void _refresh() {
-    setState(() => _inviteFuture = _loadInvite(_authData));
+    final authData = _authData;
+    setState(() {
+      _inviteFuture = _loadInvite(authData);
+    });
   }
 
   Future<void> _createInviteCode() async {
@@ -1242,7 +1245,13 @@ String _formatMoney(int cents) {
 }
 
 String _failureMessage(Object? error, {required String fallback}) {
-  if (error is AuthServerMessageFailure) return error.message;
+  if (error is AuthServerMessageFailure) {
+    final msg = error.message.toLowerCase();
+    if (msg.contains('activate') || msg.contains('renew') || msg.contains('membership')) {
+      return '请先开通或续费会员后再使用此功能';
+    }
+    return error.message;
+  }
   if (error is AuthInvalidCredentialsFailure) return error.message ?? '请求参数不正确';
   if (error is AuthTokenExpiredFailure) return '登录已过期，请重新登录';
   if (error is AuthNotLoggedInFailure) return '请先登录账号';

@@ -699,6 +699,8 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       );
       return;
     }
+    // 如果计算出的状态和当前一样，跳过避免无意义重建
+    if (_clientState.phase == computed.phase && _clientState.message == computed.message) return;
     _setClientState(computed, reason: reason);
   }
 

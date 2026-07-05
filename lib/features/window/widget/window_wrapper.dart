@@ -93,6 +93,7 @@ class _WindowWrapperState extends ConsumerState<WindowWrapper> with WindowListen
 
   @override
   void onWindowFocus() {
-    setState(() {});
+    // Intentionally empty — previously called setState(() {}) which triggered
+    // a full widget tree rebuild on every focus change, causing visible flicker.
   }
 }

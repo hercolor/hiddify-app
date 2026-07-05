@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
-import 'package:hiddify/core/widget/desktop/desktop_window_chrome.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -14,27 +13,25 @@ class DesktopShell extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentLocation = GoRouterState.of(context).uri.toString();
-    final isHomePage = currentLocation == '/' || currentLocation == '/home';
+    final isLoggedIn = ref.watch(
+      authNotifierProvider.select((a) => a.valueOrNull?.isLoggedIn == true),
+    );
 
     return DesktopTheme(
       child: Material(
         color: const Color(0xFFF5F6FA),
-        child: DesktopWindowChrome(
-          showCloseButton: isHomePage,
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: BrandDesktopWindow.contentMaxWidth),
-                    child: navigationShell,
-                  ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: BrandDesktopWindow.contentMaxWidth),
+                  child: navigationShell,
                 ),
               ),
-              _BottomNavBar(navigationShell: navigationShell),
-            ],
-          ),
+            ),
+            if (isLoggedIn) _BottomNavBar(navigationShell: navigationShell),
+          ],
         ),
       ),
     );
@@ -61,40 +58,6 @@ class _BottomNavBar extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggedIn = ref.watch(authNotifierProvider).valueOrNull?.isLoggedIn == true;
-
-    // 未登录时只展示「会员」tab
-    if (!isLoggedIn) {
-      return Container(
-        height: BrandDesktopWindow.bottomNavHeight,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
-        ),
-        child: SafeArea(
-          top: false,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              navigationShell.goBranch(2);
-            },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.person_rounded, size: 22, color: Color(0xFF6366F1)),
-                const SizedBox(height: 2),
-                Text(
-                  '会员',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return Container(
       height: BrandDesktopWindow.bottomNavHeight,
       decoration: const BoxDecoration(

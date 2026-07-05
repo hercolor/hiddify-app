@@ -47,7 +47,10 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
 
       final nextState = AuthState.loggedIn(session);
       await _logAuthDebug(nextState, userInfoLoaded: session.subscription != null);
-      unawaited(_syncNodesInBackground(session));
+      // Debug 模式下后台同步是空操作，跳过避免无意义的状态更新
+      if (!kDebugMode) {
+        unawaited(_syncNodesInBackground(session));
+      }
       loggy.debug('auth bootstrapMs=${bootstrapWatch.elapsedMilliseconds}');
       return nextState;
     } catch (error, stackTrace) {
@@ -62,13 +65,24 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   }
 
   Future<void> login(String account, String password) async {
-    if (state.isLoading) return;
+    if (state.isLoading) {
+      loggy.warning('login called but already loading, ignoring');
+      return;
+    }
     state = const AsyncLoading<AuthState>().copyWithPrevious(state);
+    loggy.debug('login: state set to loading, about to get loginService');
     state = await AsyncValue.guard(() async {
       final loginService = await ref.read(loginServiceProvider.future);
+      loggy.debug('login: loginService obtained, sending request for account=${account.trim()}');
       final session = await loginService
           .login(account: account, password: password)
-          .match((err) => throw err, (session) => session)
+          .match((err) {
+            loggy.warning('login: service returned error: $err');
+            throw err;
+          }, (session) {
+            loggy.debug('login: service returned session successfully');
+            return session;
+          })
           .run();
 
       // 先保存 token 并立即进入已登录状态
@@ -84,6 +98,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       }
       return nextState;
     });
+    loggy.debug('login: guard completed, final state isError=${state is AsyncError}');
   }
 
   Future<void> register({
@@ -486,6 +501,8 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
       final result = await _fetchSubscriptionAndImport(session, showNodeFailureToast: false);
       final syncedSession = result.session;
       if (!_isCurrentSession(session)) return;
+      // 如果 session 实际没变化，跳过状态更新避免无意义重建
+      if (identical(syncedSession, session) || syncedSession == state.valueOrNull?.session) return;
       await ref.read(authTokenStorageProvider).save(syncedSession);
       final nextState = AuthState.loggedIn(syncedSession);
       state = AsyncData(nextState);

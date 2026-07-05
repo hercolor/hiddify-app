@@ -21,6 +21,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
     if (PlatformUtils.isWindows) {
       return DesktopShell(navigationShell: navigationShell);
     }
+    final isLoggedIn = ref.watch(authNotifierProvider).valueOrNull?.isLoggedIn == true;
     return PopScope(
       canPop: navigationShell.currentIndex == 0,
       onPopInvokedWithResult: (didPop, _) {
@@ -32,7 +33,7 @@ class MyAdaptiveLayout extends HookConsumerWidget {
         child: Column(
           children: [
             Expanded(child: navigationShell),
-            _MobileBottomNavBar(navigationShell: navigationShell),
+            if (isLoggedIn) _MobileBottomNavBar(navigationShell: navigationShell),
           ],
         ),
       ),
@@ -47,40 +48,7 @@ class _MobileBottomNavBar extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggedIn = ref.watch(authNotifierProvider).valueOrNull?.isLoggedIn == true;
     final currentIndex = navigationShell.currentIndex;
-
-    // 未登录时只展示「会员」tab
-    if (!isLoggedIn) {
-      return Container(
-        height: 60,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
-        ),
-        child: SafeArea(
-          top: false,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              navigationShell.goBranch(2);
-            },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.person_rounded, size: 22, color: Color(0xFF6366F1)),
-                const SizedBox(height: 2),
-                const Text(
-                  '会员',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF6366F1)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
 
     return Container(
       height: 60,

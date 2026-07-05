@@ -3,11 +3,14 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
+import 'package:hiddify/features/auth/model/auth_failure.dart';
 import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/auth_state.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
+import 'package:hiddify/features/auth/widget/user_profile_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
+import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -43,6 +46,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
   final _passwordController = TextEditingController();
   String? _emailError;
   String? _passwordError;
+  String? _loginError;
   bool _isSubmitting = false;
   bool _showExternalError = true;
 
@@ -57,15 +61,41 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
     if (_isSubmitting) return;
     if (!_validate()) return;
     final stopwatch = Stopwatch()..start();
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _loginError = null;
+    });
     DiagnosticEventBuffer.addSafe('loginRequestStart');
     try {
       await ref.read(authNotifierProvider.notifier).login(_emailController.text, _passwordController.text);
       stopwatch.stop();
-      final loggedIn = ref.read(authNotifierProvider).valueOrNull?.isLoggedIn == true;
+      final authState = ref.read(authNotifierProvider);
+      final loggedIn = authState.valueOrNull?.isLoggedIn == true;
       DiagnosticEventBuffer.addSafe('loginRequestEnd success=$loggedIn elapsedMs=${stopwatch.elapsedMilliseconds}');
       if (!mounted) return;
-      if (loggedIn) context.goNamed('home');
+      if (loggedIn) {
+        context.goNamed('home');
+      } else if (authState case AsyncError(:final error)) {
+        setState(() {
+          _loginError = _authErrorMessage(error);
+          _showExternalError = true;
+        });
+      } else {
+        // 登录既没有成功也没有报错，显示当前状态帮助排查
+        setState(() {
+          _loginError = '登录未成功，当前状态：${authState.valueOrNull?.status.name ?? "未知"}，请检查网络连接后重试';
+          _showExternalError = true;
+        });
+      }
+    } catch (error) {
+      stopwatch.stop();
+      DiagnosticEventBuffer.addSafe('loginRequestException: $error');
+      if (mounted) {
+        setState(() {
+          _loginError = '登录过程出错：${_authErrorMessage(error)}';
+          _showExternalError = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -120,7 +150,14 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                         const Gap(8),
                         Text('Fast, Secure, Borderless', style: Theme.of(context).textTheme.bodyMedium),
                         const Gap(42),
-                        if (_showExternalError && widget.errorText != null) ...[
+                        if (_loginError != null) ...[
+                          Text(
+                            _loginError!,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrandDesktopColors.error),
+                          ),
+                          const Gap(14),
+                        ] else if (_showExternalError && widget.errorText != null) ...[
                           Text(
                             widget.errorText!,
                             textAlign: TextAlign.center,
@@ -225,6 +262,7 @@ class _DesktopMemberCenter extends StatelessWidget {
     final traffic = subscription != null && subscription.hasTrafficInfo
         ? _TrafficCard(subscription: subscription)
         : null;
+    final security = _SecurityCenterCard(session: session);
     const actions = _MemberActions();
 
     return DesktopTheme(
@@ -235,37 +273,28 @@ class _DesktopMemberCenter extends StatelessWidget {
             child: Column(
               children: [
                 const Gap(10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.goNamed('home')),
-                    const Text('我的账号', style: BrandDesktopText.pageTitle),
-                    const SizedBox(width: 38, height: 38),
-                  ],
-                ),
+                const Center(child: Text('我的账号', style: BrandDesktopText.pageTitle)),
                 const Gap(12),
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      return Align(
-                        alignment: Alignment.topCenter,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.topCenter,
-                          child: SizedBox(
-                            width: constraints.maxWidth,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                plan,
-                                const Gap(18),
-                                if (traffic != null) ...[traffic, const Gap(18)],
-                                actions,
-                                const Gap(16),
-                                const _DesktopLogoutButton(),
-                              ],
-                            ),
+                      return SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              plan,
+                              const Gap(18),
+                              if (traffic != null) ...[traffic, const Gap(18)],
+                              security,
+                              const Gap(18),
+                              actions,
+                              const Gap(16),
+                              const _DesktopLogoutButton(),
+                              const Gap(20),
+                            ],
                           ),
                         ),
                       );
@@ -276,33 +305,6 @@ class _DesktopMemberCenter extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TopRoundIcon extends StatelessWidget {
-  const _TopRoundIcon({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-          boxShadow: [
-            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
       ),
     );
   }
@@ -483,6 +485,63 @@ class _SmallPlanButton extends StatelessWidget {
     );
     final child = Text(label, style: BrandDesktopText.smallButton);
     return OutlinedButton(onPressed: onPressed, style: style, child: child);
+  }
+}
+
+class _SecurityCenterCard extends StatelessWidget {
+  const _SecurityCenterCard({required this.session});
+
+  final AuthSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final phone = session.phone?.trim();
+    final isMobile = PlatformUtils.isAndroid;
+    return DesktopCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!isMobile) ...[
+            _ActionRow(
+              icon: Icons.lock_reset_rounded,
+              title: '修改密码',
+              subtitle: '更新账号登录密码',
+              iconColor: BrandDesktopColors.accent,
+              onTap: () => showSecurityActionModal(
+                context,
+                title: '修改密码',
+                child: const PasswordChangeCard(closeOnSuccess: true),
+              ),
+            ),
+            const _DesktopActionDivider(),
+            _ActionRow(
+              icon: Icons.phone_iphone_rounded,
+              title: '绑定手机',
+              subtitle: phone == null || phone.isEmpty ? '绑定后可使用手机号登录和找回密码' : '当前手机号：$phone',
+              iconColor: const Color(0xFF10B981),
+              onTap: () => showSecurityActionModal(
+                context,
+                title: '绑定手机',
+                child: PhoneBindCard(session: session, closeOnSuccess: true),
+              ),
+            ),
+            const _DesktopActionDivider(),
+          ] else
+            _ActionRow(
+              icon: Icons.lock_reset_rounded,
+              title: '修改密码',
+              subtitle: '更新账号登录密码',
+              iconColor: BrandDesktopColors.accent,
+              onTap: () => showSecurityActionModal(
+                context,
+                title: '修改密码',
+                child: const PasswordChangeCard(closeOnSuccess: true),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -800,4 +859,15 @@ bool _looksLikeLoginAccount(String value) {
   final trimmed = value.trim();
   if (trimmed.contains('@')) return trimmed.contains('.');
   return RegExp(r'^\+?[0-9][0-9\s\-()]{5,30}$').hasMatch(trimmed);
+}
+
+String _authErrorMessage(Object error) {
+  if (error is AuthServerMessageFailure) return error.message;
+  if (error is AuthInvalidCredentialsFailure) return error.message ?? '账号或密码不正确';
+  if (error is AuthTokenExpiredFailure) return error.message ?? '登录已过期，请重新登录';
+  if (error is AuthNetworkFailure) return error.message ?? '网络连接失败，请稍后重试';
+  if (error is AuthBadResponseFailure) return error.message ?? '服务器返回异常';
+  if (error is AuthNotLoggedInFailure) return '请先登录账号';
+  final raw = error.toString();
+  return raw.length <= 120 ? raw : '${raw.substring(0, 120)}…';
 }

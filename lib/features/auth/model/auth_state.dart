@@ -30,4 +30,14 @@ class AuthState {
       AuthStatus.loggedIn => nextSession == null ? const AuthState.loggedOut() : AuthState.loggedIn(nextSession),
     };
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AuthState &&
+      status == other.status &&
+      session?.authData == other.session?.authData &&
+      session?.subscription == other.session?.subscription;
+
+  @override
+  int get hashCode => Object.hash(status, session?.authData, session?.subscription);
 }

@@ -61,8 +61,19 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
     final upgrader = ref.watch(upgraderProvider);
     final activeBreakpoint = Breakpoint(context).activeBreakpoint;
 
-    ref.listen(foregroundProfilesUpdateNotifierProvider, (_, _) {});
-    if (PlatformUtils.isDesktop) ref.listen(systemTrayNotifierProvider, (_, _) {});
+    // Keep providers alive without registering new listeners on every build.
+    // Using useEffect with empty deps so listeners are only registered once.
+    useEffect(() {
+      final profSub = ref.listenManual(foregroundProfilesUpdateNotifierProvider, (_, _) {});
+      ProviderSubscription<void>? traySub;
+      if (PlatformUtils.isDesktop) {
+        traySub = ref.listenManual(systemTrayNotifierProvider, (_, _) {});
+      }
+      return () {
+        profSub.close();
+        traySub?.close();
+      };
+    }, const []);
 
     // updating ActiveBreakpointNotifier value
     useEffect(() {

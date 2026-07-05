@@ -19,27 +19,10 @@ class ConnectionWrapper extends StatefulHookConsumerWidget {
 
 class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppLogger {
   ProviderSubscription<AsyncValue<ConnectionStatus>>? _connectionSubscription;
+  ProviderSubscription<AsyncValue<bool>>? _configOptionSubscription;
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(configOptionNotifierProvider, (previous, next) async {
-      if (next case AsyncData(value: true)) {
-        final t = ref.read(translationsProvider).requireValue;
-        ref
-            .read(inAppNotificationControllerProvider)
-            .showInfoToast(
-              t.connection.reconnectMsg,
-              // actionText: t.connection.reconnect,
-              // callback: () async {
-              //   await ref
-              //       .read(connectionNotifierProvider.notifier)
-              //       .reconnect(await ref.read(activeProfileProvider.future));
-              // },
-            );
-        await ref.read(connectionNotifierProvider.notifier).reconnect(await ref.read(activeProfileProvider.future));
-      }
-    });
-
     return widget.child;
   }
 
@@ -53,6 +36,13 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
         (_, _) {},
         fireImmediately: true,
       );
+      _configOptionSubscription ??= ref.listenManual(configOptionNotifierProvider, (previous, next) async {
+        if (next case AsyncData(value: true)) {
+          final t = ref.read(translationsProvider).requireValue;
+          ref.read(inAppNotificationControllerProvider).showInfoToast(t.connection.reconnectMsg);
+          await ref.read(connectionNotifierProvider.notifier).reconnect(await ref.read(activeProfileProvider.future));
+        }
+      }, fireImmediately: false);
     });
     // remove for now...
     //
@@ -69,6 +59,7 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
   @override
   void dispose() {
     _connectionSubscription?.close();
+    _configOptionSubscription?.close();
     super.dispose();
   }
 }

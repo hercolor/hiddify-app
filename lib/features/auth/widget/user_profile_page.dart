@@ -59,7 +59,7 @@ class UserProfilePage extends HookConsumerWidget {
       };
     }, [session?.authData]);
 
-    if (PlatformUtils.isWindows) {
+    if (PlatformUtils.isWindows || PlatformUtils.isAndroid) {
       return DesktopMembershipPage(authState: authState, errorText: authState.readableError(t));
     }
 
@@ -277,7 +277,7 @@ class _SecurityActionMenu extends StatelessWidget {
           subtitle: '更新账号登录密码',
           iconColor: BrandColors.signalBlue,
           onTap: () =>
-              _showSecurityActionModal(context, title: '修改密码', child: const _PasswordChangeCard(closeOnSuccess: true)),
+              showSecurityActionModal(context, title: '修改密码', child: const PasswordChangeCard(closeOnSuccess: true)),
         ),
         const _ActionDivider(),
         _ActionTile(
@@ -285,10 +285,10 @@ class _SecurityActionMenu extends StatelessWidget {
           title: '绑定手机',
           subtitle: phone == null || phone.isEmpty ? '绑定后可使用手机号登录和找回密码' : '当前手机号：$phone',
           iconColor: const Color(0xFF10B981),
-          onTap: () => _showSecurityActionModal(
+          onTap: () => showSecurityActionModal(
             context,
             title: '绑定手机',
-            child: _PhoneBindCard(session: session, closeOnSuccess: true),
+            child: PhoneBindCard(session: session, closeOnSuccess: true),
           ),
         ),
       ],
@@ -296,7 +296,7 @@ class _SecurityActionMenu extends StatelessWidget {
   }
 }
 
-Future<void> _showSecurityActionModal(BuildContext context, {required String title, required Widget child}) {
+Future<void> showSecurityActionModal(BuildContext context, {required String title, required Widget child}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -809,16 +809,16 @@ class _SecurityCenterEntryCard extends StatelessWidget {
   }
 }
 
-class _PasswordChangeCard extends ConsumerStatefulWidget {
-  const _PasswordChangeCard({this.closeOnSuccess = false});
+class PasswordChangeCard extends ConsumerStatefulWidget {
+  const PasswordChangeCard({this.closeOnSuccess = false});
 
   final bool closeOnSuccess;
 
   @override
-  ConsumerState<_PasswordChangeCard> createState() => _PasswordChangeCardState();
+  ConsumerState<PasswordChangeCard> createState() => PasswordChangeCardState();
 }
 
-class _PasswordChangeCardState extends ConsumerState<_PasswordChangeCard> {
+class PasswordChangeCardState extends ConsumerState<PasswordChangeCard> {
   final _oldPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -934,17 +934,17 @@ class _PasswordChangeCardState extends ConsumerState<_PasswordChangeCard> {
   }
 }
 
-class _PhoneBindCard extends ConsumerStatefulWidget {
-  const _PhoneBindCard({required this.session, this.closeOnSuccess = false});
+class PhoneBindCard extends ConsumerStatefulWidget {
+  const PhoneBindCard({required this.session, this.closeOnSuccess = false});
 
   final AuthSession session;
   final bool closeOnSuccess;
 
   @override
-  ConsumerState<_PhoneBindCard> createState() => _PhoneBindCardState();
+  ConsumerState<PhoneBindCard> createState() => PhoneBindCardState();
 }
 
-class _PhoneBindCardState extends ConsumerState<_PhoneBindCard> {
+class PhoneBindCardState extends ConsumerState<PhoneBindCard> {
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
   bool _sendingCode = false;
@@ -958,7 +958,7 @@ class _PhoneBindCardState extends ConsumerState<_PhoneBindCard> {
   }
 
   @override
-  void didUpdateWidget(covariant _PhoneBindCard oldWidget) {
+  void didUpdateWidget(covariant PhoneBindCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.session.phone != widget.session.phone && _codeController.text.isEmpty) {
       _phoneController.text = widget.session.phone ?? '';

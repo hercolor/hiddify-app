@@ -4,7 +4,6 @@ import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/widget/desktop/desktop_widgets.dart';
@@ -14,37 +13,11 @@ import 'package:hiddify/features/dev_mode/dev_mode_providers.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 
 import 'package:hiddify/features/proxy/overview/proxies_overview_notifier.dart';
+import 'package:hiddify/features/proxy/utils/country_code.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final desktopNodeSearchProvider = StateProvider.autoDispose<String>((ref) => '');
-
-class _TopRoundIcon extends StatelessWidget {
-  const _TopRoundIcon({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-          boxShadow: [
-            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
-      ),
-    );
-  }
-}
 
 class _TestSpeedButton extends ConsumerWidget {
   const _TestSpeedButton({required this.groupTag});
@@ -109,13 +82,8 @@ class DesktopNodesPage extends HookConsumerWidget {
             child: Column(
               children: [
                 const Gap(10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _TopRoundIcon(icon: Icons.arrow_back_ios_new_rounded, onTap: () => context.goNamed('home')),
-                    const Text('选择节点', style: BrandDesktopText.pageTitle),
-                    const SizedBox(width: 38),
-                  ],
+                const Center(
+                  child: Text('选择节点', style: BrandDesktopText.pageTitle),
                 ),
                 const Gap(12),
                 Row(
@@ -359,7 +327,7 @@ class _NodeFlag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final countryCode = _extractCountryCode(name);
+    final countryCode = extractCountryCode(name);
     return Container(
       width: 32,
       height: 32,
@@ -425,32 +393,4 @@ Color _delayColor(int? delay) {
   return BrandDesktopColors.error;
 }
 
-String? _extractCountryCode(String nodeName) {
-  final name = nodeName.toLowerCase();
-  const map = {
-    'us': ['美国', 'usa', 'united states', 'us-'],
-    'jp': ['日本', 'japan', 'jp-'],
-    'cn': ['中国', 'china', 'cn-'],
-    'hk': ['香港', 'hong kong', 'hk-'],
-    'tw': ['台湾', 'taiwan', 'tw-'],
-    'sg': ['新加坡', 'singapore', 'sg-'],
-    'kr': ['韩国', 'korea', 'kr-'],
-    'gb': ['英国', 'uk', 'united kingdom', 'gb-'],
-    'de': ['德国', 'germany', 'de-'],
-    'fr': ['法国', 'france', 'fr-'],
-    'ru': ['俄罗斯', 'russia', 'ru-'],
-    'au': ['澳大利亚', 'australia', 'au-'],
-    'ca': ['加拿大', 'canada', 'ca-'],
-    'nl': ['荷兰', 'netherlands', 'nl-'],
-    'in': ['印度', 'india', 'in-'],
-    'br': ['巴西', 'brazil', 'br-'],
-    'it': ['意大利', 'italy', 'it-'],
-    'es': ['西班牙', 'spain', 'es-'],
-  };
-  for (final entry in map.entries) {
-    for (final keyword in entry.value) {
-      if (name.contains(keyword)) return entry.key;
-    }
-  }
-  return null;
-}
+

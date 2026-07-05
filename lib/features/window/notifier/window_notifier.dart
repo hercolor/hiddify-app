@@ -62,12 +62,9 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
         minimumSize: minimumWindowSize,
         maximumSize: BrandDesktopWindow.maximumSize,
         title: '蝴蝶加速',
-        titleBarStyle: Platform.isWindows ? TitleBarStyle.hidden : null,
-        windowButtonVisibility: Platform.isWindows ? false : null,
       ),
     );
     if (Platform.isWindows) {
-      await windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: false);
       await windowManager.setAspectRatio(BrandDesktopWindow.aspectRatio);
       await windowManager.setResizable(false);
       await windowManager.setMaximizable(false);
@@ -84,8 +81,9 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
       loggy.debug("restoring window to maximized state");
     }
     if (!silentStart) {
-      await ref.read(windowNotifierProvider.notifier).show(focus: false);
-      loggy.debug("showing app window on start");
+      await windowManager.show();
+      await windowManager.focus();
+      loggy.debug("showing app window on start, isVisible=${await windowManager.isVisible()}");
     } else {
       loggy.debug("silent start, remain hidden accessible via tray");
     }
