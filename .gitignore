@@ -75,3 +75,4 @@ windows/sign.cer
 
 # Build output
 out/
+windows/cpp_src/
