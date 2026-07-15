@@ -10,28 +10,6 @@ include(${EPHEMERAL_DIR}/generated_config.cmake)
 # https://github.com/flutter/flutter/issues/57146.
 set(WRAPPER_ROOT "${EPHEMERAL_DIR}/cpp_client_wrapper")
 
-# Ensure cpp_client_wrapper files exist (they may be deleted by Flutter tool).
-# Restore from persistent cpp_src/ backup at CMake configure time.
-set(_CPP_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../cpp_src")
-if(EXISTS "${_CPP_SRC}")
-  file(GLOB _CC_FILES "${_CPP_SRC}/*.cc")
-  foreach(_f ${_CC_FILES})
-    get_filename_component(_name "${_f}" NAME)
-    if(NOT EXISTS "${WRAPPER_ROOT}/${_name}")
-      file(COPY "${_f}" DESTINATION "${WRAPPER_ROOT}")
-    endif()
-  endforeach()
-  if(EXISTS "${_CPP_SRC}/include/flutter")
-    file(GLOB _HDR_FILES "${_CPP_SRC}/include/flutter/*.h")
-    foreach(_f ${_HDR_FILES})
-      get_filename_component(_name "${_f}" NAME)
-      if(NOT EXISTS "${WRAPPER_ROOT}/include/flutter/${_name}")
-        file(COPY "${_f}" DESTINATION "${WRAPPER_ROOT}/include/flutter")
-      endif()
-    endforeach()
-  endif()
-endif()
-
 # Set fallback configurations for older versions of the flutter tool.
 if (NOT DEFINED FLUTTER_TARGET_PLATFORM)
   set(FLUTTER_TARGET_PLATFORM "windows-x64")
@@ -89,7 +67,6 @@ set_target_properties(flutter_wrapper_plugin PROPERTIES
   CXX_VISIBILITY_PRESET hidden)
 target_link_libraries(flutter_wrapper_plugin PUBLIC flutter)
 target_include_directories(flutter_wrapper_plugin PUBLIC
-  "${WRAPPER_ROOT}"
   "${WRAPPER_ROOT}/include"
 )
 add_dependencies(flutter_wrapper_plugin flutter_assemble)
@@ -122,17 +99,6 @@ add_custom_command(
     ${FLUTTER_TOOL_ENVIRONMENT}
     "${FLUTTER_ROOT}/packages/flutter_tools/bin/tool_backend.bat"
       ${FLUTTER_TARGET_PLATFORM} $<CONFIG>
-  # Restore .cc and header files from cpp_src/ backup if tool_backend deleted them
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${_CPP_SRC}/core_implementations.cc"
-    "${_CPP_SRC}/standard_codec.cc"
-    "${_CPP_SRC}/plugin_registrar.cc"
-    "${_CPP_SRC}/flutter_engine.cc"
-    "${_CPP_SRC}/flutter_view_controller.cc"
-    "${WRAPPER_ROOT}/"
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${_CPP_SRC}/include"
-    "${WRAPPER_ROOT}/include"
   VERBATIM
 )
 add_custom_target(flutter_assemble DEPENDS

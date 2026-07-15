@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "080404b0"
         BEGIN
-            VALUE "CompanyName", "蝴蝶加速" "\0"
-            VALUE "FileDescription", "蝴蝶加速" "\0"
+            VALUE "CompanyName", "BflyVPN" "\0"
+            VALUE "FileDescription", "BflyVPN" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "hudiejiasu" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 蝴蝶加速. All rights reserved." "\0"
-            VALUE "OriginalFilename", "hudiejiasu.exe" "\0"
-            VALUE "ProductName", "蝴蝶加速" "\0"
+            VALUE "InternalName", "BflyVPN" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 BflyVPN. All rights reserved." "\0"
+            VALUE "OriginalFilename", "BflyVPN.exe" "\0"
+            VALUE "ProductName", "BflyVPN" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

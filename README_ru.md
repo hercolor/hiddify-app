@@ -1,6 +1,6 @@
-# 蝴蝶加速 Client
+# BflyVPN Client
 
-This repository is now a customized Butterfly Accelerator client. The original upstream multi-language README has been retired for this fork.
+This repository is now a customized BflyVPN client. The original upstream multi-language README has been retired for this fork.
 
 Please use the current documentation:
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract class Constants {
-  static const appName = "蝴蝶加速";
+  static const appName = "BflyVPN";
   static const githubUrl = "https://api.y88.pro";
   static const licenseUrl = "https://api.y88.pro/terms";
   static const clientVersionUrl = "https://api.y88.pro/api/app/v1/client-version";

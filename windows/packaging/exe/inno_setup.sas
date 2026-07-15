@@ -7,6 +7,7 @@ AppPublisherURL={{PUBLISHER_URL}}
 AppSupportURL={{PUBLISHER_URL}}
 AppUpdatesURL={{PUBLISHER_URL}}
 DefaultDirName={{INSTALL_DIR_NAME}}
+UsePreviousAppDir=no
 DisableProgramGroupPage=yes
 OutputDir=.
 OutputBaseFilename={{OUTPUT_BASE_FILENAME}}
@@ -62,7 +63,14 @@ Name: "{userstartup}\\{{DISPLAY_NAME}}"; Filename: "{app}\\{{EXECUTABLE_NAME}}";
 [Run]
 Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLAY_NAME}}}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} nowait postinstall skipifsilent
 
+[InstallDelete]
+Type: filesandordirs; Name: "{autopf64}\蝴蝶加速"
+Type: files; Name: "{autoprograms}\蝴蝶加速.lnk"
+Type: files; Name: "{autodesktop}\蝴蝶加速.lnk"
+Type: files; Name: "{userstartup}\蝴蝶加速.lnk"
+
 [UninstallDelete]
+Type: filesandordirs; Name: "{userappdata}\BflyVPN"
 Type: filesandordirs; Name: "{userappdata}\蝴蝶加速"
 Type: filesandordirs; Name: "{userappdata}\Hiddify"
 
@@ -71,6 +79,9 @@ function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
 begin
+  Exec('taskkill', '/F /IM BflyVPN.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+  Exec('net', 'stop "BflyVPNTunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+  Exec('sc.exe', 'delete "BflyVPNTunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
   Exec('taskkill', '/F /IM 蝴蝶加速.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
   Exec('net', 'stop "蝴蝶加速TunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
   Exec('sc.exe', 'delete "蝴蝶加速TunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)

@@ -1,4 +1,4 @@
-display_name: 蝴蝶加速
+display_name: BflyVPN
 package_name: hudiejiasu
 maintainer:
   name: y88
@@ -15,24 +15,24 @@ icon: assets/images/source/ic_launcher_border.png
 # 2. Remove conflicting hudiejiasu.desktop files from users' .local directories (cleanup AppImage artifacts)
 # 3. Update the desktop database to apply changes immediately
 postinstall_scripts:
-  - echo "Setting up 蝴蝶加速..."
+  - echo "Setting up BflyVPN..."
   - sudo sed -i '/^\[Desktop Entry\]/a StartupWMClass=pro.y88.hudiejiasu' "/usr/share/applications/hudiejiasu.desktop"
   - echo "Search and remove hudiejiasu.desktop from .local"
   - for user_dir in /home/*; do if [ -f "$user_dir/.local/share/applications/hudiejiasu.desktop" ]; then rm -f "$user_dir/.local/share/applications/hudiejiasu.desktop"; echo "Found and removed hudiejiasu.desktop from $user_dir .local"; fi; done
   - update-desktop-database /usr/share/applications
-  - echo "蝴蝶加速 is ready to use :)"
+  - echo "BflyVPN is ready to use :)"
 
 # Post-uninstallation tasks:
 # 1. Iterate through all user directories to remove Hiddify configuration and data
 # 2. Clean up root user data to ensure a clean removal
 postuninstall_scripts:
-  - echo "Removing 蝴蝶加速 user data..."
+  - echo "Removing BflyVPN user data..."
   - for user_dir in /home/*; do if [ -d "$user_dir/.local/share/hudiejiasu" ]; then rm -rf "$user_dir/.local/share/hudiejiasu"; echo "Removed data from $user_dir"; fi; done
   - rm -rf /root/.local/share/hudiejiasu
-  - echo "蝴蝶加速 data cleanup complete."
+  - echo "BflyVPN data cleanup complete."
 
 keywords:
-  - 蝴蝶加速
+  - BflyVPN
   - Proxy
   - VPN
   - V2ray
@@ -41,7 +41,7 @@ keywords:
   - Psiphon
   - OpenVPN
 
-generic_name: 蝴蝶加速
+generic_name: BflyVPN
 
 categories:
   - Network

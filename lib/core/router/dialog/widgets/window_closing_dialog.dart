@@ -59,7 +59,7 @@ class _WindowClosingDialogState extends ConsumerState<WindowClosingDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('关闭蝴蝶加速？', style: BrandDesktopText.sectionTitle.copyWith(fontSize: 18)),
+                          Text('关闭 BflyVPN？', style: BrandDesktopText.sectionTitle.copyWith(fontSize: 18)),
                           const Gap(4),
                           Text(
                             '可以最小化到托盘继续运行，或完全退出应用。',

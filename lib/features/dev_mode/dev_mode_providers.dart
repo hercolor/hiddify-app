@@ -34,11 +34,7 @@ class MockClientNodeSelectionNotifier extends StateNotifier<ClientNodeSelection>
     ClientNode(id: 'cn-01', name: '中国-01', delay: 15),
   ];
 
-  static final _mockSelection = ClientNodeSelection(
-    nodes: _mockNodes,
-    selectedNodeId: 'hk-01',
-    profileName: '蝴蝶加速',
-  );
+  static final _mockSelection = ClientNodeSelection(nodes: _mockNodes, selectedNodeId: 'hk-01', profileName: 'BflyVPN');
 
   void selectNode(String nodeId) {
     state = state.copyWith(selectedNodeId: nodeId);

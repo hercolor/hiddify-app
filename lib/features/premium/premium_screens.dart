@@ -339,11 +339,11 @@ class PremiumWebsitePage extends ConsumerWidget {
             children: [
               const Icon(Icons.language_rounded, size: 64, color: Color(0xFF10B981)),
               const Gap(18),
-              const Text('访问 蝴蝶加速 官方支持', style: BrandDesktopText.sectionTitle),
+              const Text('访问 BflyVPN 官方支持', style: BrandDesktopText.sectionTitle),
               const Gap(6),
               const Text('获取最新客户端、使用帮助及服务支持。', textAlign: TextAlign.center, style: BrandDesktopText.bodySecondary),
               const Gap(36),
-              const _SoftInfoBox(icon: Icons.public_rounded, title: '蝴蝶加速', subtitle: '官方入口以客服返回的信息为准'),
+              const _SoftInfoBox(icon: Icons.public_rounded, title: 'BflyVPN', subtitle: '官方入口以客服返回的信息为准'),
               const Gap(24),
               SizedBox(
                 width: double.infinity,
@@ -379,7 +379,7 @@ class PremiumContactPage extends ConsumerWidget {
             children: [
               const Icon(Icons.support_agent_rounded, size: 64, color: Color(0xFF2563EB)),
               const Gap(18),
-              const Text('蝴蝶加速 客服支持', style: BrandDesktopText.sectionTitle),
+              const Text('BflyVPN 客服支持', style: BrandDesktopText.sectionTitle),
               const Gap(6),
               Text(
                 hasCustomerService ? '如需续费、套餐、节点或账号帮助，请通过客服入口联系。' : '客服入口暂未配置，请稍后重试。',
@@ -433,24 +433,15 @@ class _PremiumAboutPageState extends ConsumerState<PremiumAboutPage> {
     final version = ref.watch(appInfoProvider).valueOrNull?.presentVersion;
     final versionText = version == null || version.trim().isEmpty ? '--' : version;
     return _PremiumScaffold(
-      title: '关于 蝴蝶加速',
+      title: '关于 BflyVPN',
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           Image.asset('assets/images/app_icon.png', width: 64, height: 64),
           const Gap(16),
-          Center(
-            child: Image.asset(
-              'assets/images/logo_text.png',
-              width: 220,
-              height: 55,
-              fit: BoxFit.contain,
-            ),
-          ),
+          Center(child: Image.asset('assets/images/logo_text.png', width: 220, height: 55, fit: BoxFit.contain)),
           const Gap(6),
-          const Center(
-            child: Text('Fast, Secure, Borderless', style: BrandDesktopText.bodySecondary),
-          ),
+          const Center(child: Text('Fast, Secure, Borderless', style: BrandDesktopText.bodySecondary)),
           const Gap(28),
           _InputCard(
             child: Column(
@@ -521,7 +512,7 @@ class PremiumPreferencesPage extends ConsumerWidget {
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               title: const Text('全局代理模式', style: BrandDesktopText.sectionTitle),
-              subtitle: Text(isGlobalMode ? '所有流量将通过 蝴蝶加速 传输' : '智能分流，仅代理必要流量', style: BrandDesktopText.caption),
+              subtitle: Text(isGlobalMode ? '所有流量将通过 BflyVPN 传输' : '智能分流，仅代理必要流量', style: BrandDesktopText.caption),
               activeThumbColor: const Color(0xFF2563EB),
               value: isGlobalMode,
               onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
@@ -1271,7 +1262,7 @@ String _ticketSubject(String message) {
 
 String _ticketMessage({required String message, required String contact, required String email}) {
   final contactText = contact.trim().isEmpty ? '未填写' : contact.trim();
-  return [message.trim(), '', '---', '来源：蝴蝶加速 APP', '账号：${_maskUser(email)}', '联系方式：$contactText'].join('\n');
+  return [message.trim(), '', '---', '来源：BflyVPN APP', '账号：${_maskUser(email)}', '联系方式：$contactText'].join('\n');
 }
 
 Future<void> _openCustomerService(BuildContext context, WidgetRef ref, String? customerService) async {

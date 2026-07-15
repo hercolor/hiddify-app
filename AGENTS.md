@@ -54,15 +54,15 @@ Phase 2:
 - Android: ./gradlew assembleDebug
 - Node: npm install && npm run build
 
-# 蝴蝶加速 Windows Client Rules
+# BflyVPN Windows Client Rules
 
 ## Product
 
-This is the Windows desktop client for 蝴蝶加速, a commercial VPN-style proxy client connected to XBoard and Xboard-Node.
+This is the Windows desktop client for BflyVPN, a commercial VPN-style proxy client connected to XBoard and Xboard-Node.
 
 ## Branding
 
-- User-visible product name must be 蝴蝶加速.
+- User-visible product name must be BflyVPN.
 - Do not show XBoard, Hiddify, proxy core names, protocol names, server addresses, ports, ciphers, DNS, fake-ip, IPv6, or subscription URL in normal UI.
 - XBoard may only remain in internal API class names if needed.
 
@@ -104,8 +104,8 @@ Technical details are only allowed in hidden diagnostics.
 
 - Support system tray.
 - Minimize to tray if enabled.
-- Tray menu should show 蝴蝶加速, Connect/Disconnect, Current node, Open app, Quit.
-- Windows notifications must show 蝴蝶加速, not XBoard.
+- Tray menu should show BflyVPN, Connect/Disconnect, Current node, Open app, Quit.
+- Windows notifications must show BflyVPN, not XBoard.
 - Detect admin permission or Wintun requirement before starting TUN mode.
 - Start/stop core must be idempotent.
 

@@ -75,7 +75,7 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
         NotificationCompat.Builder(service, notificationChannel)
                 .setShowWhen(false)
                 .setOngoing(true)
-                .setContentTitle("蝴蝶加速")
+                .setContentTitle("BflyVPN")
                 .setOnlyAlertOnce(true)
                 .setSmallIcon(R.drawable.ic_stat_logo)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -110,13 +110,13 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Application.notification.createNotificationChannel(
                 NotificationChannel(
-                    notificationChannel, "蝴蝶加速服务", NotificationManager.IMPORTANCE_LOW
+                    notificationChannel, "BflyVPN 服务", NotificationManager.IMPORTANCE_LOW
                 )
             )
         }
         service.startForeground(
             notificationId, notificationBuilder
-                .setContentTitle(profileName.takeIf { it.isNotBlank() } ?: "蝴蝶加速")
+                .setContentTitle(profileName.takeIf { it.isNotBlank() } ?: "BflyVPN")
                 .setContentText(service.getString(contentTextId)).build()
         )
     }

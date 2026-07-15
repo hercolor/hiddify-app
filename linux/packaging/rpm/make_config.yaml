@@ -8,7 +8,7 @@
 # - Successful builds do not guarantee runtime stability on Red Hat-based systems.
 
 
-# display_name: 蝴蝶加速
+# display_name: BflyVPN
 # url: https://y88.pro
 # license: Other
 
@@ -18,7 +18,7 @@
 # icon: assets/images/source/ic_launcher_border.png
 
 # keywords:
-#   - 蝴蝶加速
+#   - BflyVPN
 #   - Proxy
 #   - VPN
 #   - V2ray
@@ -27,7 +27,7 @@
 #   - Psiphon
 #   - OpenVPN
 
-# generic_name: 蝴蝶加速
+# generic_name: BflyVPN
 
 # requires:
 #   - libayatana-appindicator-gtk3

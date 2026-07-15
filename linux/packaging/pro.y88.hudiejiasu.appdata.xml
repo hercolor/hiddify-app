@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  蝴蝶加速 AppStream Metadata
+  BflyVPN AppStream Metadata
   Place this file at: linux/packaging/myappid.appdata.xml
 -->
 <component type="desktop-application">
@@ -8,20 +8,20 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <name>蝴蝶加速</name>
+  <name>BflyVPN</name>
   <summary>Modern Proxy and VPN Manager for Linux</summary>
 
-  <developer_name>蝴蝶加速</developer_name>
+  <developer_name>BflyVPN</developer_name>
   <update_contact>support@y88.pro</update_contact>
 
   <description>
     <p>
-      蝴蝶加速 is a branded network acceleration client built for stable and simple connectivity. 
+      BflyVPN is a branded network acceleration client built for stable and simple connectivity.
       It supports multiple backend protocols including V2Ray, Xray, Clash, and Sing-box, 
       providing flexibility and performance for all kinds of network configurations.
     </p>
     <p>
-      Designed with simplicity in mind, 蝴蝶加速 helps users connect securely and 
+      Designed with simplicity in mind, BflyVPN helps users connect securely and
       manage complex proxy configurations through a clean graphical interface.
     </p>
   </description>
@@ -29,7 +29,7 @@
   <screenshots>
     <screenshot type="default">
       <image>https://y88.pro</image>
-      <caption>Main Interface of 蝴蝶加速</caption>
+      <caption>Main Interface of BflyVPN</caption>
     </screenshot>
   </screenshots>
 
@@ -42,7 +42,7 @@
   </categories>
 
   <keywords>
-    <keyword>蝴蝶加速</keyword>
+    <keyword>BflyVPN</keyword>
     <keyword>Proxy</keyword>
     <keyword>VPN</keyword>
     <keyword>V2Ray</keyword>
@@ -73,7 +73,7 @@
   <releases>
     <release version="1.0.0" date="2025-10-25">
       <description>
-        <p>Initial Linux release of 蝴蝶加速 with modern UI.</p>
+        <p>Initial Linux release of BflyVPN with modern UI.</p>
       </description>
     </release>
   </releases>

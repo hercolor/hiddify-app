@@ -1,13 +1,13 @@
-display_name: 蝴蝶加速
+display_name: BflyVPN
 
 icon: ..\..\assets\images\windows.ico
 
 keywords:
-  - 蝴蝶加速
+  - BflyVPN
   - Proxy
   - VPN
 
-generic_name: 蝴蝶加速
+generic_name: BflyVPN
 
 actions:
   - name: Start

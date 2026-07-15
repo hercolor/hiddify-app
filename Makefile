@@ -287,6 +287,7 @@ android-aab-release:
 windows-release: windows-zip-release windows-exe-release windows-msix-release
 
 windows-zip-release:
+	rm -rf build/windows/x64/runner/Release/*_portable_data
 	fastforge package \
 	  --platform windows \
 	  --targets zip \
@@ -295,20 +296,15 @@ windows-zip-release:
 	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
 	  --build-dart-define=portable=true
 	@FULL_PATH=$$(ls dist/*/*.zip | head -n 1); \
-	ZIP_DIR=$$(dirname "$$FULL_PATH"); \
-	ZIP_FILE=$$(basename "$$FULL_PATH"); \
-	FILE_NAME=$${ZIP_FILE%.*}; \
 	$(YELLOW)Post-processing Windows portable$(DONE); \
-	cd "$$ZIP_DIR"; \
-	$(BLUE)Extracting and Repacking...$(DONE); \
-	mkdir -p 蝴蝶加速; \
-	unzip -q "$$ZIP_FILE" -d 蝴蝶加速/; \
-	rm "$$ZIP_FILE"; \
-	tar -a -cf "$$FILE_NAME.zip" 蝴蝶加速; \
-	rm -rf 蝴蝶加速; \
+	powershell.exe -NoProfile -ExecutionPolicy Bypass \
+	  -File scripts/repack_windows_portable.ps1 \
+	  -ArchivePath "$$FULL_PATH" \
+	  -RootName "BflyVPN"; \
 	$(GREEN)Successful$(DONE)
 
 windows-exe-release:
+	rm -rf build/windows/x64/runner/Release/*_portable_data
 	fastforge package \
 	  --platform windows \
 	  --targets exe \
@@ -392,17 +388,17 @@ linux-appimage-release:
 	$(BLUE)Deleting bundled libstdc++ to fix Arch Linux compatibility...$(DONE); \
 	find squashfs-root/usr/lib -name "libstdc++.so.6" -delete; \
 	$(BLUE)Rebuilding AppImage$(DONE); \
-	ARCH=x86_64 appimagetool --no-appstream squashfs-root 蝴蝶加速.AppImage > /dev/null; \
+	ARCH=x86_64 appimagetool --no-appstream squashfs-root BflyVPN.AppImage > /dev/null; \
 	$(BLUE)Cleaning up squashfs$(DONE); \
 	rm -rf squashfs-root; \
 	$(YELLOW)Creating Portable Package$(DONE); \
-	PKG_DIR_NAME="hudiejiasu-linux-appimage"; \
+	PKG_DIR_NAME="BflyVPN-linux-appimage"; \
 	$(BLUE)Creating dir: $$PKG_DIR_NAME$(DONE); \
 	mkdir -p "$$PKG_DIR_NAME"; \
-	$(BLUE)Moving 蝴蝶加速.AppImage$(DONE); \
-	cp -p "蝴蝶加速.AppImage" "$$PKG_DIR_NAME/蝴蝶加速.AppImage"; \
+	$(BLUE)Moving BflyVPN.AppImage$(DONE); \
+	cp -p "BflyVPN.AppImage" "$$PKG_DIR_NAME/BflyVPN.AppImage"; \
 	$(BLUE)Creating Portable Home directory$(DONE); \
-	mkdir -p "$$PKG_DIR_NAME/蝴蝶加速.AppImage.home"; \
+	mkdir -p "$$PKG_DIR_NAME/BflyVPN.AppImage.home"; \
 	$(BLUE)Compressing to .tar.gz$(DONE); \
 	tar -czf "$$PKG_DIR_NAME.tar.gz" -C . "$$PKG_DIR_NAME"; \
 	$(BLUE)Removing intermediate directory$(DONE); \

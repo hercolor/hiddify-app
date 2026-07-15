@@ -387,7 +387,7 @@ String _buildDiagnosticText({
   required AsyncValue<List<DiagProbeResult>> probeResults,
 }) {
   final buffer = StringBuffer()
-    ..writeln('蝴蝶加速内部诊断')
+    ..writeln('BflyVPN 内部诊断')
     ..writeln('loginStatus=${authState.valueOrNull?.status.name ?? 'initializing'}')
     ..writeln('userId=${_diagnosticUserId(authState.valueOrNull?.session?.email)}')
     ..writeln(

@@ -1,6 +1,6 @@
-# 蝴蝶加速客户端变更记录
+# BflyVPN 客户端变更记录
 
-本文件记录蝴蝶加速二次开发后的产品变更。旧上游通用客户端的发布记录不再作为当前项目的主变更记录。
+本文件记录 BflyVPN 二次开发后的产品变更。旧上游通用客户端的发布记录不再作为当前项目的主变更记录。
 
 ## 当前版本
 
@@ -10,11 +10,11 @@
 
 ### 品牌与平台
 
-- 产品名称统一为“蝴蝶加速”。
+- 产品名称统一为“BflyVPN”。
 - Android 包名保持 `pro.y88.accelerator`。
 - iOS 主 App Bundle ID 为 `pro.y88.hudiejiasu`，Network Extension 为 `pro.y88.hudiejiasu.PacketTunnel`。
-- Windows 可执行文件为 `蝴蝶加速.exe`。
-- 图标资源已替换为蝴蝶加速图标。
+- Windows 可执行文件为 `BflyVPN.exe`。
+- 图标资源已替换为 BflyVPN 图标。
 - 启动页当前保持白屏，等待正式启动页设计。
 
 ### 账号与会员

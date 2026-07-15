@@ -484,12 +484,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                   const SizedBox(height: 42),
                   const _LoginMark(),
                   const Gap(24),
-                  Image.asset(
-                    'assets/images/logo_text.png',
-                    width: 220,
-                    height: 55,
-                    fit: BoxFit.contain,
-                  ),
+                  Image.asset('assets/images/logo_text.png', width: 220, height: 55, fit: BoxFit.contain),
                   const Gap(8),
                   Text('Fast, Secure, Borderless', style: theme.textTheme.bodyMedium),
                   const Gap(48),
@@ -677,7 +672,9 @@ class _HeroMemberCard extends HookConsumerWidget {
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFF38BDF8).withOpacity(.3)),
-        boxShadow: [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(.25), blurRadius: 22, offset: const Offset(0, 12))],
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(.25), blurRadius: 22, offset: const Offset(0, 12)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -779,7 +776,11 @@ class _PlanBadge extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandText.caption.copyWith(color: const Color(0xFF854D0E), fontWeight: FontWeight.w900, fontSize: 12),
+            style: BrandText.caption.copyWith(
+              color: const Color(0xFF854D0E),
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -1187,7 +1188,7 @@ class _SupportCard extends HookConsumerWidget {
         const _ActionDivider(),
         _ActionTile(
           icon: Icons.info_outline_rounded,
-          title: '关于 蝴蝶加速',
+          title: '关于 BflyVPN',
           iconColor: const Color(0xFF64748B),
           onTap: () => context.pushNamed('premiumAbout'),
         ),
