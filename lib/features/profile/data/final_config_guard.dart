@@ -209,6 +209,7 @@ class FinalConfigGuard with InfraLogger {
     _removeUnsafeKeysDeep(root);
     _ensureDiagnosticLogLevel(root, stats);
     _normalizeLockedOutboundTags(root);
+    _migrateDeprecatedDnsOutbounds(root);
     _normalizeSingBoxRuleListFields(root);
     _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
     _sanitizeRoute(_ensureRoute(root), stats, globalRouteMode: globalRouteMode);
@@ -336,6 +337,117 @@ class FinalConfigGuard with InfraLogger {
       preferredLegacyTag: '自动选择',
       type: 'urltest',
     );
+  }
+
+  /// Sing-box 1.11+ routes DNS through the DNS engine instead of a `dns`
+  /// outbound. Remove legacy entries before the core parses the profile.
+  static void _migrateDeprecatedDnsOutbounds(Map<String, dynamic> root) {
+    final outbounds = _listValue(root['outbounds']);
+    if (outbounds == null || outbounds.isEmpty) return;
+
+    final deprecatedTags = <String>{};
+    final keptOutbounds = <Object?>[];
+    var removedDeprecatedOutbound = false;
+    for (final outbound in outbounds) {
+      final map = _mapValue(outbound);
+      final type = _stringValue(map?['type'])?.trim().toLowerCase();
+      if (type == 'dns') {
+        removedDeprecatedOutbound = true;
+        final tag = _stringValue(map?['tag'])?.trim();
+        if (tag != null && tag.isNotEmpty) deprecatedTags.add(tag);
+      } else {
+        keptOutbounds.add(outbound);
+      }
+    }
+    if (!removedDeprecatedOutbound) return;
+
+    // Do not turn an unusable legacy profile into an empty selector/urltest.
+    // The core should reject that profile instead of starting without a route.
+    for (final outbound in keptOutbounds) {
+      final map = _mapValue(outbound);
+      final choices = _listValue(map?['outbounds']);
+      if (choices == null || !choices.any((choice) => deprecatedTags.contains(_stringValue(choice)?.trim()))) {
+        continue;
+      }
+      if (choices.every((choice) => deprecatedTags.contains(_stringValue(choice)?.trim()))) return;
+    }
+
+    root['outbounds'] = keptOutbounds;
+
+    // Selector and urltest groups must not retain removed candidates/defaults.
+    for (final outbound in keptOutbounds) {
+      final map = _mapValue(outbound);
+      if (map == null) continue;
+      final choices = _listValue(map['outbounds']);
+      if (choices != null) {
+        final filtered = choices
+            .where((choice) => !deprecatedTags.contains(_stringValue(choice)?.trim()))
+            .toList(growable: true);
+        if (filtered.length != choices.length) map['outbounds'] = filtered;
+      }
+      if (deprecatedTags.contains(_stringValue(map['default'])?.trim())) map.remove('default');
+    }
+
+    final route = _mapValue(root['route']);
+    if (route != null) {
+      // _sanitizeRoute applies the locked route final after this migration.
+      if (deprecatedTags.contains(_stringValue(route['final'])?.trim())) route.remove('final');
+      final rules = _listValue(route['rules']);
+      if (rules != null) {
+        final keptRules = <Object?>[];
+        for (final rule in rules) {
+          final map = _mapValue(rule);
+          if (map == null) {
+            keptRules.add(rule);
+            continue;
+          }
+          final outbound = _stringValue(map['outbound'])?.trim();
+          if (deprecatedTags.contains(outbound) && _isDnsProtocolRule(map)) {
+            map['action'] = 'hijack-dns';
+            map.remove('outbound');
+          } else if (deprecatedTags.contains(outbound)) {
+            // A non-DNS rule targeting the removed outbound has no safe equivalent.
+            continue;
+          }
+          final outboundChoices = _listValue(map['outbounds']);
+          if (outboundChoices != null) {
+            final filteredChoices = outboundChoices
+                .where((choice) => !deprecatedTags.contains(_stringValue(choice)?.trim()))
+                .toList(growable: true);
+            if (filteredChoices.length != outboundChoices.length) {
+              if (filteredChoices.isEmpty) {
+                map.remove('outbounds');
+              } else {
+                map['outbounds'] = filteredChoices;
+              }
+            }
+          }
+          keptRules.add(rule);
+        }
+        route['rules'] = keptRules;
+      }
+    }
+
+    _removeDeprecatedDetourReferences(root, deprecatedTags);
+  }
+
+  static void _removeDeprecatedDetourReferences(Object? value, Set<String> deprecatedTags) {
+    if (value is Map) {
+      for (final key in value.keys.toList()) {
+        final normalizedKey = _normalizeKey(key.toString());
+        final child = value[key];
+        if (const {'detour', 'downloaddetour', 'externaluidownloaddetour'}.contains(normalizedKey) &&
+            deprecatedTags.contains(_stringValue(child)?.trim())) {
+          value.remove(key);
+        } else {
+          _removeDeprecatedDetourReferences(child, deprecatedTags);
+        }
+      }
+    } else if (value is Iterable && value is! String) {
+      for (final child in value) {
+        _removeDeprecatedDetourReferences(child, deprecatedTags);
+      }
+    }
   }
 
   static void _renameOutboundTagIfMissing({
@@ -802,9 +914,7 @@ class FinalConfigGuard with InfraLogger {
       final map = _mapValue(rule);
       if (map == null || !_isDnsProtocolRule(map)) continue;
       map['action'] = 'hijack-dns';
-      if (_stringValue(map['outbound']) == 'dns-out') {
-        map.remove('outbound');
-      }
+      map.remove('outbound');
       return;
     }
     rules.insert(0, {

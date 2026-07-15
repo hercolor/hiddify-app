@@ -565,6 +565,7 @@ void main() {
         },
         'outbounds': [
           {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'dns-out', 'type': 'dns'},
         ],
       });
 
@@ -572,6 +573,7 @@ void main() {
       final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
       final dnsRules = ((sanitized['dns'] as Map)['rules'] as List).cast<Map>();
       final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+      final outbounds = (sanitized['outbounds'] as List).cast<Map>();
 
       expect(dnsRules, hasLength(5));
       expect(dnsRules.first['outbound'], ['any']);
@@ -579,6 +581,7 @@ void main() {
       expect(routeRules, hasLength(6));
       expect(routeRules.first['protocol'], ['dns']);
       expect(routeRules.first['action'], 'hijack-dns');
+      expect(routeRules.first.containsKey('outbound'), isFalse);
       expect(routeRules[1]['domain_suffix'], contains('cn'));
       expect(routeRules[1]['domain_suffix'], contains('api.skk.moe'));
       expect(routeRules.any((rule) => (rule['domain'] as List?)?.contains('ip138.com') == true), isTrue);
@@ -586,6 +589,112 @@ void main() {
       expect(routeRules.any((rule) => rule['domain_keyword'] is List), isTrue);
       expect(routeRules.any((rule) => rule['rule_set'] is List), isTrue);
       expect(result.removedClashModeRules, 2);
+      expect(outbounds.where((item) => item['type'] == 'dns'), isEmpty);
+      expect(outbounds.map((item) => item['tag']), isNot(contains('dns-out')));
+    });
+
+    test('migrates custom legacy DNS outbound references before core import', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'legacy-dns'},
+          ],
+          'final': 'dns-remote',
+        },
+        'route': {
+          'rules': [
+            {
+              'protocol': ['dns'],
+              'outbound': 'legacy-dns',
+            },
+            {
+              'domain': ['example.com'],
+              'outbound': 'legacy-dns',
+            },
+          ],
+          'final': 'legacy-dns',
+          'rule_set': [
+            {
+              'tag': 'custom-rules',
+              'type': 'remote',
+              'url': 'https://example.com/rules.srs',
+              'download_detour': 'legacy-dns',
+            },
+          ],
+        },
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'type': 'selector',
+            'outbounds': ['legacy-dns', 'node'],
+            'default': 'legacy-dns',
+          },
+          {'tag': 'node', 'type': 'vless', 'detour': 'legacy-dns'},
+          {'tag': 'legacy-dns', 'type': 'DNS'},
+        ],
+      });
+
+      const guard = FinalConfigGuard();
+      final result = guard.inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final outbounds = (sanitized['outbounds'] as List).cast<Map>();
+      final selector = outbounds.firstWhere((item) => item['tag'] == 'proxy');
+      final route = sanitized['route'] as Map;
+      final routeRules = (route['rules'] as List).cast<Map>();
+      final ruleSets = (route['rule_set'] as List).cast<Map>();
+      final dnsRule = routeRules.firstWhere((rule) => (rule['protocol'] as List?)?.contains('dns') == true);
+      final dnsServers = ((sanitized['dns'] as Map)['servers'] as List).cast<Map>();
+      final node = outbounds.firstWhere((item) => item['tag'] == 'node');
+      final customRuleSet = ruleSets.firstWhere((item) => item['tag'] == 'custom-rules');
+      final remoteDnsServer = dnsServers.firstWhere((item) => item['tag'] == 'dns-remote');
+
+      expect(outbounds.where((item) => item['type'].toString().toLowerCase() == 'dns'), isEmpty);
+      expect(selector['outbounds'], ['node']);
+      expect(selector.containsKey('default'), isFalse);
+      expect(route['final'], 'proxy');
+      expect(dnsRule['action'], 'hijack-dns');
+      expect(dnsRule.containsKey('outbound'), isFalse);
+      expect(routeRules.any((rule) => rule['outbound'] == 'legacy-dns'), isFalse);
+      expect(
+        routeRules.any((rule) => rule['domain'] is List && (rule['domain'] as List).contains('example.com')),
+        isFalse,
+      );
+      expect(remoteDnsServer['detour'], 'proxy');
+      expect(node.containsKey('detour'), isFalse);
+      expect(customRuleSet.containsKey('download_detour'), isFalse);
+
+      final secondPass = guard.inspectAndSanitizeContent(result.sanitizedContent!);
+      expect(secondPass.changed, isFalse);
+      expect(secondPass.sanitizedContent, isNull);
+    });
+
+    test('keeps an unusable DNS-only selector profile fail-closed', () {
+      final content = jsonEncode({
+        'route': {'rules': <Object?>[], 'final': 'proxy'},
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'type': 'selector',
+            'outbounds': ['legacy-dns'],
+            'default': 'legacy-dns',
+          },
+          {
+            'tag': 'auto',
+            'type': 'urltest',
+            'outbounds': ['legacy-dns'],
+            'default': 'legacy-dns',
+          },
+          {'tag': 'legacy-dns', 'type': 'dns'},
+        ],
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, globalRouteMode: true);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final groups = (sanitized['outbounds'] as List).cast<Map>();
+
+      expect(groups, hasLength(3));
+      expect(groups.where((group) => group['type'] == 'dns'), hasLength(1));
+      expect(groups.where((group) => group['type'] != 'dns'), everyElement(containsPair('outbounds', ['legacy-dns'])));
     });
 
     test('injects smart direct rules when generated final config has no route rules', () {
