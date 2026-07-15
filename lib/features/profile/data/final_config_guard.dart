@@ -852,9 +852,14 @@ class FinalConfigGuard with InfraLogger {
     }
 
     final dnsFinal = _stringValue(dns['final']);
+    final dnsServerTags = _listValue(
+      dns['servers'],
+    )?.map((server) => _stringValue(_mapValue(server)?['tag'])).whereType<String>().toSet();
     if (dnsFinal == null ||
         removedFakeTags.contains(dnsFinal) ||
         removedIpv6Tags.contains(dnsFinal) ||
+        dnsServerTags == null ||
+        !dnsServerTags.contains(dnsFinal) ||
         _containsFakeIpMarker(dnsFinal)) {
       dns['final'] = _firstDnsServerTag(dns) ?? 'dns-remote';
     }

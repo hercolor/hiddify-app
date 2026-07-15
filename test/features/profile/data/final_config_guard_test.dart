@@ -1041,7 +1041,7 @@ void main() {
 
     test('adds typed defaults when an existing DNS object has no servers', () {
       final content = jsonEncode({
-        'dns': <String, Object?>{},
+        'dns': {'servers': <Object?>[], 'final': 'stale-dns'},
         'outbounds': [
           {'tag': 'proxy', 'type': 'selector'},
         ],
