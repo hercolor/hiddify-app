@@ -29,24 +29,25 @@ void main() {
     expect(routeResults.first.summary, contains('actualMode=route'));
     expect(routeResults.first.summary, contains('viaCoreProxy=localhost:unset'));
     expect(routeResults.first.summary, contains('noDirectFallback=true'));
-    expect(routeResults.first.summary, contains('policyTrace=expectedDirect:domain:ipv4-ip.api.skk.moe'));
+    expect(routeResults.first.summary, contains('policyTrace=expectedProxy:domain_suffix:api.skk.moe'));
     expect(routeResults.first.summary, contains('country=HK'));
     expect(directResults.first.summary, contains('actualMode=forcedDirect'));
     expect(directResults.first.summary, contains('policyApplied=false'));
-    expect(directResults.first.summary, contains('policyTrace=expectedDirect:domain:ipv4-ip.api.skk.moe'));
+    expect(directResults.first.summary, contains('policyTrace=expectedProxy:domain_suffix:api.skk.moe'));
     expect(directResults.first.summary, contains('country=CN'));
     expect(proxyResults.first.summary, contains('actualMode=coreOnly'));
     expect(proxyResults.first.summary, contains('policyApplied=false'));
-    expect(proxyResults.first.summary, contains('policyTrace=expectedDirect:domain:ipv4-ip.api.skk.moe'));
+    expect(proxyResults.first.summary, contains('policyTrace=expectedProxy:domain_suffix:api.skk.moe'));
     expect(proxyResults.first.summary, contains('country=HK'));
     expect(results.last.label, 'CN ip.cn');
     expect(results.last.mode, 'proxy');
   });
 
-  test('explains expected direct rule coverage for probe hosts', () {
-    expect(DiagnosticsRouteTrace('2026.ip138.com').matcher, 'domain:2026.ip138.com');
-    expect(DiagnosticsRouteTrace('my.ip.cn').matcher, 'domain:my.ip.cn');
-    expect(DiagnosticsRouteTrace('ip.api.skk.moe').matcher, 'domain:ip.api.skk.moe');
+  test('explains expected proxy overrides for public IP probe hosts', () {
+    expect(DiagnosticsRouteTrace('2026.ip138.com').matcher, 'domain_suffix:ip138.com');
+    expect(DiagnosticsRouteTrace('my.ip.cn').matcher, 'domain_suffix:ip.cn');
+    expect(DiagnosticsRouteTrace('ip.api.skk.moe').matcher, 'domain_suffix:api.skk.moe');
+    expect(DiagnosticsRouteTrace('ip.api.skk.moe').matched, isFalse);
     expect(DiagnosticsRouteTrace('unknown.example').matched, isFalse);
   });
 }

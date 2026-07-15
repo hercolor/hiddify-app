@@ -10,7 +10,11 @@ void main() {
       expect(rules, ClientRoutePolicy.smartRules);
       expect(rules, isNotEmpty);
       expect(rules.first.domains, contains('domain:baidu.com'));
+      expect(rules.first.domains, isNot(contains('ip138.com')));
+      expect(rules.first.domains, isNot(contains('ip.cn')));
+      expect(rules.first.domains, isNot(contains('api.skk.moe')));
       expect(rules.first.outbound, RuleOutbound.bypass);
+      expect(ClientRoutePolicy.publicIpCheckDomainSuffixes, ['ip138.com', 'ip.cn', 'api.skk.moe']);
     });
 
     test('global mode injects no bypass rules', () {

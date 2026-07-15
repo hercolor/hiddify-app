@@ -41,6 +41,7 @@ class FinalConfigGuardResult {
     required this.dnsRuleSummary,
     required this.routeRuleSetSummary,
     required this.inboundSummary,
+    required this.hasUsableTunInbound,
     this.sanitizedContent,
   });
 
@@ -78,6 +79,7 @@ class FinalConfigGuardResult {
   final List<String> dnsRuleSummary;
   final List<String> routeRuleSetSummary;
   final List<String> inboundSummary;
+  final bool hasUsableTunInbound;
   final String? sanitizedContent;
 
   bool get hasResidualFakeIp => fakeIpAfter;
@@ -93,7 +95,8 @@ class FinalConfigGuard with InfraLogger {
     required String stage,
     bool globalRouteMode = false,
     String? selectedOutboundTag,
-    bool ensureAndroidRawInbounds = false,
+    bool ensureRawInbounds = false,
+    bool ensureRawAutoDetectInterface = false,
     bool lockSelectedOutboundReferences = true,
   }) async {
     final file = File(path);
@@ -102,7 +105,8 @@ class FinalConfigGuard with InfraLogger {
       content,
       globalRouteMode: globalRouteMode,
       selectedOutboundTag: selectedOutboundTag,
-      ensureAndroidRawInbounds: ensureAndroidRawInbounds,
+      ensureRawInbounds: ensureRawInbounds,
+      ensureRawAutoDetectInterface: ensureRawAutoDetectInterface,
       lockSelectedOutboundReferences: lockSelectedOutboundReferences,
     );
     if (result.changed && result.sanitizedContent != null) {
@@ -116,7 +120,8 @@ class FinalConfigGuard with InfraLogger {
     String content, {
     bool globalRouteMode = false,
     String? selectedOutboundTag,
-    bool ensureAndroidRawInbounds = false,
+    bool ensureRawInbounds = false,
+    bool ensureRawAutoDetectInterface = false,
     bool lockSelectedOutboundReferences = true,
   }) {
     final fakeIpBefore = _containsFakeIpMarker(content);
@@ -160,6 +165,7 @@ class FinalConfigGuard with InfraLogger {
         dnsRuleSummary: const [],
         routeRuleSetSummary: const [],
         inboundSummary: const [],
+        hasUsableTunInbound: false,
       );
     }
 
@@ -199,6 +205,7 @@ class FinalConfigGuard with InfraLogger {
         dnsRuleSummary: const [],
         routeRuleSetSummary: const [],
         inboundSummary: const [],
+        hasUsableTunInbound: false,
       );
     }
 
@@ -214,8 +221,10 @@ class FinalConfigGuard with InfraLogger {
     _sanitizeDns(_ensureDns(root, stats), stats, globalRouteMode: globalRouteMode);
     _sanitizeRoute(_ensureRoute(root), stats, globalRouteMode: globalRouteMode);
     _ensureSmartRouteFallback(root, globalRouteMode: globalRouteMode);
-    if (ensureAndroidRawInbounds) _ensureAndroidRawInbounds(root);
-    _ensureInboundSniff(root['inbounds']);
+    if (ensureRawInbounds) {
+      _ensureRawInbounds(root, autoDetectInterface: ensureRawAutoDetectInterface);
+    }
+    _migrateInboundFieldsToRouteActions(root);
     if (lockSelectedOutboundReferences) {
       _lockSelectedOutboundReferences(root, selectedOutboundTag, stats);
     }
@@ -261,6 +270,7 @@ class FinalConfigGuard with InfraLogger {
       dnsRuleSummary: _summarizeRules(_listValue(_mapValue(root['dns'])?['rules'])),
       routeRuleSetSummary: _summarizeRuleSets(_listValue(_mapValue(root['route'])?['rule_set'])),
       inboundSummary: _summarizeInbounds(_listValue(root['inbounds'])),
+      hasUsableTunInbound: _hasUsableTunInbound(root['inbounds']),
       sanitizedContent: changed ? encoder!.convert(root) : null,
     );
   }
@@ -300,6 +310,7 @@ class FinalConfigGuard with InfraLogger {
       'removedUnselectedOutbounds=${result.removedUnselectedOutbounds}, '
       'forcedCoreLogLevel=${result.forcedCoreLogLevel}, '
       'coreLogLevel=${_safeLogValue(result.coreLogLevel)}, '
+      'usableTun=${result.hasUsableTunInbound}, '
       'nodeCount=${result.outboundTags.length}, '
       'outboundTags=[$tags], '
       'inbounds=[${result.inboundSummary.join(';')}], '
@@ -999,6 +1010,7 @@ class FinalConfigGuard with InfraLogger {
 
     final rules = _listValue(route['rules']) ?? <Object?>[];
     _ensureDnsHijackRouteRule(rules);
+    _ensurePublicIpCheckRouteRule(rules);
     _addRouteRuleIfMissing(rules, 'ip_is_private', {'ip_is_private': true, 'outbound': 'direct', 'action': 'route'});
     _ensureRouteRuleValues(rules, 'domain', ClientRoutePolicy.cnBypassExactDomains);
     _ensureRouteRuleValues(rules, 'domain_suffix', ClientRoutePolicy.cnBypassDomainSuffixes);
@@ -1038,14 +1050,100 @@ class FinalConfigGuard with InfraLogger {
   }
 
   static void _ensureRouteRuleValues(List<Object?> rules, String matcherKey, List<String> values) {
+    if (values.isEmpty) return;
     for (final item in rules) {
       final map = _mapValue(item);
       if (map == null || _stringValue(map['outbound']) != 'direct' || !map.containsKey(matcherKey)) continue;
       map['action'] = 'route';
-      map[matcherKey] = _mergedStringList(map[matcherKey], values);
+      map[matcherKey] = _withoutPublicIpCheckDomains(_mergedStringList(map[matcherKey], values));
       return;
     }
     rules.add({matcherKey: values, 'outbound': 'direct', 'action': 'route'});
+  }
+
+  static void _ensurePublicIpCheckRouteRule(List<Object?> rules) {
+    for (var index = 0; index < rules.length; index += 1) {
+      final item = rules[index];
+      final map = _mapValue(item);
+      if (map == null || !_isCanonicalPublicIpRouteRule(map)) continue;
+      final domains = _listValue(map['domain_suffix']);
+      if (!_hasCanonicalPublicIpDomainSuffixes(domains)) continue;
+      final outbound = _stringValue(map['outbound']);
+      if (outbound == null || const {'direct', 'block', 'reject', 'dns-out'}.contains(outbound)) continue;
+      map['action'] = 'route';
+      map['outbound'] = LockedCoreConfig.outboundTag;
+      rules.removeAt(index);
+      rules.insert(_dnsHijackRuleCount(rules), item);
+      _removePublicIpChecksFromDirectRules(rules);
+      return;
+    }
+
+    rules.insert(_dnsHijackRuleCount(rules), {
+      'domain_suffix': ClientRoutePolicy.publicIpCheckDomainSuffixes,
+      'outbound': LockedCoreConfig.outboundTag,
+      'action': 'route',
+    });
+    _removePublicIpChecksFromDirectRules(rules);
+  }
+
+  static bool _isCanonicalPublicIpRouteRule(Map<String, dynamic> map) {
+    const allowedKeys = {'domain_suffix', 'outbound', 'action'};
+    return map.keys.every(allowedKeys.contains);
+  }
+
+  static int _dnsHijackRuleCount(List<Object?> rules) {
+    var count = 0;
+    while (count < rules.length && _isDnsProtocolRule(rules[count])) {
+      count += 1;
+    }
+    return count;
+  }
+
+  static void _removePublicIpChecksFromDirectRules(List<Object?> rules) {
+    final emptiedRules = <Object?>[];
+    for (final item in rules) {
+      final map = _mapValue(item);
+      if (map == null || _stringValue(map['outbound']) != 'direct') continue;
+      var removedPublicIpMatcher = false;
+      for (final key in const ['domain', 'domain_suffix']) {
+        if (!map.containsKey(key)) continue;
+        final original = _listValue(map[key]) ?? const [];
+        final cleaned = _withoutPublicIpCheckDomains(original);
+        removedPublicIpMatcher = removedPublicIpMatcher || cleaned.length != original.length;
+        if (cleaned.isEmpty) {
+          map.remove(key);
+        } else {
+          map[key] = cleaned;
+        }
+      }
+      if (removedPublicIpMatcher && !map.containsKey('domain') && !map.containsKey('domain_suffix')) {
+        emptiedRules.add(item);
+      }
+    }
+    rules.removeWhere((rule) => emptiedRules.contains(rule) || _isDefaultBlockOrDirectRule(rule));
+  }
+
+  static List<String> _withoutPublicIpCheckDomains(Iterable<Object?> values) => values
+      .map((value) => value?.toString().trim() ?? '')
+      .where((value) => value.isNotEmpty && !_isPublicIpCheckDomain(value))
+      .toList(growable: false);
+
+  static bool _isPublicIpCheckDomain(String value) {
+    var normalized = value.toLowerCase().trim();
+    if (normalized.startsWith('domain:')) normalized = normalized.substring('domain:'.length);
+    while (normalized.startsWith('.')) {
+      normalized = normalized.substring(1);
+    }
+    return ClientRoutePolicy.publicIpCheckDomainSuffixes.any(
+      (suffix) => normalized == suffix || normalized.endsWith('.$suffix'),
+    );
+  }
+
+  static bool _hasCanonicalPublicIpDomainSuffixes(List<Object?>? domains) {
+    if (domains == null || domains.length != ClientRoutePolicy.publicIpCheckDomainSuffixes.length) return false;
+    final normalized = domains.map((domain) => domain?.toString().toLowerCase().trim() ?? '').toSet();
+    return normalized.length == ClientRoutePolicy.publicIpCheckDomainSuffixes.length &&
+        ClientRoutePolicy.publicIpCheckDomainSuffixes.every(normalized.contains);
   }
 
   static void _addRouteRuleIfMissing(List<Object?> rules, String matcherKey, Map<String, Object> rule) {
@@ -1058,9 +1156,9 @@ class FinalConfigGuard with InfraLogger {
     if (!exists) rules.add(rule);
   }
 
-  static void _ensureAndroidRawInbounds(Map<String, dynamic> root) {
+  static void _ensureRawInbounds(Map<String, dynamic> root, {required bool autoDetectInterface}) {
     final inbounds = _listValue(root['inbounds']) ?? <Object?>[];
-    if (!_hasInboundType(inbounds, 'mixed')) {
+    if (_firstInboundByType(inbounds, 'mixed') == null) {
       inbounds.insert(0, {
         'type': 'mixed',
         'tag': 'mixed-in',
@@ -1068,50 +1166,93 @@ class FinalConfigGuard with InfraLogger {
         'listen_port': LockedCoreConfig.mixedPort,
       });
     }
-    if (!_hasInboundType(inbounds, 'tun')) {
-      inbounds.add({
-        'type': 'tun',
-        'tag': 'tun-in',
-        'address': ['172.19.0.1/30'],
-        'mtu': LockedCoreConfig.mtu,
-        'auto_route': true,
-        'strict_route': true,
-        'stack': 'gvisor',
-      });
+    final existingTun = _firstInboundByType(inbounds, 'tun');
+    final canonicalTun = <String, dynamic>{
+      'type': 'tun',
+      'tag': 'tun-in',
+      'address': ['172.19.0.1/30'],
+      'mtu': LockedCoreConfig.mtu,
+      'auto_route': true,
+      'strict_route': true,
+      'stack': 'gvisor',
+    };
+    if (!autoDetectInterface && existingTun != null) {
+      for (final key in const [
+        'include_uid',
+        'include_uid_range',
+        'exclude_uid',
+        'exclude_uid_range',
+        'include_android_user',
+        'include_package',
+        'exclude_package',
+      ]) {
+        if (existingTun.containsKey(key)) canonicalTun[key] = existingTun[key];
+      }
     }
+    inbounds.removeWhere((item) {
+      final map = _mapValue(item);
+      return map != null && _stringValue(map['type'])?.toLowerCase().trim() == 'tun';
+    });
+    inbounds.add(canonicalTun);
     root['inbounds'] = inbounds;
+    final route = _mapValue(root['route']);
+    if (autoDetectInterface) {
+      if (route != null) route['auto_detect_interface'] = true;
+    } else {
+      route?.remove('auto_detect_interface');
+    }
   }
 
-  static bool _hasInboundType(List<Object?> inbounds, String type) {
+  static Map<String, dynamic>? _firstInboundByType(List<Object?> inbounds, String type) {
     final normalized = type.toLowerCase().trim();
-    return inbounds.any((item) => _stringValue(_mapValue(item)?['type'])?.toLowerCase().trim() == normalized);
+    for (final item in inbounds) {
+      final map = _mapValue(item);
+      if (_stringValue(map?['type'])?.toLowerCase().trim() == normalized) return map;
+    }
+    return null;
   }
 
-  static void _ensureInboundSniff(Object? value) {
-    final inbounds = _listValue(value);
+  static void _migrateInboundFieldsToRouteActions(Map<String, dynamic> root) {
+    final inbounds = _listValue(root['inbounds']);
     if (inbounds == null) return;
+    var needsSniff = false;
     for (final inbound in inbounds) {
       final map = _mapValue(inbound);
       if (map == null) continue;
       final type = _stringValue(map['type'])?.toLowerCase().trim();
       if (type == null || !const {'mixed', 'tun', 'tproxy', 'redirect'}.contains(type)) continue;
-      map['sniff'] = true;
-      map['sniff_override_destination'] = true;
-      map['sniff_timeout'] = '300ms';
-      if (type == 'mixed') {
-        map.remove('domain_strategy');
-      } else {
-        map['domain_strategy'] = LockedCoreConfig.dnsStrategy;
+      needsSniff = true;
+      for (final key in const [
+        'sniff',
+        'sniff_override_destination',
+        'sniff_timeout',
+        'domain_strategy',
+        'udp_disable_domain_unmapping',
+      ]) {
+        map.remove(key);
       }
     }
+    if (!needsSniff) return;
+
+    final route = _mapValue(root['route']);
+    if (route == null) return;
+    final rules = _listValue(route['rules']) ?? <Object?>[];
+    rules.removeWhere(_isSniffActionRule);
+    rules.insert(0, {'action': 'sniff', 'timeout': '300ms'});
+    route['rules'] = rules;
   }
 
   static void _ensureDnsHijackRouteRule(List<Object?> rules) {
-    for (final rule in rules) {
+    for (var index = 0; index < rules.length; index += 1) {
+      final rule = rules[index];
       final map = _mapValue(rule);
       if (map == null || !_isDnsProtocolRule(map)) continue;
       map['action'] = 'hijack-dns';
       map.remove('outbound');
+      if (index != 0) {
+        rules.removeAt(index);
+        rules.insert(0, rule);
+      }
       return;
     }
     rules.insert(0, {
@@ -1126,9 +1267,11 @@ class FinalConfigGuard with InfraLogger {
 
     final servers = _listValue(dns['servers']) ?? <Object?>[];
     _addDnsServerIfMissing(servers, {'tag': 'dns-local', 'type': 'https', 'server': '223.5.5.5'});
+    if (_proxyDnsServerTag(dns) == null) _addDnsServerIfMissing(servers, _defaultDnsServer());
     dns['servers'] = servers;
 
     final rules = _listValue(dns['rules']) ?? <Object?>[];
+    _ensurePublicIpCheckDnsRule(rules, _proxyDnsServerTag(dns) ?? 'dns-remote');
     _ensureDnsRuleValues(rules, 'domain', ClientRoutePolicy.cnBypassExactDomains);
     _ensureDnsRuleValues(rules, 'domain_suffix', ClientRoutePolicy.cnBypassDomainSuffixes);
     _ensureDnsRuleValues(rules, 'domain_keyword', ClientRoutePolicy.cnBypassDomainKeywords);
@@ -1139,6 +1282,54 @@ class FinalConfigGuard with InfraLogger {
     dns['rules'] = rules;
   }
 
+  static void _ensurePublicIpCheckDnsRule(List<Object?> rules, String server) {
+    for (var index = 0; index < rules.length; index += 1) {
+      final item = rules[index];
+      final map = _mapValue(item);
+      if (map == null || !_isCanonicalPublicIpDnsRule(map)) continue;
+      final domains = _listValue(map['domain_suffix']);
+      if (!_hasCanonicalPublicIpDomainSuffixes(domains)) continue;
+      if (_stringValue(map['server']) == 'dns-local') continue;
+      map['server'] = server;
+      rules.removeAt(index);
+      rules.insert(0, item);
+      _removePublicIpChecksFromLocalDnsRules(rules);
+      return;
+    }
+    rules.insert(0, {'domain_suffix': ClientRoutePolicy.publicIpCheckDomainSuffixes, 'server': server});
+    _removePublicIpChecksFromLocalDnsRules(rules);
+  }
+
+  static bool _isCanonicalPublicIpDnsRule(Map<String, dynamic> map) {
+    const allowedKeys = {'domain_suffix', 'server', 'action'};
+    final action = _stringValue(map['action'])?.toLowerCase().trim();
+    return map.keys.every(allowedKeys.contains) && (action == null || action == 'route');
+  }
+
+  static void _removePublicIpChecksFromLocalDnsRules(List<Object?> rules) {
+    final emptiedRules = <Object?>[];
+    for (final item in rules) {
+      final map = _mapValue(item);
+      if (map == null || _stringValue(map['server']) != 'dns-local') continue;
+      var removedPublicIpMatcher = false;
+      for (final key in const ['domain', 'domain_suffix']) {
+        if (!map.containsKey(key)) continue;
+        final original = _listValue(map[key]) ?? const [];
+        final cleaned = _withoutPublicIpCheckDomains(original);
+        removedPublicIpMatcher = removedPublicIpMatcher || cleaned.length != original.length;
+        if (cleaned.isEmpty) {
+          map.remove(key);
+        } else {
+          map[key] = cleaned;
+        }
+      }
+      if (removedPublicIpMatcher && !map.containsKey('domain') && !map.containsKey('domain_suffix')) {
+        emptiedRules.add(item);
+      }
+    }
+    rules.removeWhere(emptiedRules.contains);
+  }
+
   static void _addDnsServerIfMissing(List<Object?> servers, Map<String, Object> server) {
     final tag = server['tag']?.toString();
     if (tag == null || tag.isEmpty) return;
@@ -1147,6 +1338,7 @@ class FinalConfigGuard with InfraLogger {
   }
 
   static void _ensureDnsRuleValues(List<Object?> rules, String matcherKey, List<String> values) {
+    if (values.isEmpty) return;
     for (final item in rules) {
       final map = _mapValue(item);
       if (map == null || _stringValue(map['server']) != 'dns-local' || !map.containsKey(matcherKey)) continue;
@@ -1378,7 +1570,7 @@ class FinalConfigGuard with InfraLogger {
     return route;
   }
 
-  static Map<String, dynamic> _defaultDnsServer() => {
+  static Map<String, Object> _defaultDnsServer() => {
     'tag': 'dns-remote',
     'type': 'tcp',
     'server': '8.8.8.8',
@@ -1438,6 +1630,52 @@ class FinalConfigGuard with InfraLogger {
       if (tag != null && tag.isNotEmpty && !_containsFakeIpMarker(tag)) return tag;
     }
     return null;
+  }
+
+  static String? _proxyDnsServerTag(Map<String, dynamic> dns) {
+    final servers = _listValue(dns['servers']);
+    if (servers == null) return null;
+    for (final server in servers) {
+      final map = _mapValue(server);
+      final tag = _stringValue(map?['tag'])?.trim();
+      if (map == null || tag == null || tag.isEmpty || _containsFakeIpMarker(tag)) continue;
+      final desiredDetour = _desiredDnsServerDetour(map);
+      if (desiredDetour != null && desiredDetour != 'direct') return tag;
+    }
+    return null;
+  }
+
+  static bool _hasUsableTunInbound(Object? value) {
+    final inbounds = _listValue(value);
+    if (inbounds == null) return false;
+    for (final inbound in inbounds) {
+      final map = _mapValue(inbound);
+      if (_stringValue(map?['type'])?.toLowerCase().trim() != 'tun') continue;
+      final addresses = _listValue(map?['address']);
+      final hasIpv4Address =
+          addresses?.any((address) {
+            final value = address?.toString().trim() ?? '';
+            return value.isNotEmpty && value.contains('.') && value.contains('/');
+          }) ==
+          true;
+      final mtu = map?['mtu'];
+      final validMtu = mtu is num && mtu == LockedCoreConfig.mtu;
+      final hasCatchAllRouteExclusion = const [
+        'route_exclude_address',
+        'inet4_route_exclude_address',
+        'inet6_route_exclude_address',
+      ].any((key) => _containsCatchAllCidr(map?[key]));
+      if (_stringValue(map?['tag']) == 'tun-in' &&
+          hasIpv4Address &&
+          validMtu &&
+          map?['auto_route'] == true &&
+          map?['strict_route'] == true &&
+          _stringValue(map?['stack']) == 'gvisor' &&
+          !hasCatchAllRouteExclusion) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static List<String> _summarizeRules(List<Object?>? rules) {

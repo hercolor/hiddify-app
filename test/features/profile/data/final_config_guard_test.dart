@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hiddify/core/config/client_route_policy.dart';
 import 'package:hiddify/core/config/locked_core_config.dart';
 import 'package:hiddify/features/profile/data/final_config_guard.dart';
 
@@ -141,11 +142,13 @@ void main() {
       final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
       expect(localDnsServer.containsKey('detour'), isFalse);
       expect(dnsServer['detour'], 'proxy');
-      expect(tunInbound['sniff'], isTrue);
-      expect(tunInbound['sniff_override_destination'], isTrue);
-      expect(tunInbound['sniff_timeout'], '300ms');
-      expect(tunInbound['domain_strategy'], LockedCoreConfig.dnsStrategy);
-      expect(routeRules.any((rule) => rule['action'] == 'sniff'), isFalse);
+      expect(tunInbound.containsKey('sniff'), isFalse);
+      expect(tunInbound.containsKey('sniff_override_destination'), isFalse);
+      expect(tunInbound.containsKey('sniff_timeout'), isFalse);
+      expect(tunInbound.containsKey('domain_strategy'), isFalse);
+      expect(routeRules.first['action'], 'sniff');
+      expect(routeRules.first['timeout'], '300ms');
+      expect(routeRules[1]['action'], 'hijack-dns');
       expect(dnsServer.containsKey('strategy'), isFalse);
       expect(dnsServer['type'], 'tcp');
       expect(dnsServer['server'], '8.8.8.8');
@@ -510,10 +513,11 @@ void main() {
       expect(localDnsServer.containsKey('detour'), isFalse);
       expect(route['final'], '香港-IPEL');
       expect(routeRules.any((rule) => rule['action'] == 'sniff'), isFalse);
-      expect(routeRules.firstWhere((rule) => rule['domain_suffix'] is List)['outbound'], '香港-IPEL');
+      expect(routeRules[1]['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
+      expect(routeRules[1]['outbound'], '香港-IPEL');
       expect(routeRuleSets.map((item) => item['download_detour']), everyElement('香港-IPEL'));
       expect(result.forcedSelectorDefaults, 1);
-      expect(result.forcedSelectedOutboundReferences, 5);
+      expect(result.forcedSelectedOutboundReferences, 6);
       expect(result.removedUnselectedOutbounds, 0);
     });
 
@@ -690,17 +694,20 @@ void main() {
       final dnsRules = ((sanitized['dns'] as Map)['rules'] as List).cast<Map>();
       final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
       final outbounds = (sanitized['outbounds'] as List).cast<Map>();
+      final anyDnsRule = dnsRules.firstWhere((rule) => rule['outbound'] is List);
 
       expect(dnsRules, hasLength(5));
-      expect(dnsRules.first['outbound'], ['any']);
-      expect(dnsRules.first['query_type'], ['A']);
+      expect(anyDnsRule['outbound'], ['any']);
+      expect(anyDnsRule['query_type'], ['A']);
       expect(routeRules, hasLength(6));
       expect(routeRules.first['protocol'], ['dns']);
       expect(routeRules.first['action'], 'hijack-dns');
       expect(routeRules.first.containsKey('outbound'), isFalse);
-      expect(routeRules[1]['domain_suffix'], contains('cn'));
-      expect(routeRules[1]['domain_suffix'], contains('api.skk.moe'));
-      expect(routeRules.any((rule) => (rule['domain'] as List?)?.contains('ip138.com') == true), isTrue);
+      expect(routeRules[1]['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
+      expect(routeRules[1]['outbound'], 'proxy');
+      expect(routeRules[2]['domain_suffix'], contains('cn'));
+      expect(routeRules[2]['domain_suffix'], isNot(contains('api.skk.moe')));
+      expect(routeRules.any((rule) => (rule['domain'] as List?)?.contains('ip138.com') == true), isFalse);
       expect(routeRules.any((rule) => rule['ip_is_private'] == true), isTrue);
       expect(routeRules.any((rule) => rule['domain_keyword'] is List), isTrue);
       expect(routeRules.any((rule) => rule['rule_set'] is List), isTrue);
@@ -841,13 +848,14 @@ void main() {
       expect(routeRules[0]['protocol'], ['dns']);
       expect(routeRules[0]['action'], 'hijack-dns');
       expect(routeRules[0].containsKey('outbound'), isFalse);
-      expect(routeRules[1]['ip_is_private'], isTrue);
+      expect(routeRules[1]['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
+      expect(routeRules[1]['outbound'], 'proxy');
       expect(routeRules[1]['action'], 'route');
-      expect(routeRules[2]['domain'], contains('ip138.com'));
-      expect(routeRules[2]['domain'], contains('www.ip.cn'));
-      expect(routeRules[2]['outbound'], 'direct');
+      expect(routeRules[2]['ip_is_private'], isTrue);
       expect(routeRules[2]['action'], 'route');
       expect(routeRules[3]['domain_suffix'], contains('baidu.com'));
+      expect(routeRules[3]['domain_suffix'], contains('cn'));
+      expect(routeRules[3]['domain_suffix'], isNot(contains('ip.cn')));
       expect(routeRules[3]['outbound'], 'direct');
       expect(routeRules[3]['action'], 'route');
       expect(routeRules[4]['domain_keyword'], contains('baidu'));
@@ -863,13 +871,19 @@ void main() {
       expect(localDns.containsKey('strategy'), isFalse);
       expect(dns['reverse_mapping'], isTrue);
       expect(route['default_domain_resolver'], 'dns-local');
-      expect(dnsRules.any((item) => (item['domain'] as List?)?.contains('www.ip138.com') == true), isTrue);
-      expect(dnsRules.any((item) => (item['domain_suffix'] as List?)?.contains('ip138.com') == true), isTrue);
+      expect(dnsRules.first['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
+      expect(dnsRules.first['server'], 'dns-remote');
+      expect(
+        dnsRules.any(
+          (item) => item['server'] == 'dns-local' && (item['domain_suffix'] as List?)?.contains('ip138.com') == true,
+        ),
+        isFalse,
+      );
       expect(dnsRules.any((item) => (item['rule_set'] as List?)?.contains('geosite-cn') == true), isTrue);
       expect(outbounds.any((item) => item['tag'] == 'direct' && item['type'] == 'direct'), isTrue);
     });
 
-    test('merges diagnostic test domains into existing direct rules', () {
+    test('migrates legacy public IP checks out of direct rules', () {
       final content = jsonEncode({
         'dns': {
           'servers': [
@@ -907,23 +921,113 @@ void main() {
         },
       });
 
+      const guard = FinalConfigGuard();
+      final result = guard.inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+      final dnsRules = ((sanitized['dns'] as Map)['rules'] as List).cast<Map>();
+
+      expect(routeRules.first['protocol'], ['dns']);
+      expect(routeRules[1]['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
+      expect(routeRules[1]['outbound'], 'proxy');
+      expect(
+        routeRules.where((rule) => rule['outbound'] == 'direct').expand((rule) sync* {
+          yield* (rule['domain'] as List?) ?? const [];
+          yield* (rule['domain_suffix'] as List?) ?? const [];
+        }),
+        isNot(contains(anyOf('ip138.com', 'ip.cn', 'api.skk.moe'))),
+      );
+      expect(dnsRules.first['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
+      expect(dnsRules.first['server'], 'dns-remote');
+      expect(
+        dnsRules.where((rule) => rule['server'] == 'dns-local').expand((rule) sync* {
+          yield* (rule['domain'] as List?) ?? const [];
+          yield* (rule['domain_suffix'] as List?) ?? const [];
+        }),
+        isNot(contains(anyOf('ip138.com', 'ip.cn', 'api.skk.moe'))),
+      );
+
+      final secondPass = guard.inspectAndSanitizeContent(result.sanitizedContent!);
+      expect(secondPass.changed, isFalse);
+      expect(secondPass.sanitizedContent, isNull);
+    });
+
+    test('drops composite direct rules when their public IP domain matcher is emptied', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {
+          'rules': [
+            {
+              'domain_suffix': ['ip.cn'],
+              'network': ['tcp'],
+              'outbound': 'direct',
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+
+      expect(routeRules.any((rule) => rule['outbound'] == 'direct' && rule['network'] != null), isFalse);
+      expect(routeRules[1]['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
+      expect(routeRules[1]['outbound'], 'proxy');
+    });
+
+    test('adds unconditional public IP overrides when legacy rules have extra matchers', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-local', 'address': 'https://223.5.5.5/dns-query', 'detour': 'direct'},
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'rules': [
+            {
+              'domain_suffix': ClientRoutePolicy.publicIpCheckDomainSuffixes,
+              'query_type': ['A'],
+              'server': 'dns-remote',
+            },
+          ],
+          'final': 'dns-local',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {
+          'rules': [
+            {
+              'domain_suffix': ClientRoutePolicy.publicIpCheckDomainSuffixes,
+              'network': ['tcp'],
+              'outbound': 'proxy',
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
       final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
       final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
       final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
       final dnsRules = ((sanitized['dns'] as Map)['rules'] as List).cast<Map>();
-      final routeDomainRule = routeRules.firstWhere((rule) => rule['domain'] is List);
-      final routeSuffixRule = routeRules.firstWhere((rule) => rule['domain_suffix'] is List);
-      final dnsDomainRule = dnsRules.firstWhere((rule) => rule['domain'] is List);
-      final dnsSuffixRule = dnsRules.firstWhere((rule) => rule['domain_suffix'] is List);
 
-      expect(routeDomainRule['domain'], contains('2026.ip138.com'));
-      expect(routeDomainRule['domain'], contains('my.ip.cn'));
-      expect(routeDomainRule['domain'], contains('ipv4-ip.api.skk.moe'));
-      expect(routeDomainRule['domain'], contains('ip.api.skk.moe'));
-      expect(routeSuffixRule['domain_suffix'], contains('api.skk.moe'));
-      expect(dnsDomainRule['domain'], contains('2026.ip138.com'));
-      expect(dnsDomainRule['domain'], contains('ip.api.skk.moe'));
-      expect(dnsSuffixRule['domain_suffix'], contains('api.skk.moe'));
+      expect(routeRules[1].keys, containsAll(['domain_suffix', 'outbound', 'action']));
+      expect(routeRules[1].containsKey('network'), isFalse);
+      expect(routeRules[1]['outbound'], 'proxy');
+      expect(dnsRules.first.keys, containsAll(['domain_suffix', 'server']));
+      expect(dnsRules.first.containsKey('query_type'), isFalse);
+      expect(dnsRules.first['server'], 'dns-remote');
     });
 
     test('keeps mixed inbound domain visible for route rule matching', () {
@@ -957,16 +1061,20 @@ void main() {
       final mixed = inbounds.firstWhere((item) => item['type'] == 'mixed');
       final tun = inbounds.firstWhere((item) => item['type'] == 'tun');
 
-      expect(mixed['sniff'], isTrue);
-      expect(mixed['sniff_override_destination'], isTrue);
-      expect(mixed['sniff_timeout'], '300ms');
+      expect(mixed.containsKey('sniff'), isFalse);
+      expect(mixed.containsKey('sniff_override_destination'), isFalse);
+      expect(mixed.containsKey('sniff_timeout'), isFalse);
       expect(mixed.containsKey('domain_strategy'), isFalse);
-      expect(tun['domain_strategy'], LockedCoreConfig.dnsStrategy);
+      expect(tun.containsKey('domain_strategy'), isFalse);
+      final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+      expect(routeRules.first['action'], 'sniff');
+      expect(routeRules.first['timeout'], '300ms');
+      expect(routeRules[1]['action'], 'hijack-dns');
       expect(result.inboundSummary.join(' ; '), contains('type=mixed'));
       expect(result.inboundSummary.join(' ; '), isNot(contains('type=mixed domain_strategy')));
     });
 
-    test('does not synthesize Android raw inbounds unless requested', () {
+    test('does not synthesize raw inbounds unless requested', () {
       final content = jsonEncode({
         'dns': {
           'servers': [
@@ -986,9 +1094,10 @@ void main() {
 
       expect(sanitized.containsKey('inbounds'), isFalse);
       expect(result.inboundSummary, isEmpty);
+      expect(result.hasUsableTunInbound, isFalse);
     });
 
-    test('synthesizes Android raw mixed and tun inbounds for runtime start', () {
+    test('synthesizes raw mixed and tun inbounds for runtime start', () {
       final content = jsonEncode({
         'dns': {
           'servers': [
@@ -1003,25 +1112,185 @@ void main() {
         'route': {'rules': [], 'final': 'proxy'},
       });
 
-      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, ensureAndroidRawInbounds: true);
+      const guard = FinalConfigGuard();
+      final result = guard.inspectAndSanitizeContent(content, ensureRawInbounds: true);
+      final windowsResult = guard.inspectAndSanitizeContent(
+        content,
+        ensureRawInbounds: true,
+        ensureRawAutoDetectInterface: true,
+      );
       final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final windowsSanitized = jsonDecode(windowsResult.sanitizedContent!) as Map<String, dynamic>;
       final inbounds = (sanitized['inbounds'] as List).cast<Map>();
       final mixed = inbounds.firstWhere((item) => item['type'] == 'mixed');
       final tun = inbounds.firstWhere((item) => item['type'] == 'tun');
 
       expect(mixed['listen'], '127.0.0.1');
       expect(mixed['listen_port'], LockedCoreConfig.mixedPort);
-      expect(mixed['sniff'], isTrue);
-      expect(mixed['sniff_override_destination'], isTrue);
+      expect(mixed.containsKey('sniff'), isFalse);
+      expect(mixed.containsKey('sniff_override_destination'), isFalse);
       expect(mixed.containsKey('domain_strategy'), isFalse);
       expect(tun['address'], contains('172.19.0.1/30'));
       expect(tun['mtu'], LockedCoreConfig.mtu);
       expect(tun['auto_route'], isTrue);
       expect(tun['strict_route'], isTrue);
       expect(tun['stack'], 'gvisor');
-      expect(tun['domain_strategy'], LockedCoreConfig.dnsStrategy);
+      expect(tun.containsKey('domain_strategy'), isFalse);
+      expect((sanitized['route'] as Map).containsKey('auto_detect_interface'), isFalse);
+      expect((windowsSanitized['route'] as Map)['auto_detect_interface'], isTrue);
+      final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
+      expect(routeRules.first['action'], 'sniff');
+      expect(routeRules.first['timeout'], '300ms');
+      expect(routeRules[1]['action'], 'hijack-dns');
+      expect(routeRules[2]['domain_suffix'], ClientRoutePolicy.publicIpCheckDomainSuffixes);
       expect(result.inboundSummary.join(' ; '), contains('type=mixed'));
       expect(result.inboundSummary.join(' ; '), contains('type=tun'));
+      expect(result.hasUsableTunInbound, isTrue);
+
+      final secondPass = guard.inspectAndSanitizeContent(result.sanitizedContent!, ensureRawInbounds: true);
+      expect(secondPass.changed, isFalse);
+      expect(secondPass.sanitizedContent, isNull);
+    });
+
+    test('repairs incomplete duplicate raw TUN inbounds before runtime start', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {
+          'rules': [
+            {'action': 'sniff'},
+          ],
+          'final': 'proxy',
+          'auto_detect_interface': true,
+        },
+        'inbounds': [
+          {'type': 'tun', 'tag': 'broken-tun', 'auto_route': false, 'strict_route': false},
+          {'type': 'tun', 'tag': 'duplicate-tun'},
+        ],
+      });
+
+      const guard = FinalConfigGuard();
+      final androidResult = guard.inspectAndSanitizeContent(content, ensureRawInbounds: true);
+      final sanitized = jsonDecode(androidResult.sanitizedContent!) as Map<String, dynamic>;
+      final tunInbounds = (sanitized['inbounds'] as List)
+          .cast<Map>()
+          .where((inbound) => inbound['type'] == 'tun')
+          .toList(growable: false);
+      final route = sanitized['route'] as Map;
+      final routeRules = (route['rules'] as List).cast<Map>();
+
+      expect(tunInbounds, hasLength(1));
+      expect(tunInbounds.single['tag'], 'tun-in');
+      expect(tunInbounds.single['address'], ['172.19.0.1/30']);
+      expect(tunInbounds.single['auto_route'], isTrue);
+      expect(tunInbounds.single['strict_route'], isTrue);
+      expect(tunInbounds.single['stack'], 'gvisor');
+      expect(route.containsKey('auto_detect_interface'), isFalse);
+      expect(routeRules.where((rule) => rule['action'] == 'sniff'), hasLength(1));
+      expect(androidResult.hasUsableTunInbound, isTrue);
+
+      final secondPass = guard.inspectAndSanitizeContent(androidResult.sanitizedContent!, ensureRawInbounds: true);
+      expect(secondPass.changed, isFalse);
+    });
+
+    test('rebuilds Windows TUN without inherited route exclusions or interface constraints', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+        'inbounds': [
+          {
+            'type': 'tun',
+            'tag': 'profile-tun',
+            'route_exclude_address': ['0.0.0.0/0'],
+            'route_exclude_address_set': ['all'],
+            'include_interface': ['missing-interface'],
+            'exclude_interface': ['Ethernet'],
+            'include_package': ['com.example.browser'],
+            'gso': true,
+          },
+        ],
+      });
+
+      const guard = FinalConfigGuard();
+      final result = guard.inspectAndSanitizeContent(
+        content,
+        ensureRawInbounds: true,
+        ensureRawAutoDetectInterface: true,
+      );
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final tun = (sanitized['inbounds'] as List).cast<Map>().singleWhere((inbound) => inbound['type'] == 'tun');
+
+      expect(tun, {
+        'type': 'tun',
+        'tag': 'tun-in',
+        'address': ['172.19.0.1/30'],
+        'mtu': LockedCoreConfig.mtu,
+        'auto_route': true,
+        'strict_route': true,
+        'stack': 'gvisor',
+      });
+      expect((sanitized['route'] as Map)['auto_detect_interface'], isTrue);
+      expect(result.hasUsableTunInbound, isTrue);
+
+      final secondPass = guard.inspectAndSanitizeContent(
+        result.sanitizedContent!,
+        ensureRawInbounds: true,
+        ensureRawAutoDetectInterface: true,
+      );
+      expect(secondPass.changed, isFalse);
+      expect(secondPass.sanitizedContent, isNull);
+    });
+
+    test('preserves only Android app routing selectors when rebuilding raw TUN', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {'rules': [], 'final': 'proxy'},
+        'inbounds': [
+          {
+            'type': 'tun',
+            'route_exclude_address': ['0.0.0.0/0'],
+            'include_package': ['com.example.browser'],
+            'exclude_uid': [1000],
+            'interface_name': 'stale-tun',
+          },
+        ],
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content, ensureRawInbounds: true);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final tun = (sanitized['inbounds'] as List).cast<Map>().singleWhere((inbound) => inbound['type'] == 'tun');
+
+      expect(tun['include_package'], ['com.example.browser']);
+      expect(tun['exclude_uid'], [1000]);
+      expect(tun.containsKey('route_exclude_address'), isFalse);
+      expect(tun.containsKey('interface_name'), isFalse);
+      expect(result.hasUsableTunInbound, isTrue);
     });
 
     test('does not inject smart direct rules in global route mode', () {
@@ -1037,6 +1306,60 @@ void main() {
       final route = sanitized['route'] as Map;
 
       expect(route['rules'], isEmpty);
+    });
+
+    test('keeps only required actions when Windows TUN starts in global route mode', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {'tag': 'dns-remote', 'address': 'tcp://8.8.8.8', 'detour': 'proxy'},
+          ],
+          'final': 'dns-remote',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {
+          'rules': [
+            {'ip_is_private': true, 'outbound': 'direct'},
+            {
+              'protocol': ['dns'],
+              'action': 'hijack-dns',
+            },
+          ],
+          'final': 'proxy',
+        },
+      });
+
+      const guard = FinalConfigGuard();
+      final result = guard.inspectAndSanitizeContent(
+        content,
+        globalRouteMode: true,
+        ensureRawInbounds: true,
+        ensureRawAutoDetectInterface: true,
+      );
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final route = sanitized['route'] as Map;
+      final routeRules = (route['rules'] as List).cast<Map>();
+
+      expect(routeRules, hasLength(2));
+      expect(routeRules[0], {'action': 'sniff', 'timeout': '300ms'});
+      expect(routeRules[1]['protocol'], ['dns']);
+      expect(routeRules[1]['action'], 'hijack-dns');
+      expect(routeRules.every((rule) => rule['outbound'] != 'direct'), isTrue);
+      expect(route['auto_detect_interface'], isTrue);
+      expect(result.removedGlobalModeRules, 1);
+      expect(result.hasUsableTunInbound, isTrue);
+
+      final secondPass = guard.inspectAndSanitizeContent(
+        result.sanitizedContent!,
+        globalRouteMode: true,
+        ensureRawInbounds: true,
+        ensureRawAutoDetectInterface: true,
+      );
+      expect(secondPass.changed, isFalse);
+      expect(secondPass.sanitizedContent, isNull);
     });
 
     test('adds typed defaults when an existing DNS object has no servers', () {

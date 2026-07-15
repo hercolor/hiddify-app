@@ -152,7 +152,8 @@ class DiagnosticsProbeService {
 
   static String _policyTrace(String host) {
     final trace = DiagnosticsRouteTrace(host);
-    return trace.matched ? 'expectedDirect:${trace.matcher}' : 'expectedProxy:final';
+    if (trace.matched) return 'expectedDirect:${trace.matcher}';
+    return trace.matcher == 'final:proxy' ? 'expectedProxy:final' : 'expectedProxy:${trace.matcher}';
   }
 
   static String _summarizeResponse(String url, Response<Object> response) {
@@ -237,6 +238,12 @@ class DiagnosticsProbeService {
 class DiagnosticsRouteTrace {
   factory DiagnosticsRouteTrace(String host) {
     final normalized = host.toLowerCase().trim();
+    for (final suffix in ClientRoutePolicy.publicIpCheckDomainSuffixes) {
+      final normalizedSuffix = suffix.toLowerCase().trim();
+      if (normalized == normalizedSuffix || normalized.endsWith('.$normalizedSuffix')) {
+        return DiagnosticsRouteTrace._(host: host, matched: false, matcher: 'domain_suffix:$suffix');
+      }
+    }
     for (final domain in ClientRoutePolicy.cnBypassExactDomains) {
       if (normalized == domain) {
         return DiagnosticsRouteTrace._(host: host, matched: true, matcher: 'domain:$domain');

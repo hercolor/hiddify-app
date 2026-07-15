@@ -80,21 +80,11 @@ abstract final class ClientRoutePolicy {
     'zhihu.com',
     'zhimg.com',
     'gitee.com',
-    'ip138.com',
-    'ip.cn',
-    'api.skk.moe',
   ];
 
-  static const cnBypassExactDomains = [
-    'ip138.com',
-    'www.ip138.com',
-    '2026.ip138.com',
-    'ip.cn',
-    'www.ip.cn',
-    'my.ip.cn',
-    'ipv4-ip.api.skk.moe',
-    'ip.api.skk.moe',
-  ];
+  static const cnBypassExactDomains = <String>[];
+
+  static const publicIpCheckDomainSuffixes = ['ip138.com', 'ip.cn', 'api.skk.moe'];
 
   static const cnBypassDomainKeywords = [
     'baidu',
@@ -164,16 +154,7 @@ abstract final class ClientRoutePolicy {
       'domain:amap.com,'
       'domain:.amap.com,'
       'domain:zhihu.com,'
-      'domain:.zhihu.com,'
-      'domain:ip138.com,'
-      'domain:.ip138.com,'
-      'domain:2026.ip138.com,'
-      'domain:ip.cn,'
-      'domain:.ip.cn,'
-      'domain:my.ip.cn,'
-      'domain:ipv4-ip.api.skk.moe,'
-      'domain:ip.api.skk.moe,'
-      'domain:.api.skk.moe';
+      'domain:.zhihu.com';
 
   static const _privateIpv4CidrsText = '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16';
 

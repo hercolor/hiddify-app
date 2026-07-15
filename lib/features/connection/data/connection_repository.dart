@@ -157,7 +157,8 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
           generatedContent,
           globalRouteMode: globalRouteMode,
           selectedOutboundTag: selectedOutboundTag,
-          ensureAndroidRawInbounds: PlatformUtils.isAndroid,
+          ensureRawInbounds: PlatformUtils.isAndroid || PlatformUtils.isWindows,
+          ensureRawAutoDetectInterface: PlatformUtils.isWindows,
         );
         final runtimeFile = profilePathResolver.file('${prof.id}.runtime');
         await runtimeFile.writeAsString(runtimeResult.sanitizedContent ?? generatedContent);
@@ -174,6 +175,9 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
         );
         if (runtimeResult.hasResidualFakeIp) {
           throw const ConnectionFailure.invalidConfig(FinalConfigGuard.residualFakeIpMessage);
+        }
+        if ((PlatformUtils.isAndroid || PlatformUtils.isWindows) && !runtimeResult.hasUsableTunInbound) {
+          throw const ConnectionFailure.backgroundCoreNotAvailable();
         }
         return runtimeFile.path;
       }, (err, st) => err is ConnectionFailure ? err : ConnectionFailure.unexpected(err, st));
@@ -192,7 +196,8 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
       'final config check: stage=$stage, label=$label, globalRouteMode=$globalRouteMode, '
       'parsedJson=${result.parsedJson}, sanitized=${result.changed}, '
       'routeFinal=${result.routeFinal}, routeRules=${result.routeRuleCount}, '
-      'dnsServers=${result.dnsServerCount}, removedClashModeRules=${result.removedClashModeRules}, '
+      'dnsServers=${result.dnsServerCount}, usableTun=${result.hasUsableTunInbound}, '
+      'removedClashModeRules=${result.removedClashModeRules}, '
       'removedGlobalModeRules=${result.removedGlobalModeRules}, '
       'forcedSelectedOutboundReferences=${result.forcedSelectedOutboundReferences}, '
       'removedUnselectedOutbounds=${result.removedUnselectedOutbounds}, '
