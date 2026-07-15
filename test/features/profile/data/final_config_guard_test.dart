@@ -139,14 +139,16 @@ void main() {
       final localDnsServer = dnsServers.firstWhere((item) => item['tag'] == 'dns-local');
       final tunInbound = (sanitized['inbounds'] as List).cast<Map>().first;
       final routeRules = ((sanitized['route'] as Map)['rules'] as List).cast<Map>();
-      expect(localDnsServer['detour'], 'direct');
+      expect(localDnsServer.containsKey('detour'), isFalse);
       expect(dnsServer['detour'], 'proxy');
       expect(tunInbound['sniff'], isTrue);
       expect(tunInbound['sniff_override_destination'], isTrue);
       expect(tunInbound['sniff_timeout'], '300ms');
       expect(tunInbound['domain_strategy'], LockedCoreConfig.dnsStrategy);
       expect(routeRules.any((rule) => rule['action'] == 'sniff'), isFalse);
-      expect(dnsServer['strategy'], 'ipv4_only');
+      expect(dnsServer.containsKey('strategy'), isFalse);
+      expect(dnsServer['type'], 'tcp');
+      expect(dnsServer['server'], '8.8.8.8');
       expect((sanitized['dns'] as Map)['strategy'], 'ipv4_only');
       expect((sanitized['dns'] as Map)['reverse_mapping'], isTrue);
       expect(jsonEncode(sanitized), isNot(contains('::/0')));
@@ -214,8 +216,8 @@ void main() {
       final localDnsServer = dnsServers.firstWhere((item) => item['tag'] == 'dns-local');
       expect(dnsServer['tag'], 'dns-remote');
       expect(dnsServer['detour'], LockedCoreConfig.outboundTag);
-      expect(localDnsServer['detour'], 'direct');
-      expect(dnsServer['strategy'], LockedCoreConfig.dnsStrategy);
+      expect(localDnsServer.containsKey('detour'), isFalse);
+      expect(dnsServer.containsKey('strategy'), isFalse);
       expect((sanitized['dns'] as Map)['strategy'], LockedCoreConfig.dnsStrategy);
       expect((sanitized['route'] as Map)['final'], LockedCoreConfig.routeFinal);
     });
@@ -288,13 +290,13 @@ void main() {
       expect(routeRuleSets.map((item) => item['tag']), containsAll(['geosite-cn', 'geoip-cn']));
       expect(routeRuleSets.map((item) => item['download_detour']), everyElement(LockedCoreConfig.outboundTag));
       expect(dnsServer['detour'], LockedCoreConfig.outboundTag);
-      expect(localDnsServer['detour'], 'direct');
+      expect(localDnsServer.containsKey('detour'), isFalse);
       expect(encoded, isNot(contains('节点选择')));
       expect(encoded, isNot(contains('自动选择')));
       expect(encoded, contains('香港-IPEL'));
     });
 
-    test('keeps local DNS on direct detour while routing remote DNS through selected node', () {
+    test('keeps local DNS on the native direct dialer while routing remote DNS through selected node', () {
       final content = jsonEncode({
         'dns': {
           'servers': [
@@ -306,6 +308,16 @@ void main() {
             {
               'domain_suffix': ['cn'],
               'server': 'local',
+            },
+            {
+              'domain': ['blocked.example'],
+              'server': 'block',
+              'strategy': 'prefer_ipv6',
+              'disable_cache': true,
+              'disable_optimistic_cache': true,
+              'rewrite_ttl': 60,
+              'client_subnet': '203.0.113.0/24',
+              'bypass_if_failed': true,
             },
           ],
           'final': 'remote',
@@ -330,11 +342,115 @@ void main() {
 
       final result = const FinalConfigGuard().inspectAndSanitizeContent(content, selectedOutboundTag: '香港-IPEL');
       final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
-      final servers = ((sanitized['dns'] as Map)['servers'] as List).cast<Map>();
+      final dns = sanitized['dns'] as Map;
+      final servers = (dns['servers'] as List).cast<Map>();
+      final rules = (dns['rules'] as List).cast<Map>();
 
       expect(servers.firstWhere((item) => item['tag'] == 'remote')['detour'], '香港-IPEL');
-      expect(servers.firstWhere((item) => item['tag'] == 'local')['detour'], 'direct');
-      expect(servers.firstWhere((item) => item['tag'] == 'block').containsKey('detour'), isFalse);
+      expect(servers.firstWhere((item) => item['tag'] == 'local').containsKey('detour'), isFalse);
+      expect(servers.any((item) => item['tag'] == 'block'), isFalse);
+      final blockRule = rules.firstWhere((item) => (item['domain'] as List?)?.contains('blocked.example') == true);
+      expect(blockRule['action'], 'predefined');
+      expect(blockRule['rcode'], 'NOERROR');
+      expect(blockRule.containsKey('server'), isFalse);
+      expect(blockRule.containsKey('strategy'), isFalse);
+      expect(blockRule.containsKey('disable_cache'), isFalse);
+      expect(blockRule.containsKey('disable_optimistic_cache'), isFalse);
+      expect(blockRule.containsKey('rewrite_ttl'), isFalse);
+      expect(blockRule.containsKey('client_subnet'), isFalse);
+      expect(blockRule.containsKey('bypass_if_failed'), isFalse);
+    });
+
+    test('migrates legacy DNS transports to the typed sing-box schema', () {
+      final content = jsonEncode({
+        'dns': {
+          'servers': [
+            {
+              'tag': 'remote-tcp',
+              'address': 'tcp://8.8.8.8:5353',
+              'detour': 'proxy',
+              'strategy': 'prefer_ipv6',
+              'client_subnet': '203.0.113.0/24',
+            },
+            {'tag': 'bootstrap', 'address': '1.1.1.1', 'detour': 'direct'},
+            {
+              'tag': 'remote-tls',
+              'address': 'tls://dns.google:8853',
+              'address_resolver': 'bootstrap',
+              'address_strategy': 'prefer_ipv6',
+              'address_fallback_delay': '250ms',
+              'detour': 'proxy',
+            },
+            {'tag': 'remote-doh', 'address': 'https://1.1.1.1/custom-query', 'detour': 'proxy'},
+            {'tag': 'cloudflare', 'address': 'https://1.0.0.1/dns-query'},
+            {'tag': 'system-local', 'address': 'local'},
+            {'tag': 'dhcp-local', 'address': 'dhcp://auto'},
+            {'tag': 'static-hosts', 'type': 'hosts', 'detour': 'proxy'},
+            {'tag': 'remote-sdns', 'type': 'sdns', 'server': '1.1.1.1', 'stamp': 'sdns://example', 'detour': 'proxy'},
+          ],
+          'final': 'remote-tcp',
+        },
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+          {'tag': 'direct', 'type': 'direct'},
+        ],
+        'route': {'rules': <Object?>[], 'final': 'proxy'},
+      });
+
+      const guard = FinalConfigGuard();
+      final result = guard.inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final dns = sanitized['dns'] as Map;
+      final servers = (dns['servers'] as List).cast<Map>();
+      final tcp = servers.firstWhere((item) => item['tag'] == 'remote-tcp');
+      final udp = servers.firstWhere((item) => item['tag'] == 'bootstrap');
+      final tls = servers.firstWhere((item) => item['tag'] == 'remote-tls');
+      final doh = servers.firstWhere((item) => item['tag'] == 'remote-doh');
+      final cloudflare = servers.firstWhere((item) => item['tag'] == 'cloudflare');
+      final local = servers.firstWhere((item) => item['tag'] == 'system-local');
+      final dhcp = servers.firstWhere((item) => item['tag'] == 'dhcp-local');
+      final hosts = servers.firstWhere((item) => item['tag'] == 'static-hosts');
+      final sdns = servers.firstWhere((item) => item['tag'] == 'remote-sdns');
+      final smartLocal = servers.firstWhere((item) => item['tag'] == 'dns-local');
+
+      for (final server in servers) {
+        expect(server.containsKey('address'), isFalse);
+        expect(server.containsKey('address_resolver'), isFalse);
+        expect(server.containsKey('address_strategy'), isFalse);
+        expect(server.containsKey('strategy'), isFalse);
+        expect(server.containsKey('client_subnet'), isFalse);
+      }
+      expect(tcp, containsPair('type', 'tcp'));
+      expect(tcp, containsPair('server', '8.8.8.8'));
+      expect(tcp, containsPair('server_port', 5353));
+      expect(udp, containsPair('type', 'udp'));
+      expect(udp, containsPair('server', '1.1.1.1'));
+      expect(tls, containsPair('type', 'tls'));
+      expect(tls, containsPair('server', 'dns.google'));
+      expect(tls, containsPair('server_port', 8853));
+      expect(tls['domain_resolver'], {'server': 'bootstrap', 'strategy': 'ipv4_only'});
+      expect(tls, containsPair('fallback_delay', '250ms'));
+      expect(doh, containsPair('type', 'https'));
+      expect(doh, containsPair('path', '/custom-query'));
+      expect(cloudflare, containsPair('detour', 'proxy'));
+      expect(local, containsPair('type', 'local'));
+      expect(local.containsKey('server'), isFalse);
+      expect(local.containsKey('detour'), isFalse);
+      expect(dhcp, containsPair('type', 'dhcp'));
+      expect(dhcp.containsKey('interface'), isFalse);
+      expect(hosts, containsPair('type', 'hosts'));
+      expect(hosts.containsKey('detour'), isFalse);
+      expect(sdns, containsPair('type', 'sdns'));
+      expect(sdns, containsPair('detour', 'proxy'));
+      expect(smartLocal, containsPair('type', 'https'));
+      expect(smartLocal, containsPair('server', '223.5.5.5'));
+      expect(dns['strategy'], LockedCoreConfig.dnsStrategy);
+      expect(result.dnsServerSummary.join(' ; '), contains('type=tcp'));
+      expect(result.dnsServerSummary.join(' ; '), contains('server=8.8.8.8'));
+
+      final secondPass = guard.inspectAndSanitizeContent(result.sanitizedContent!);
+      expect(secondPass.changed, isFalse);
+      expect(secondPass.sanitizedContent, isNull);
     });
 
     test('pins selector default to the app-selected node before core start', () {
@@ -391,7 +507,7 @@ void main() {
 
       expect(proxy['default'], '香港-IPEL');
       expect(dnsServer['detour'], '香港-IPEL');
-      expect(localDnsServer['detour'], 'direct');
+      expect(localDnsServer.containsKey('detour'), isFalse);
       expect(route['final'], '香港-IPEL');
       expect(routeRules.any((rule) => rule['action'] == 'sniff'), isFalse);
       expect(routeRules.firstWhere((rule) => rule['domain_suffix'] is List)['outbound'], '香港-IPEL');
@@ -739,7 +855,12 @@ void main() {
       expect(routeRules[5]['action'], 'route');
       final ruleSets = (route['rule_set'] as List).cast<Map>();
       expect(ruleSets.map((item) => item['url']), everyElement(contains('/rules/sing-box/')));
-      expect(dnsServers.any((item) => item['tag'] == 'dns-local' && item['detour'] == 'direct'), isTrue);
+      expect(dnsServers.any((item) => item['tag'] == 'dns-local' && !item.containsKey('detour')), isTrue);
+      final localDns = dnsServers.firstWhere((item) => item['tag'] == 'dns-local');
+      expect(localDns, containsPair('type', 'https'));
+      expect(localDns, containsPair('server', '223.5.5.5'));
+      expect(localDns.containsKey('address'), isFalse);
+      expect(localDns.containsKey('strategy'), isFalse);
       expect(dns['reverse_mapping'], isTrue);
       expect(route['default_domain_resolver'], 'dns-local');
       expect(dnsRules.any((item) => (item['domain'] as List?)?.contains('www.ip138.com') == true), isTrue);
@@ -918,6 +1039,35 @@ void main() {
       expect(route['rules'], isEmpty);
     });
 
+    test('adds typed defaults when an existing DNS object has no servers', () {
+      final content = jsonEncode({
+        'dns': <String, Object?>{},
+        'outbounds': [
+          {'tag': 'proxy', 'type': 'selector'},
+        ],
+        'route': {'rules': <Object?>[], 'final': 'proxy'},
+      });
+
+      final result = const FinalConfigGuard().inspectAndSanitizeContent(content);
+      final sanitized = jsonDecode(result.sanitizedContent!) as Map<String, dynamic>;
+      final dns = sanitized['dns'] as Map;
+      final servers = (dns['servers'] as List).cast<Map>();
+
+      expect(servers.firstWhere((item) => item['tag'] == 'dns-remote'), {
+        'tag': 'dns-remote',
+        'type': 'tcp',
+        'server': '8.8.8.8',
+        'detour': 'proxy',
+      });
+      expect(servers.firstWhere((item) => item['tag'] == 'dns-local'), {
+        'tag': 'dns-local',
+        'type': 'https',
+        'server': '223.5.5.5',
+      });
+      expect(dns['final'], 'dns-remote');
+      expect(dns['strategy'], LockedCoreConfig.dnsStrategy);
+    });
+
     test('creates locked DNS and route defaults when final config omits them', () {
       final content = jsonEncode({
         'outbounds': [
@@ -940,7 +1090,15 @@ void main() {
       final dnsServer = dnsServers.firstWhere((item) => item['tag'] != 'dns-local');
       final localDnsServer = dnsServers.firstWhere((item) => item['tag'] == 'dns-local');
       expect(dnsServer['detour'], LockedCoreConfig.outboundTag);
-      expect(localDnsServer['detour'], 'direct');
+      expect(dnsServer, containsPair('type', 'tcp'));
+      expect(dnsServer, containsPair('server', '8.8.8.8'));
+      expect(dnsServer.containsKey('address'), isFalse);
+      expect(dnsServer.containsKey('strategy'), isFalse);
+      expect(localDnsServer.containsKey('detour'), isFalse);
+      expect(localDnsServer, containsPair('type', 'https'));
+      expect(localDnsServer, containsPair('server', '223.5.5.5'));
+      expect(localDnsServer.containsKey('address'), isFalse);
+      expect(localDnsServer.containsKey('strategy'), isFalse);
       expect(route['final'], LockedCoreConfig.routeFinal);
       expect(route['rules'], isNotEmpty);
       final routeRules = (route['rules'] as List).cast<Map>();

@@ -589,16 +589,213 @@ class FinalConfigGuard with InfraLogger {
 
   static const _dnsRuleListFields = {..._sharedRuleListFields, 'outbound', 'outbounds', 'querytype', 'querytypes'};
 
+  /// Converts the DNS server format removed by the bundled sing-box fork.
+  /// Typed DNS servers reject legacy fields such as `address` and `strategy`.
+  static void _migrateLegacyDnsServers(Map<String, dynamic> dns, _SanitizeStats stats) {
+    final servers = _listValue(dns['servers']);
+    if (servers == null || servers.isEmpty) return;
+
+    final migratedServers = <Object?>[];
+    final rcodeServers = <String, String>{};
+    for (final server in servers) {
+      final map = _mapValue(server);
+      if (map == null) {
+        migratedServers.add(server);
+        continue;
+      }
+
+      final type = _stringValue(map['type'])?.trim().toLowerCase();
+      final isLegacy = type == null || type.isEmpty || type == 'legacy' || type == 'dns';
+      if (isLegacy) {
+        final rcode = _migrateLegacyDnsServer(map);
+        if (rcode != null) {
+          final tag = _stringValue(map['tag'])?.trim();
+          if (tag != null && tag.isNotEmpty) rcodeServers[tag] = rcode;
+          continue;
+        }
+      }
+
+      final migratedType = _stringValue(map['type'])?.trim();
+      if (migratedType == null || migratedType.isEmpty || migratedType == 'legacy' || migratedType == 'dns') {
+        // Keep malformed or unknown legacy transports fail-closed instead of
+        // silently changing where DNS is sent.
+        migratedServers.add(server);
+        continue;
+      }
+
+      _migrateLegacyDnsDialFields(map);
+      if (map.containsKey('strategy')) {
+        map.remove('strategy');
+        stats.forcedDnsStrategies += 1;
+      }
+      map.remove('address');
+      map.remove('client_subnet');
+      migratedServers.add(map);
+    }
+
+    dns['servers'] = migratedServers;
+    if (rcodeServers.isNotEmpty) {
+      _rewriteLegacyRcodeDnsRules(dns['rules'], rcodeServers);
+      final dnsFinal = _stringValue(dns['final'])?.trim();
+      if (dnsFinal != null && rcodeServers.containsKey(dnsFinal)) dns.remove('final');
+    }
+  }
+
+  /// Returns an RCODE when the legacy server must be replaced by a rule action.
+  static String? _migrateLegacyDnsServer(Map<String, dynamic> server) {
+    final address = _stringValue(server['address'])?.trim();
+    if (address == null || address.isEmpty) return null;
+
+    final normalizedAddress = address.toLowerCase();
+    if (normalizedAddress == 'local') {
+      server['type'] = 'local';
+      server.remove('address');
+      return null;
+    }
+    if (normalizedAddress == 'fakeip' || normalizedAddress == 'fake-ip') {
+      server['type'] = 'fakeip';
+      server.remove('address');
+      return null;
+    }
+
+    final hasScheme = address.contains('://');
+    var scheme = 'udp';
+    Uri? uri;
+    if (hasScheme) {
+      uri = Uri.tryParse(address);
+      scheme = uri?.scheme.toLowerCase() ?? '';
+    } else if (_looksLikeIpv6Text(address)) {
+      server['type'] = 'udp';
+      server['server'] = address.replaceAll('[', '').replaceAll(']', '');
+      server.remove('address');
+      return null;
+    } else {
+      uri = Uri.tryParse('udp://$address');
+    }
+
+    if (scheme == 'rcode') {
+      final rcode = _legacyDnsRcode(uri?.host);
+      if (rcode == null) return null;
+      server.remove('address');
+      return rcode;
+    }
+    if (scheme == 'dhcp') {
+      if (uri == null) return null;
+      server['type'] = 'dhcp';
+      if (uri.host.isNotEmpty && uri.host.toLowerCase() != 'auto') {
+        server['interface'] = uri.host;
+      }
+      server.remove('address');
+      return null;
+    }
+
+    if (scheme == 'http3') scheme = 'h3';
+    const remoteTypes = {'udp', 'tcp', 'tls', 'https', 'quic', 'h3'};
+    if (uri == null || !remoteTypes.contains(scheme) || uri.host.isEmpty) return null;
+
+    final defaultPort = switch (scheme) {
+      'udp' || 'tcp' => 53,
+      'tls' || 'quic' => 853,
+      'https' || 'h3' => 443,
+      _ => 0,
+    };
+    server['type'] = scheme;
+    server['server'] = uri.host;
+    if (uri.hasPort && uri.port != defaultPort) {
+      server['server_port'] = uri.port;
+    } else {
+      server.remove('server_port');
+    }
+    if ((scheme == 'https' || scheme == 'h3') && uri.path.isNotEmpty && uri.path != '/dns-query') {
+      server['path'] = uri.path;
+    }
+    server.remove('address');
+    return null;
+  }
+
+  static void _migrateLegacyDnsDialFields(Map<String, dynamic> server) {
+    final addressResolver = _stringValue(server.remove('address_resolver'))?.trim();
+    final addressStrategy = _stringValue(server.remove('address_strategy'))?.trim();
+    final fallbackDelay = server.remove('address_fallback_delay');
+
+    final currentResolver = server['domain_resolver'];
+    if (addressResolver != null && addressResolver.isNotEmpty && currentResolver == null) {
+      server['domain_resolver'] = addressStrategy == null || addressStrategy.isEmpty
+          ? addressResolver
+          : <String, Object>{'server': addressResolver, 'strategy': LockedCoreConfig.dnsStrategy};
+    } else if (addressStrategy != null && addressStrategy.isNotEmpty && currentResolver is String) {
+      server['domain_resolver'] = <String, Object>{'server': currentResolver, 'strategy': LockedCoreConfig.dnsStrategy};
+    } else if (addressStrategy != null && addressStrategy.isNotEmpty) {
+      final resolverMap = _mapValue(currentResolver);
+      if (resolverMap != null && !resolverMap.containsKey('strategy')) {
+        resolverMap['strategy'] = LockedCoreConfig.dnsStrategy;
+        server['domain_resolver'] = resolverMap;
+      }
+    }
+
+    final resolverMap = _mapValue(server['domain_resolver']);
+    if (resolverMap != null && resolverMap.containsKey('strategy')) {
+      resolverMap['strategy'] = LockedCoreConfig.dnsStrategy;
+      server['domain_resolver'] = resolverMap;
+    }
+    server.remove('domain_strategy');
+
+    if (fallbackDelay != null && !server.containsKey('fallback_delay')) {
+      server['fallback_delay'] = fallbackDelay;
+    }
+  }
+
+  static void _rewriteLegacyRcodeDnsRules(Object? value, Map<String, String> rcodeServers) {
+    final rules = _listValue(value);
+    if (rules == null) return;
+    for (final rule in rules) {
+      final map = _mapValue(rule);
+      if (map == null) continue;
+      final server = _stringValue(map['server'])?.trim();
+      final rcode = server == null ? null : rcodeServers[server];
+      if (rcode != null) {
+        map['action'] = 'predefined';
+        map['rcode'] = rcode;
+        map.remove('server');
+        for (final key in const [
+          'strategy',
+          'disable_cache',
+          'disable_optimistic_cache',
+          'rewrite_ttl',
+          'client_subnet',
+          'bypass_if_failed',
+        ]) {
+          map.remove(key);
+        }
+      }
+      _rewriteLegacyRcodeDnsRules(map['rules'], rcodeServers);
+    }
+  }
+
+  static String? _legacyDnsRcode(String? value) => switch (value?.trim().toLowerCase()) {
+    'success' => 'NOERROR',
+    'format_error' => 'FORMERR',
+    'server_failure' => 'SERVFAIL',
+    'name_error' => 'NXDOMAIN',
+    'not_implemented' => 'NOTIMP',
+    'refused' => 'REFUSED',
+    _ => null,
+  };
+
   static void _sanitizeDns(Object? value, _SanitizeStats stats, {required bool globalRouteMode}) {
     final dns = _mapValue(value);
     if (dns == null) return;
 
     _removeFakeIpKeys(dns);
+    _migrateLegacyDnsServers(dns, stats);
 
     final removedFakeTags = <String>{};
     final removedIpv6Tags = <String>{};
     final servers = _listValue(dns['servers']);
-    if (servers != null) {
+    if (servers == null) {
+      dns['servers'] = [_defaultDnsServer()];
+      stats.forcedDnsDetours += 1;
+    } else {
       final keptServers = <Object?>[];
       for (final server in servers) {
         if (_isFakeDnsServer(server)) {
@@ -622,10 +819,6 @@ class FinalConfigGuard with InfraLogger {
               serverMap['detour'] = desiredDetour;
               stats.forcedDnsDetours += 1;
             }
-            if (serverMap['strategy'] != LockedCoreConfig.dnsStrategy) {
-              serverMap['strategy'] = LockedCoreConfig.dnsStrategy;
-              stats.forcedDnsStrategies += 1;
-            }
           }
           keptServers.add(server);
         }
@@ -636,7 +829,6 @@ class FinalConfigGuard with InfraLogger {
       if (keptServers.isEmpty) {
         dns['servers'] = [_defaultDnsServer()];
         stats.forcedDnsDetours += 1;
-        stats.forcedDnsStrategies += 1;
       }
     }
 
@@ -928,12 +1120,7 @@ class FinalConfigGuard with InfraLogger {
     if (dns == null) return;
 
     final servers = _listValue(dns['servers']) ?? <Object?>[];
-    _addDnsServerIfMissing(servers, {
-      'tag': 'dns-local',
-      'address': LockedCoreConfig.directDnsAddress,
-      'detour': 'direct',
-      'strategy': LockedCoreConfig.dnsStrategy,
-    });
+    _addDnsServerIfMissing(servers, {'tag': 'dns-local', 'type': 'https', 'server': '223.5.5.5'});
     dns['servers'] = servers;
 
     final rules = _listValue(dns['rules']) ?? <Object?>[];
@@ -986,22 +1173,35 @@ class FinalConfigGuard with InfraLogger {
 
   static String? _desiredDnsServerDetour(Map<String, dynamic> server) {
     final tag = _stringValue(server['tag'])?.trim().toLowerCase();
-    final address = _stringValue(server['address'])?.trim().toLowerCase() ?? '';
+    final type = _stringValue(server['type'])?.trim().toLowerCase();
+    final address = (_stringValue(server['server']) ?? _stringValue(server['address']))?.trim().toLowerCase() ?? '';
     final detour = _stringValue(server['detour'])?.trim();
     final normalizedDetour = detour?.toLowerCase();
 
-    if (address.startsWith('rcode://') || tag == 'block') {
+    if (address.startsWith('rcode://') || type == 'rcode' || tag == 'block') {
       return null;
     }
+
+    const dialTypes = {'udp', 'tcp', 'tls', 'https', 'quic', 'h3', 'local', 'dhcp', 'mdns', 'multi', 'sdns'};
+    if (type == null || !dialTypes.contains(type)) return null;
 
     if (tag != null && tag.contains('remote')) {
       return LockedCoreConfig.outboundTag;
     }
 
-    if (normalizedDetour == 'direct' || tag == 'local' || tag == 'direct') {
-      return 'direct';
+    if (normalizedDetour == 'direct' ||
+        type == 'local' ||
+        type == 'dhcp' ||
+        tag?.contains('local') == true ||
+        tag?.contains('direct') == true ||
+        tag?.contains('bootstrap') == true ||
+        tag?.contains('system') == true) {
+      // An empty direct outbound is the core's native direct dialer. The
+      // bundled core rejects an explicit detour to that empty outbound.
+      return null;
     }
 
+    if (detour != null && detour.isNotEmpty) return detour;
     return LockedCoreConfig.outboundTag;
   }
 
@@ -1175,9 +1375,9 @@ class FinalConfigGuard with InfraLogger {
 
   static Map<String, dynamic> _defaultDnsServer() => {
     'tag': 'dns-remote',
-    'address': LockedCoreConfig.remoteDnsAddress,
+    'type': 'tcp',
+    'server': '8.8.8.8',
     'detour': LockedCoreConfig.outboundTag,
-    'strategy': LockedCoreConfig.dnsStrategy,
   };
 
   static void _removeUnsafeKeysDeep(Object? value) {
@@ -1273,7 +1473,8 @@ class FinalConfigGuard with InfraLogger {
           final index = entry.key;
           final map = _mapValue(entry.value);
           if (map == null) return '$index:<non-map>';
-          return '#$index tag=${_summarizeValue(map['tag'])} address=${_summarizeAddress(map['address'])} detour=${_summarizeValue(map['detour'])} strategy=${_summarizeValue(map['strategy'])}';
+          final endpoint = map['server'] ?? map['address'];
+          return '#$index tag=${_summarizeValue(map['tag'])} type=${_summarizeValue(map['type'])} server=${_summarizeAddress(endpoint)} port=${_summarizeValue(map['server_port'])} detour=${_summarizeValue(map['detour'])}';
         })
         .toList(growable: false);
   }
