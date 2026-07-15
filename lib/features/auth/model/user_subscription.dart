@@ -75,9 +75,9 @@ class UserSubscription {
     if (isSubscriptionExpired) return '会员到期';
     if (isNormalUser || planId == null) return '普通用户';
     return switch (_normalizedMembershipStatus) {
-      'month' => '蝴蝶月卡',
-      'quarter' => '蝴蝶季卡',
-      'year' => '蝴蝶年卡',
+      'month' => 'BflyVPN 月卡',
+      'quarter' => 'BflyVPN 季卡',
+      'year' => 'BflyVPN 年卡',
       _ => planName?.trim().isNotEmpty == true ? planName!.trim() : '普通用户',
     };
   }

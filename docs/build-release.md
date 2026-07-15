@@ -34,13 +34,13 @@ build/app/outputs/flutter-apk/app-release.apk
 建议发布时复制到：
 
 ```text
-out/蝴蝶加速-Android-<version>-app-release.apk
+out/BflyVPN-Android-<version>-app-release.apk
 ```
 
 并生成：
 
 ```bash
-sha256sum out/蝴蝶加速-Android-*.apk > out/<file>.sha256
+sha256sum out/BflyVPN-Android-*.apk > out/<file>.sha256
 ```
 
 ## Windows Release 目录
@@ -59,7 +59,7 @@ build\windows\x64\runner\Release
 
 应包含：
 
-- `蝴蝶加速.exe`
+- `BflyVPN.exe`
 - `HiddifyCli.exe`
 - `hiddify-core.dll`
 - `flutter_windows.dll`
@@ -81,12 +81,12 @@ fastforge 可能输出旧工程名格式的临时文件，例如：
 dist/<version>/<legacy-name>-<version>-windows-setup.exe
 ```
 
-发布前必须统一重命名为蝴蝶加速格式。
+发布前必须统一重命名为 BflyVPN 格式。
 
 最终发布命名：
 
 ```text
-out/蝴蝶加速-Windows-Setup-x64.exe
+out/BflyVPN-Windows-Setup-x64.exe
 ```
 
 如果脚本在中文路径上出现编码错误，可以手动复制 Inno Setup 成功生成的 exe 到 `out/`。
@@ -96,16 +96,16 @@ out/蝴蝶加速-Windows-Setup-x64.exe
 将 release 目录压缩为：
 
 ```text
-out/蝴蝶加速-Windows-Portable-x64.zip
+out/BflyVPN-Windows-Portable-x64.zip
 ```
 
 zip 内部根目录应为：
 
 ```text
-蝴蝶加速/
+BflyVPN/
 ```
 
-并包含 `蝴蝶加速.exe` 与核心 DLL/EXE。
+并包含 `BflyVPN.exe` 与核心 DLL/EXE。
 
 Linux/WSL 中可用示例：
 
@@ -114,27 +114,27 @@ python3 - <<'PY'
 from pathlib import Path
 import zipfile
 src = Path('/mnt/e/codex_build/butterfly-client/build/windows/x64/runner/Release')
-out = Path('out/蝴蝶加速-Windows-Portable-x64.zip')
+out = Path('out/BflyVPN-Windows-Portable-x64.zip')
 with zipfile.ZipFile(out, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
     for p in sorted(src.rglob('*')):
         if p.is_file():
-            zf.write(p, f'蝴蝶加速/{p.relative_to(src).as_posix()}')
+            zf.write(p, f'BflyVPN/{p.relative_to(src).as_posix()}')
 PY
 ```
 
 ## Windows 产物校验
 
 ```bash
-sha256sum out/蝴蝶加速-Windows-Setup-x64.exe > out/蝴蝶加速-Windows-Setup-x64.exe.sha256
-sha256sum out/蝴蝶加速-Windows-Portable-x64.zip > out/蝴蝶加速-Windows-Portable-x64.zip.sha256
+sha256sum out/BflyVPN-Windows-Setup-x64.exe > out/BflyVPN-Windows-Setup-x64.exe.sha256
+sha256sum out/BflyVPN-Windows-Portable-x64.zip > out/BflyVPN-Windows-Portable-x64.zip.sha256
 ```
 
 便携包至少检查：
 
-- `蝴蝶加速/蝴蝶加速.exe`
-- `蝴蝶加速/HiddifyCli.exe`
-- `蝴蝶加速/hiddify-core.dll`
-- `蝴蝶加速/flutter_windows.dll`
+- `BflyVPN/BflyVPN.exe`
+- `BflyVPN/HiddifyCli.exe`
+- `BflyVPN/hiddify-core.dll`
+- `BflyVPN/flutter_windows.dll`
 
 ## iOS 测试包
 

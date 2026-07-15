@@ -15,7 +15,7 @@ Future<void> main() async {
 
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
-    await windowManager.setTitle('蝴蝶加速');
+    await windowManager.setTitle('BflyVPN');
     await windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: false);
   }
 

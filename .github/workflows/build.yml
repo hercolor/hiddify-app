@@ -19,18 +19,18 @@ env:
   NDK_VERSION: r28c
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   TAG_NAME: "${{ inputs.tag-name }}"
-  TARGET_NAME_gz: "蝴蝶加速-Linux-x64-AppImage.tar"
-  TARGET_NAME_AppImage: "蝴蝶加速-Linux-x64-AppImage"
-  TARGET_NAME_deb: "蝴蝶加速-Debian-x64"
-  # TARGET_NAME_rpm: "蝴蝶加速-rpm-x64"
-  TARGET_NAME_apk: "蝴蝶加速-Android"
-  TARGET_NAME_aab: "蝴蝶加速-Android"
-  TARGET_NAME_exe: "蝴蝶加速-Windows-Setup-x64"
-  TARGET_NAME_msix: "蝴蝶加速-Windows-x64"
-  TARGET_NAME_zip: "蝴蝶加速-Windows-Portable-x64"
-  TARGET_NAME_dmg: "蝴蝶加速-MacOS"
-  TARGET_NAME_pkg: "蝴蝶加速-MacOS-Installer"
-  TARGET_NAME_ipa: "蝴蝶加速-iOS"
+  TARGET_NAME_gz: "BflyVPN-Linux-x64-AppImage.tar"
+  TARGET_NAME_AppImage: "BflyVPN-Linux-x64-AppImage"
+  TARGET_NAME_deb: "BflyVPN-Debian-x64"
+  # TARGET_NAME_rpm: "BflyVPN-rpm-x64"
+  TARGET_NAME_apk: "BflyVPN-Android"
+  TARGET_NAME_aab: "BflyVPN-Android"
+  TARGET_NAME_exe: "BflyVPN-Windows-Setup-x64"
+  TARGET_NAME_msix: "BflyVPN-Windows-x64"
+  TARGET_NAME_zip: "BflyVPN-Windows-Portable-x64"
+  TARGET_NAME_dmg: "BflyVPN-MacOS"
+  TARGET_NAME_pkg: "BflyVPN-MacOS-Installer"
+  TARGET_NAME_ipa: "BflyVPN-iOS"
   
 
 jobs:
@@ -263,7 +263,7 @@ jobs:
           folder: 'dist'
           timestamp-server: 'http://timestamp.digicert.com'
           recursive: true
-          description: '蝴蝶加速'
+          description: 'BflyVPN'
 
       - name: Copy to out Windows
         if: matrix.platform == 'windows'
@@ -519,7 +519,7 @@ jobs:
 
       - uses: Apple-Actions/upload-testflight-build@v4
         with:
-          app-path: 'out/蝴蝶加速-iOS.ipa'
+          app-path: 'out/BflyVPN-iOS.ipa'
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}

@@ -10,7 +10,7 @@ class VpnAppDemo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '蝴蝶加速',
+      title: 'BflyVPN',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF8FAFC), // 淡灰蓝色背景
@@ -62,7 +62,7 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               const Text(
-                '蝴蝶加速',
+                'BflyVPN',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2563EB), letterSpacing: 2),
               ),
               const SizedBox(height: 8),
@@ -193,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
                   }),
                   const Text(
-                    '蝴蝶加速',
+                    'BflyVPN',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
@@ -796,7 +796,7 @@ class _ProfileTabState extends State<ProfileTab> {
                           Icon(Icons.workspace_premium, size: 16, color: Color(0xFF5C4000)),
                           SizedBox(width: 4),
                           Text(
-                            '蝴蝶年卡',
+                            'BflyVPN 年卡',
                             style: TextStyle(color: Color(0xFF5C4000), fontSize: 13, fontWeight: FontWeight.w800),
                           ),
                         ],
@@ -1152,7 +1152,7 @@ class InviteScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                '每成功邀请一位好友，双方各得 30 天 蝴蝶年卡 时长。',
+                '每成功邀请一位好友，双方各得 30 天 BflyVPN 年卡时长。',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
               ),
@@ -1447,7 +1447,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFF8FAFC)),
                 ListTile(
-                  title: const Text('关于 蝴蝶加速', style: TextStyle(fontWeight: FontWeight.w500)),
+                  title: const Text('关于 BflyVPN', style: TextStyle(fontWeight: FontWeight.w500)),
                   trailing: const Text('v2.1.0', style: TextStyle(color: Color(0xFF64748B))),
                   onTap: () {},
                 ),

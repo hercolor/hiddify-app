@@ -1,10 +1,10 @@
-# 蝴蝶加速 Client
+# BflyVPN Client
 
-蝴蝶加速客户端是基于 Flutter 二次开发的商业加速客户端，面向 Android、Windows、iOS、macOS 等平台。当前仓库已经不再作为原 Hiddify 通用开源客户端维护，文档、发布包、UI、账号体系和后端集成都以蝴蝶加速业务为准。
+BflyVPN 客户端是基于 Flutter 二次开发的商业加速客户端，面向 Android、Windows、iOS、macOS 等平台。当前仓库已经不再作为原 Hiddify 通用开源客户端维护，文档、发布包、UI、账号体系和后端集成都以 BflyVPN 业务为准。
 
 ## 当前定位
 
-- 产品名称：蝴蝶加速
+- 产品名称：BflyVPN
 - 后端面板：`https://api.y88.pro`
 - 账号系统：XBoard 用户体系
 - 节点系统：XBoard 订阅 + Xboard-Node
@@ -34,7 +34,7 @@
 
 ### UI 与品牌
 
-- 品牌统一为“蝴蝶加速”。
+- 品牌统一为“BflyVPN”。
 - Android / Windows / iOS / macOS / Web 图标已替换为项目根目录 `icon.png` 派生资源。
 - Android 和 Windows 使用一致的登录、注册、会员、安全中心、关闭弹窗设计。
 - 启动页当前保持白屏，后续有正式启动页设计后再加入品牌动效或图片。
@@ -93,10 +93,10 @@ fastforge --no-version-check package --platform windows --targets exe --skip-cle
 
 当前本地发布产物建议统一放到 `out/`：
 
-- `蝴蝶加速-Android-*.apk`
-- `蝴蝶加速-Windows-Setup-x64.exe`
-- `蝴蝶加速-Windows-Portable-x64.zip`
-- `蝴蝶加速-Windows-x64.msix`（如启用 MSIX）
+- `BflyVPN-Android-*.apk`
+- `BflyVPN-Windows-Setup-x64.exe`
+- `BflyVPN-Windows-Portable-x64.zip`
+- `BflyVPN-Windows-x64.msix`（如启用 MSIX）
 
 每个产物建议同步生成 `.sha256` 校验文件。
 

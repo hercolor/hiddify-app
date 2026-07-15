@@ -482,7 +482,7 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                   const SizedBox(height: 42),
                   const _LoginMark(),
                   const Gap(24),
-                  const Text('蝴蝶加速', style: BrandText.brandTitle),
+                  const Text('BflyVPN', style: BrandText.brandTitle),
                   const Gap(8),
                   Text('安全、极速、无界', style: theme.textTheme.bodyMedium),
                   const Gap(48),
@@ -1181,7 +1181,7 @@ class _SupportCard extends HookConsumerWidget {
         const _ActionDivider(),
         _ActionTile(
           icon: Icons.info_outline_rounded,
-          title: '关于 蝴蝶加速',
+          title: '关于 BflyVPN',
           iconColor: const Color(0xFF64748B),
           onTap: () => context.pushNamed('premiumAbout'),
         ),

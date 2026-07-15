@@ -1,10 +1,10 @@
 app_id: 3A414E8D-4FF9-522C-99A9-3A923ADCB43B
-publisher: 蝴蝶加速
+publisher: BflyVPN
 publisher_url: https://api.y88.pro
-display_name: 蝴蝶加速
-executable_name: 蝴蝶加速.exe
+display_name: BflyVPN
+executable_name: BflyVPN.exe
 create_desktop_icon: true
-install_dir_name: "{autopf64}\\蝴蝶加速"
+install_dir_name: "{autopf64}\\BflyVPN"
 setup_icon_file: windows\runner\resources\app_icon.ico
 privileges_required: admin
 locales:

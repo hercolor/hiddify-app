@@ -114,7 +114,7 @@ class _DesktopLoginState extends ConsumerState<_DesktopLogin> {
                         const _DesktopLoginMark(),
                         const Gap(24),
                         Text(
-                          '蝴蝶加速',
+                          'BflyVPN',
                           style: BrandDesktopText.heroStatus.copyWith(
                             color: BrandDesktopColors.accent,
                             letterSpacing: 2,
@@ -420,7 +420,7 @@ class _DesktopPlanBadge extends StatelessWidget {
           const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
           const Gap(4),
           Text(
-            label == '--' ? '蝴蝶加速 Pro' : label,
+            label == '--' ? 'BflyVPN Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: BrandDesktopText.bodyPrimary.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
@@ -517,7 +517,7 @@ class _MemberActions extends StatelessWidget {
           const _DesktopActionDivider(),
           _ActionRow(
             icon: Icons.info_outline_rounded,
-            title: '关于 蝴蝶加速',
+            title: '关于 BflyVPN',
             iconColor: const Color(0xFF64748B),
             onTap: () => context.pushNamed('premiumAbout'),
           ),

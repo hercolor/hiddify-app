@@ -61,7 +61,7 @@ class WindowNotifier extends _$WindowNotifier with AppLogger {
         center: !isWindowVisible,
         minimumSize: minimumWindowSize,
         maximumSize: BrandDesktopWindow.maximumSize,
-        title: '蝴蝶加速',
+        title: 'BflyVPN',
         titleBarStyle: Platform.isWindows ? TitleBarStyle.hidden : null,
         windowButtonVisibility: Platform.isWindows ? false : null,
       ),

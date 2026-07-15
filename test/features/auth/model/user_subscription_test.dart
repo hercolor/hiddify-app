@@ -55,4 +55,18 @@ void main() {
       expect(trafficExhausted.canConnect, isFalse);
     });
   });
+
+  group('UserSubscription.displayMembershipLabel', () {
+    test('uses BflyVPN names for default paid membership labels', () {
+      for (final entry in const {'month': 'BflyVPN 月卡', 'quarter': 'BflyVPN 季卡', 'year': 'BflyVPN 年卡'}.entries) {
+        final subscription = UserSubscription(
+          subscribeUrl: 'https://example.com/sub',
+          membershipStatus: entry.key,
+          planId: 1,
+        );
+
+        expect(subscription.displayMembershipLabel, entry.value);
+      }
+    });
+  });
 }

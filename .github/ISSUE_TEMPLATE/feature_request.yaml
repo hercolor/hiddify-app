@@ -1,12 +1,12 @@
-name: 蝴蝶加速功能需求
-description: 提交蝴蝶加速客户端功能需求
+name: BflyVPN 功能需求
+description: 提交 BflyVPN 客户端功能需求
 title: '[需求] '
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        请描述当前蝴蝶加速业务需要的用户价值、适用平台和验收标准。普通用户界面不得暴露订阅地址、节点真实地址、协议、端口、DNS 等技术细节。
+        请描述当前 BflyVPN 业务需要的用户价值、适用平台和验收标准。普通用户界面不得暴露订阅地址、节点真实地址、协议、端口、DNS 等技术细节。
   - type: dropdown
     id: platform
     attributes:

@@ -1,13 +1,13 @@
-# 蝴蝶加速客户端
+# BflyVPN 客户端
 
-本仓库已经完成蝴蝶加速业务二次开发，不再使用原 Hiddify 通用开源客户端文档作为主说明。当前客户端服务于 `api.y88.pro` 的 XBoard 后端、会员体系和节点订阅体系。
+本仓库已经完成 BflyVPN 业务二次开发，不再使用原 Hiddify 通用开源客户端文档作为主说明。当前客户端服务于 `api.y88.pro` 的 XBoard 后端、会员体系和节点订阅体系。
 
 ## 产品信息
 
-- 名称：蝴蝶加速
+- 名称：BflyVPN
 - 后端：`https://api.y88.pro`
 - 账号：邮箱/手机号登录，注册后登录使用
-- 会员：普通用户、会员到期、蝴蝶月卡、蝴蝶季卡、蝴蝶年卡等状态
+- 会员：普通用户、会员到期、BflyVPN 月卡、BflyVPN 季卡、BflyVPN 年卡等状态
 - 平台：Android、Windows；iOS/macOS 保留并按需打包
 - 版本：见 `pubspec.yaml`
 
@@ -47,8 +47,8 @@ fastforge --no-version-check package --platform windows --targets exe --skip-cle
 
 产物统一放到 `out/`：
 
-- `蝴蝶加速-Windows-Setup-x64.exe`
-- `蝴蝶加速-Windows-Portable-x64.zip`
+- `BflyVPN-Windows-Setup-x64.exe`
+- `BflyVPN-Windows-Portable-x64.zip`
 - `*.sha256`
 
 ## 维护注意事项
@@ -58,4 +58,3 @@ fastforge --no-version-check package --platform windows --targets exe --skip-cle
 - Android `applicationId` 当前是 `pro.y88.accelerator`，为兼容已安装用户不要随意改动。
 - iOS 主 App Bundle ID 是 `pro.y88.hudiejiasu`，扩展是 `pro.y88.hudiejiasu.PacketTunnel`。
 - 启动页当前保持白屏，后续等正式启动页设计再接入。
-

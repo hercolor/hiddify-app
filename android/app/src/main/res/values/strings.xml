@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">蝴蝶加速</string>
+    <string name="app_name">BflyVPN</string>
     <string name="stop">停止加速</string>
     <string name="quick_toggle">一键加速</string>
     <string name="status_starting">加速服务启动中…</string>

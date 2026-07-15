@@ -1,11 +1,11 @@
 {
-    "name": "蝴蝶加速",
-    "short_name": "蝴蝶加速",
+    "name": "BflyVPN",
+    "short_name": "BflyVPN",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "蝴蝶加速",
+    "description": "BflyVPN",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
