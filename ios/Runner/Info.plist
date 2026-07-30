@@ -29,18 +29,12 @@
 			<dict>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<string>hudiejiasu</string>
-					<string>v2ray</string>
-					<string>v2rayn</string>
-					<string>v2rayng</string>
-					<string>clash</string>
-					<string>clashmeta</string>
-					<string>sing-box</string>
+					<string>bflyvpn</string>
 				</array>
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
 				<key>CFBundleURLName</key>
-				<string>pro.y88.hudiejiasu</string>
+				<string>pro.y88.bflyvpn</string>
 			</dict>
 		</array>
 		<key>FlutterDeepLinkingEnabled</key>

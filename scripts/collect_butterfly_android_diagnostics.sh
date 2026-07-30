@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PACKAGE_NAME="pro.y88.accelerator"
+PACKAGE_NAME="pro.y88.bflyvpn"
 APK_PATH=""
 CLEAR_LOGCAT=0
 DURATION_SECONDS=0

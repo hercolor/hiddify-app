@@ -76,7 +76,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "pro.y88.accelerator"
+        applicationId "pro.y88.bflyvpn"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
