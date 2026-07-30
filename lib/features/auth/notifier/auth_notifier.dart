@@ -166,9 +166,9 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         await _clearSubscriptionAccessCache(session: session, reason: 'expired before connect');
         return _authText.errors.auth.membershipExpired;
       }
-      if (subscription.isTrafficExhausted) {
-        await _clearSubscriptionAccessCache(session: session, reason: 'traffic exhausted before connect');
-        return _authText.errors.auth.trafficExhausted;
+      // 设备超限：会员本身有效，只提示禁连，不清缓存、不引导支付。
+      if (subscription.isDeviceLimitExceeded) {
+        return subscription.deviceLimitMessage;
       }
       return null;
     } catch (error, stackTrace) {
@@ -615,9 +615,6 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
     }
     final text = _safeError(error).toLowerCase();
     final looksExpired = text.contains('到期') || text.contains('过期') || text.contains('expired');
-    final looksTraffic = text.contains('流量') || text.contains('traffic');
-    if (looksExpired && looksTraffic) return _authText.errors.auth.membershipExpiredOrTraffic;
-    if (looksTraffic) return _authText.errors.auth.trafficExhausted;
     if (looksExpired) return _authText.errors.auth.membershipExpired;
     return _authText.errors.auth.openMembership;
   }
@@ -625,7 +622,6 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
   String _subscriptionAccessFailureMessage(UserSubscription subscription) {
     if (subscription.isNormalUser) return _authText.errors.auth.openMembership;
     if (subscription.isSubscriptionExpired) return _authText.errors.auth.membershipExpired;
-    if (subscription.isTrafficUnavailable) return _authText.errors.auth.trafficExhausted;
     if (subscription.isBanned) return _authText.errors.auth.badResponse;
     return _authText.errors.auth.openMembership;
   }
@@ -636,9 +632,7 @@ class AuthNotifier extends _$AuthNotifier with AppLogger {
         text.contains('到期') ||
         text.contains('过期') ||
         text.contains('expired') ||
-        text.contains('unavailable') ||
-        text.contains('traffic') ||
-        text.contains('流量');
+        text.contains('unavailable');
   }
 
   Future<void> _markSubscriptionUnavailable(AuthSession session, {required String reason}) async {

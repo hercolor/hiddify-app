@@ -39,6 +39,7 @@ class UserSubscription {
 
   bool get isExpired => expiredAt != null && !expiredAt!.isAfter(DateTime.now());
 
+  /// 流量仅用于统计展示，不参与连接门禁（产品定义 v0.1 §3）。
   bool get isTrafficExhausted => remainingTraffic != null && remainingTraffic! <= 0;
 
   String? get _normalizedMembershipStatus => membershipStatus?.trim().toLowerCase();
@@ -52,16 +53,20 @@ class UserSubscription {
   bool get isSubscriptionExpired =>
       _normalizedMembershipStatus == 'expired' || _normalizedSubscriptionStatus == 'expired' || isExpired;
 
-  bool get isTrafficUnavailable => isTrafficExhausted || _normalizedSubscriptionStatus == 'traffic_exhausted';
+  /// 只有后端同时返回在线设备数与设备上限时才做设备门禁；字段缺失按放行处理。
+  bool get hasDeviceLimitInfo => onlineDevices != null && (maxDevices ?? 0) > 0;
+
+  /// 严格超出上限才拦截；等于上限视为当前设备已计入，不拦。
+  bool get isDeviceLimitExceeded => hasDeviceLimitInfo && onlineDevices! > maxDevices!;
+
+  String get deviceLimitMessage => hasDeviceLimitInfo
+      ? '登录设备已达上限（当前 $onlineDevices / 上限 $maxDevices）'
+      : '登录设备已达上限';
 
   bool get isMembershipUnavailable {
     final membership = _normalizedMembershipStatus;
     final subscription = _normalizedSubscriptionStatus;
-    return membership == 'normal' ||
-        membership == 'expired' ||
-        subscription == 'expired' ||
-        subscription == 'banned' ||
-        subscription == 'traffic_exhausted';
+    return membership == 'normal' || membership == 'expired' || subscription == 'expired' || subscription == 'banned';
   }
 
   bool get hasActiveMembership =>
@@ -82,12 +87,16 @@ class UserSubscription {
     };
   }
 
+  /// 会员资格门禁：只看到期时间与账号状态，不看流量、不看设备数。
+  ///
+  /// 设备门禁由 [isDeviceLimitExceeded] 单独在连接时判断——设备超限是瞬时状态，
+  /// 不应触发清缓存或跳过节点同步。
   bool get canConnect {
     if (isMembershipUnavailable) return false;
     if (serverCanConnect != null) {
-      return serverCanConnect! && !isSubscriptionExpired && !isTrafficUnavailable;
+      return serverCanConnect! && !isSubscriptionExpired;
     }
-    return !isSubscriptionExpired && !isTrafficUnavailable && hasActiveMembership;
+    return !isSubscriptionExpired && hasActiveMembership;
   }
 
   UserSubscription copyWith({

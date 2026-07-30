@@ -126,8 +126,7 @@ bool _isSubscriptionUnavailableMessage(String? message) {
       normalized.contains('unavailable') ||
       normalized.contains('subscription') ||
       normalized.contains('到期') ||
-      normalized.contains('过期') ||
-      normalized.contains('流量');
+      normalized.contains('过期');
 }
 
 String? _localizedServerMessage(String? message) {
