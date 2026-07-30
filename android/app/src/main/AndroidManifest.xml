@@ -88,6 +88,17 @@
                 <data android:host="install-sub" /> -->
             </intent-filter>
 
+            <!-- 自有 scheme：支付回跳与通用刷新。见 docs/package-and-scheme-spec.md §3 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="bflyvpn" android:host="pay" />
+                <data android:scheme="bflyvpn" android:host="app" />
+            </intent-filter>
+
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>

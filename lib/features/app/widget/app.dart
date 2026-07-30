@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:accessibility_tools/accessibility_tools.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +11,7 @@ import 'package:hiddify/core/localization/locale_extensions.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
+import 'package:hiddify/core/router/deep_linking/my_app_links.dart';
 import 'package:hiddify/core/router/go_router/go_router_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/theme/app_theme.dart';
@@ -16,6 +19,8 @@ import 'package:hiddify/core/theme/brand_theme.dart';
 import 'package:hiddify/core/theme/theme_preferences.dart';
 import 'package:hiddify/features/app_update/notifier/app_update_notifier.dart';
 import 'package:hiddify/features/connection/widget/connection_wrapper.dart';
+import 'package:hiddify/features/payment/model/payment_models.dart';
+import 'package:hiddify/features/payment/notifier/payment_notifier.dart';
 import 'package:hiddify/features/profile/notifier/profiles_update_notifier.dart';
 import 'package:hiddify/features/shortcut/shortcut_wrapper.dart';
 import 'package:hiddify/features/system_tray/notifier/system_tray_notifier.dart';
@@ -181,6 +186,15 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
   void setupStateListener(WidgetRef ref) {
     final appLifecycleState = useAppLifecycleState();
 
+    // bflyvpn:// 唤起：支付回跳与通用刷新（package-and-scheme-spec §3）。
+    ref.listen(myAppLinksProvider, (_, next) {
+      final raw = next.valueOrNull;
+      if (raw == null || raw.isEmpty) return;
+      final link = BflyDeepLink.tryParse(raw);
+      if (link == null) return;
+      unawaited(ref.read(paymentNotifierProvider.notifier).handleDeepLink(link));
+    });
+
     useEffect(() {
       loggy.info("current app state");
       loggy.info(appLifecycleState);
@@ -188,8 +202,12 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
         onPause(ref);
       } else if (appLifecycleState == AppLifecycleState.inactive) {
         onInactive(ref);
-      } else if (appLifecycleState == AppLifecycleState.resumed && isOnPauseCalled) {
-        onResume(ref);
+      } else if (appLifecycleState == AppLifecycleState.resumed) {
+        if (isOnPauseCalled) onResume(ref);
+        // 兜底：用户在浏览器付完却没走回跳时，回前台自动查单（规范 §4.2）。
+        if (ref.read(paymentNotifierProvider).hasUnsettledOrder) {
+          unawaited(ref.read(paymentNotifierProvider.notifier).confirmPendingOrder(silent: true));
+        }
       }
       return null;
     }, [appLifecycleState]);

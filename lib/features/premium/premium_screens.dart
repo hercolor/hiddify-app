@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
@@ -11,6 +13,8 @@ import 'package:hiddify/features/auth/model/auth_session.dart';
 import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/customer_service_uri.dart';
+import 'package:hiddify/features/payment/model/payment_models.dart';
+import 'package:hiddify/features/payment/notifier/payment_notifier.dart';
 import 'package:hiddify/features/premium/data/premium_api_service.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/platform_utils.dart';
@@ -46,6 +50,7 @@ class PremiumRenewalPage extends ConsumerWidget {
                       const Gap(26),
                       _CurrentPlanCard(session: session, subscription: subscription),
                       const Gap(16),
+                      const _PaymentStatusBanner(),
                       plansAsync!.when(
                         loading: () => const _PlanListLoading(),
                         error: (error, _) => _PlanListError(
@@ -61,6 +66,7 @@ class PremiumRenewalPage extends ConsumerWidget {
                                       plan: plans[index],
                                       selected: subscription?.planId == plans[index].id,
                                       recommended: subscription?.planId != plans[index].id && index == 0,
+                                      onPurchase: () => _startPurchase(context, ref, plans[index]),
                                     ),
                                     if (index != plans.length - 1) const Gap(16),
                                   ],
@@ -71,7 +77,7 @@ class PremiumRenewalPage extends ConsumerWidget {
                   ),
                 ),
                 _BottomAction(
-                  label: '联系客服续费',
+                  label: '联系客服',
                   onPressed: () => _openCustomerService(context, ref, subscription?.customerService),
                 ),
               ],
@@ -717,18 +723,27 @@ class _CurrentPlanCard extends StatelessWidget {
 }
 
 class _PlanOptionCard extends StatelessWidget {
-  const _PlanOptionCard({required this.plan, required this.selected, required this.recommended});
+  const _PlanOptionCard({
+    required this.plan,
+    required this.selected,
+    required this.recommended,
+    required this.onPurchase,
+  });
 
   final PremiumPlan plan;
   final bool selected;
   final bool recommended;
+  final VoidCallback onPurchase;
 
   @override
   Widget build(BuildContext context) {
     final highlighted = selected || recommended;
     final tag = selected ? '当前' : (plan.tags.isNotEmpty ? plan.tags.first : (recommended ? '推荐' : '可选'));
     final description = _displayText(plan.content, fallback: '后台套餐权益配置');
-    return Container(
+    return InkWell(
+      onTap: plan.isAvailable ? onPurchase : null,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: highlighted ? const Color(0xFF2563EB).withOpacity(.05) : Colors.white,
@@ -817,10 +832,137 @@ class _PlanOptionCard extends StatelessWidget {
                 _PlanFeatureChip('${price.label} ${_formatMoney(price.amountCents)}'),
             ],
           ),
+          const Gap(12),
+          Row(
+            children: [
+              Icon(
+                plan.isAvailable ? Icons.shopping_cart_outlined : Icons.block_outlined,
+                size: 16,
+                color: plan.isAvailable ? BrandDesktopColors.accent : BrandDesktopColors.textSecondary,
+              ),
+              const Gap(6),
+              Text(
+                plan.isAvailable ? '点击购买，支付在系统浏览器完成' : '该套餐暂不可售',
+                style: BrandDesktopText.caption.copyWith(
+                  color: plan.isAvailable ? BrandDesktopColors.accent : BrandDesktopColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ],
+        ),
       ),
     );
   }
+}
+
+/// 支付会话状态条：确认中 / 成功 / 失败，以及「刷新支付状态」兜底入口（规范 §4.2–§4.3）。
+class _PaymentStatusBanner extends ConsumerWidget {
+  const _PaymentStatusBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(paymentNotifierProvider);
+    if (session.stage == PaymentStage.idle) return const SizedBox.shrink();
+
+    final (icon, color, title) = switch (session.stage) {
+      PaymentStage.awaitingBrowser => (Icons.open_in_browser_rounded, const Color(0xFF2563EB), '请在浏览器完成支付'),
+      PaymentStage.confirming => (Icons.hourglass_top_rounded, const Color(0xFF2563EB), '正在确认支付结果'),
+      PaymentStage.paid => (Icons.verified_rounded, const Color(0xFF16A34A), '会员已生效'),
+      PaymentStage.cancelled => (Icons.cancel_outlined, const Color(0xFF64748B), '支付已取消'),
+      PaymentStage.failed => (Icons.error_outline_rounded, const Color(0xFFEF4444), '支付未完成'),
+      PaymentStage.unknown => (Icons.help_outline_rounded, const Color(0xFFF59E0B), '支付状态待确认'),
+      PaymentStage.idle => (Icons.info_outline, const Color(0xFF64748B), ''),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(.30)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const Gap(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: BrandDesktopText.bodySecondary.copyWith(color: color, fontWeight: FontWeight.w700),
+                  ),
+                  if (session.message != null && session.message!.isNotEmpty) ...[
+                    const Gap(2),
+                    Text(session.message!, style: BrandDesktopText.caption),
+                  ],
+                ],
+              ),
+            ),
+            if (session.stage != PaymentStage.paid)
+              TextButton(
+                onPressed: session.stage == PaymentStage.confirming
+                    ? null
+                    : () => unawaited(ref.read(paymentNotifierProvider.notifier).confirmPendingOrder()),
+                child: const Text('刷新支付状态'),
+              )
+            else
+              TextButton(
+                onPressed: () => unawaited(ref.read(paymentNotifierProvider.notifier).dismissSession()),
+                child: const Text('知道了'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 选择付费周期后发起支付。周期 key 直接使用后端套餐价格字段名。
+Future<void> _startPurchase(BuildContext context, WidgetRef ref, PremiumPlan plan) async {
+  if (plan.prices.isEmpty) {
+    ref.read(inAppNotificationControllerProvider).showInfoToast('该套餐未配置价格，请联系客服');
+    return;
+  }
+  if (ref.read(paymentNotifierProvider).isBusy) {
+    ref.read(inAppNotificationControllerProvider).showInfoToast('已有进行中的支付，请先确认结果');
+    return;
+  }
+
+  final price = plan.prices.length == 1
+      ? plan.prices.first
+      : await showModalBottomSheet<PremiumPlanPrice>(
+          context: context,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          builder: (sheetContext) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Gap(16),
+                Text('选择 ${plan.name} 的购买周期', style: BrandDesktopText.sectionTitle),
+                const Gap(8),
+                for (final item in plan.prices)
+                  ListTile(
+                    title: Text(item.label),
+                    trailing: Text(_formatMoney(item.amountCents), style: BrandDesktopText.sectionTitle),
+                    onTap: () => Navigator.of(sheetContext).pop(item),
+                  ),
+                const Gap(12),
+              ],
+            ),
+          ),
+        );
+  if (price == null) return;
+
+  await ref
+      .read(paymentNotifierProvider.notifier)
+      .startPurchase(planId: plan.id, period: price.periodKey, planName: plan.name);
 }
 
 class _PlanFeatureChip extends StatelessWidget {
