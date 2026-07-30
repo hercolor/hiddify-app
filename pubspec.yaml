@@ -193,9 +193,13 @@ flutter_gen:
     flutter_svg: true
 
 flutter_native_splash:
+  # 重跑 `dart run flutter_native_splash:create` 前必须保留 image：
+  # 之前无 image 的配置生成过纯白空图，是启动白屏的根因。
   color: "#ffffff"
+  image: icon.png
   android_12:
     color: "#ffffff"
+    image: icon.png
 
 ffigen:
   name: "HiddifyCoreNativeLibrary"
