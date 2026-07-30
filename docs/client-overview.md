@@ -33,9 +33,10 @@ BflyVPN 客户端是面向自有 XBoard 后端的商业客户端。二开目标�
 
 ### Android
 
-- 包名：`pro.y88.accelerator`。
+- 包名：`pro.y88.bflyvpn`。
 - 图标来自项目根目录 `icon.png` 派生资源。
-- 启动页暂为白屏。
+- 启动页为品牌白底 + 蝴蝶标识。
+- 支付回跳 scheme：`bflyvpn://pay/result`、`bflyvpn://app/refresh`。
 - TUN/VPN 权限请求由连接流程触发。
 
 ### Windows
@@ -48,8 +49,8 @@ BflyVPN 客户端是面向自有 XBoard 后端的商业客户端。二开目标�
 
 ### iOS / macOS
 
-- iOS 主 App Bundle ID：`pro.y88.hudiejiasu`。
-- iOS Network Extension：`pro.y88.hudiejiasu.PacketTunnel`。
+- iOS 主 App Bundle ID：`pro.y88.bflyvpn`。
+- iOS Network Extension：`pro.y88.bflyvpn.PacketTunnel`。
 - 需要 Apple Developer 账号完成正式签名分发。
 - 当前启动页白屏。
 

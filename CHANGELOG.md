@@ -11,11 +11,18 @@
 ### 品牌与平台
 
 - 产品名称统一为“BflyVPN”。
-- Android 包名保持 `pro.y88.accelerator`。
-- iOS 主 App Bundle ID 为 `pro.y88.hudiejiasu`，Network Extension 为 `pro.y88.hudiejiasu.PacketTunnel`。
-- Windows 可执行文件为 `BflyVPN.exe`。
+- Android 包名迁移为 `pro.y88.bflyvpn`（新安装身份，不覆盖旧包 `pro.y88.accelerator`）。
+- iOS 主 App Bundle ID 为 `pro.y88.bflyvpn`，Network Extension 为 `pro.y88.bflyvpn.PacketTunnel`。
+- Windows 可执行文件为 `BflyVPN.exe`；`BINARY_NAME` 已与安装包 `executable_name` 对齐。
 - 图标资源已替换为 BflyVPN 图标。
-- 启动页当前保持白屏，等待正式启动页设计。
+- 启动页改为品牌白底 + 蝴蝶标识（此前 `splash.png` 为纯白空图，表现为白屏）。
+
+### 会员门禁与支付
+
+- 连接门禁仅校验到期时间与设备数；流量退出拦截链路，只保留统计展示。
+- 设备超限禁止连接并提示当前/上限台数，不跳转支付、不清空节点缓存。
+- 续费改为支付闭环：创建订单 → 系统浏览器支付 → `bflyvpn://pay/result` 回跳 → 查单 → 刷新会员。
+- 回前台自动查进行中订单，套餐页提供「刷新支付状态」手动兜底。
 
 ### 账号与会员
 

@@ -55,6 +55,6 @@ fastforge --no-version-check package --platform windows --targets exe --skip-cle
 
 - 普通用户界面不得展示订阅地址、节点真实地址、协议、端口、DNS、fake-ip、IPv6 等技术信息。
 - 日志必须脱敏，不输出完整 token、authData、订阅 URL、节点密码。
-- Android `applicationId` 当前是 `pro.y88.accelerator`，为兼容已安装用户不要随意改动。
-- iOS 主 App Bundle ID 是 `pro.y88.hudiejiasu`，扩展是 `pro.y88.hudiejiasu.PacketTunnel`。
-- 启动页当前保持白屏，后续等正式启动页设计再接入。
+- Android `applicationId` 为 `pro.y88.bflyvpn`（新安装身份，与遗留 `pro.y88.accelerator` 脱钩）。
+- iOS 主 App Bundle ID 是 `pro.y88.bflyvpn`，扩展是 `pro.y88.bflyvpn.PacketTunnel`。
+- 启动页使用品牌白底 + 蝴蝶标识，不再是白屏。

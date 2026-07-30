@@ -124,7 +124,9 @@ fastforge --no-version-check package --platform windows --targets exe --skip-cle
 
 - 不在普通 UI 展示订阅地址、节点真实地址、端口、协议、DNS、fake-ip、IPv6 等技术细节。
 - 不在日志中输出完整 `authData`、token、订阅地址、节点密码或完整服务端地址。
-- Android `applicationId` 当前保留为 `pro.y88.accelerator`，不要随意修改，避免影响已安装用户覆盖升级。
-- iOS 当前主 App Bundle ID 为 `pro.y88.hudiejiasu`，Network Extension 为 `pro.y88.hudiejiasu.PacketTunnel`。
+- Android `applicationId` 为 `pro.y88.bflyvpn`（2026-07-29 起的新安装身份，与遗留的 `pro.y88.accelerator` 脱钩，不做覆盖升级）。
+- iOS 主 App Bundle ID 为 `pro.y88.bflyvpn`，Network Extension 为 `pro.y88.bflyvpn.PacketTunnel`。
+- Windows 可执行文件为 `BflyVPN.exe`（`windows/CMakeLists.txt` 的 `BINARY_NAME`）。
+- 支付回跳使用自有 scheme `bflyvpn://`，仅在 `pay` / `app` 两个 host 上响应。
 - 正常用户页面以 Home / Nodes / Membership 为主；技术设置仅作为内部诊断或隐藏功能。
 

@@ -29,17 +29,20 @@
 
 ### 2.2 推荐标识（待最终确认后锁定）
 
-下列为 **推荐默认值**。上线前必须由负责人在表格「最终值」列签字锁定；锁定前实现可用 feature flag / 配置，但不可三端各写各的。
+下列值已在 2026-07-29 随 ⑤ 工程自有化落地并锁定。**一旦商店提交，禁止再改。**
 
 | 平台 | 字段 | 推荐值 | 最终值（锁定） |
 |------|------|--------|----------------|
-| Android | `applicationId` | `pro.y88.bflyvpn` | _待填_ |
+| Android | `applicationId` | `pro.y88.bflyvpn` | **`pro.y88.bflyvpn`** |
 | Android | 显示名 | BflyVPN | BflyVPN |
-| iOS | 主 App Bundle ID | `pro.y88.bflyvpn` | _待填_ |
-| iOS | Packet Tunnel Extension | `pro.y88.bflyvpn.PacketTunnel` | _待填_ |
+| iOS | 主 App Bundle ID | `pro.y88.bflyvpn` | **`pro.y88.bflyvpn`** |
+| iOS | Packet Tunnel Extension | `pro.y88.bflyvpn.PacketTunnel` | **`pro.y88.bflyvpn.PacketTunnel`** |
 | Windows | 产品名 / 快捷方式 | BflyVPN | BflyVPN |
-| Windows | 可执行文件 | `BflyVPN.exe` | BflyVPN.exe |
-| Windows | 安装目录/AUMID 相关 | 与 BflyVPN 一致，避免 Hiddify | _待填_ |
+| Windows | 可执行文件 | `BflyVPN.exe` | **`BflyVPN.exe`**（`windows/CMakeLists.txt` 的 `BINARY_NAME`） |
+| Windows | 安装目录/AUMID 相关 | 与 BflyVPN 一致，避免 Hiddify | **`{autopf64}\BflyVPN`**；MSIX `execution_alias: BflyVPN` |
+
+> Dart 包名 `hiddify`（`pubspec.yaml` 的 `name`）**不在锁定范围内**：它只影响 `package:hiddify/...` 内部 import，
+> 对用户与商店均不可见。改名会触及全仓库每一个 import，收益为零、风险极高，故明确保留。
 
 **命名约束：**
 
@@ -259,13 +262,13 @@ Authorization: <authData>
 
 | 项 | 要求 |
 |----|------|
-| 协议注册 | 安装包注册 `bflyvpn` URL Protocol（HKCR 或安装器配置） |
-| 便携包 | 文档说明：便携版需注册协议或提供「复制支付链接 + 手动刷新」降级 |
+| 协议注册 | 客户端启动时运行时写 `HKCU\SOFTWARE\Classes\bflyvpn`（`registerProtocolHandler`），安装包与便携包均生效 |
+| 便携包 | 与安装包同样注册协议；若用户机器策略禁止写注册表，退回「刷新支付状态」手动兜底 |
 | 打开浏览器 | 系统默认浏览器打开 `pay_url` |
-| 单实例 | 协议唤起时应激活已有窗口，避免多开丢状态 |
+| 单实例 | **未实现**：`WindowsSingleInstance` 当前在 `window_notifier.dart` 中被注释，协议唤起会开新实例。上线前必须补齐 |
 | 回前台 | 窗口激活时若有进行中订单则查单 |
 
-**Windows 安装包为支付主路径；便携包若无法注册协议，必须实现「回前台/手动刷新」兜底，并在 UI 说明。**
+**Windows 便携包的协议注册已由运行时 HKCU 写入覆盖，不再是降级项；剩余风险是单实例缺失。**
 
 ---
 
@@ -313,9 +316,9 @@ Authorization: <authData>
 | P-17 | scheme 含禁止字段 | 忽略敏感参数；不落日志 |
 | P-18 | 未登录时被 scheme 唤起 | 进登录；登录后可再刷新订单（策略可定为丢弃订单会话） |
 
-### 9.3 三端同日
+### 9.3 首发同日
 
-Android / Windows / iOS 均需通过 P-10–P-16（Windows 便携可标降级项）。
+Android / Windows 均需通过 P-10–P-16（Windows 便携可标降级项）。iOS 为第二批，同样标准但不阻塞首发。
 
 ---
 

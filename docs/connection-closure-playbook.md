@@ -115,6 +115,12 @@
 
 现有代码中仍可能存在「套餐流量已用尽」文案（历史逻辑）。**收口时按 v0.1 移除流量拦截**，避免与产品冲突。
 
+> **状态（2026-07-29）：** 已完成。流量拦截已从 `UserSubscription.canConnect`、`ensureSubscriptionAccessForConnect`、
+> `ConnectionNotifier._subscriptionUnavailableMessage` 移除；流量仅保留统计展示。设备门禁以
+> `UserSubscription.isDeviceLimitExceeded` 独立实现，**不并入 `canConnect`**——因为 `canConnect` 为 false 会触发
+> `_clearSubscriptionAccessCache`（清空节点缓存与订阅 profile）并跳过节点同步，而设备超限是瞬时状态、会员本身有效，
+> 若并入会把 L1 问题错误放大为 L2「暂无可用节点」。
+
 ---
 
 ## 4. 变更纪律（反补丁）
@@ -221,15 +227,15 @@
 | C-40 | 已连接基础上网 | 按测试环境验证基础出网及出口路径 |
 | C-41 | 全局/智能切换（若保留） | 行为符合产品说明；失败单独归 L6 |
 
-### 6.6 三端同日门槛（连接子集）
+### 6.6 首发同日门槛（连接子集）
 
 | 端 | 最低通过 |
 |----|----------|
 | Android | C-01–C-07、C-10–C-13、C-20–C-21、C-30–C-34、C-40 |
 | Windows | C-01–C-07、C-10–C-13、C-22–C-23、C-30–C-34、C-40 |
-| iOS | C-01–C-07、C-10–C-13、C-24、C-30–C-34、C-40 |
+| iOS（第二批） | C-01–C-07、C-10–C-13、C-24、C-30–C-34、C-40；**不阻塞首发** |
 
-**退出连接收口：** 三端上述最低集全绿，且无「未归层的已知连不上工单」。
+**退出连接收口：** Android + Windows 上述最低集全绿，且无「未归层的已知连不上工单」。
 
 ---
 
