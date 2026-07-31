@@ -322,22 +322,28 @@ class _AuthFormScaffold extends StatelessWidget {
     final form = Align(alignment: showHeader ? Alignment.center : Alignment.topCenter, child: content);
 
     if (PlatformUtils.isDesktop) {
-      if (!showHeader) {
-        return DesktopTheme(
-          child: DesktopBackdrop(
-            child: SafeArea(
-              child: Stack(
-                children: [
-                  Positioned(left: 20, top: 18, child: DesktopBackButton(onPressed: () => _goBackToLogin(context))),
-                  Padding(padding: const EdgeInsets.only(top: 46), child: form),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
+      // These routes sit outside the desktop shell, so they need their own
+      // Material surface for text fields, buttons, and ink responses.
       return DesktopTheme(
-        child: DesktopPageScaffold(title: title, subtitle: subtitle, leading: const DesktopBackButton(), child: form),
+        child: Material(
+          color: BrandDesktopColors.background,
+          child: !showHeader
+              ? DesktopBackdrop(
+                  child: SafeArea(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: 20,
+                          top: 18,
+                          child: DesktopBackButton(onPressed: () => _goBackToLogin(context)),
+                        ),
+                        Padding(padding: const EdgeInsets.only(top: 46), child: form),
+                      ],
+                    ),
+                  ),
+                )
+              : DesktopPageScaffold(title: title, subtitle: subtitle, leading: const DesktopBackButton(), child: form),
+        ),
       );
     }
 
