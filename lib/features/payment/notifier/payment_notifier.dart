@@ -99,20 +99,25 @@ class PaymentNotifier extends StateNotifier<PaymentSessionState> with InfraLogge
     DiagnosticEventBuffer.addSafe('payment ${link.safeSummary}');
     switch (link.action) {
       case BflyLinkAction.payResult:
-        // 无 order_id 也要触发一次刷新，并提示结果未知（规范 §3.4 第 3 条）。
-        final tradeNo = link.orderId ?? state.tradeNo ?? _ref.read(pendingPaymentOrderProvider);
-        if (tradeNo == null || tradeNo.isEmpty) {
-          await _refreshMembership();
-          state = state.copyWith(stage: PaymentStage.unknown, message: '支付结果未知，请稍后刷新');
-          return;
-        }
-        if (link.orderId != null) await _rememberPendingOrder(link.orderId!);
-        await _confirmOrder(tradeNo, hintCancelled: link.looksCancelled);
+        await _handlePayResult(link);
       case BflyLinkAction.refresh:
         await _refreshMembership();
       case BflyLinkAction.unknown:
         loggy.debug('unknown deep link ignored');
     }
+  }
+
+  Future<void> _handlePayResult(BflyDeepLink link) async {
+    final tradeNo = link.orderId ?? state.tradeNo ?? _ref.read(pendingPaymentOrderProvider);
+    // 无 order_id 也要触发一次刷新，并提示结果未知（规范 §3.4 第 3 条）。
+    if (tradeNo == null || tradeNo.isEmpty) {
+      await _refreshMembership();
+      state = state.copyWith(stage: PaymentStage.unknown, message: '支付结果未知，请稍后刷新');
+      return;
+    }
+    final orderId = link.orderId;
+    if (orderId != null) await _rememberPendingOrder(orderId);
+    await _confirmOrder(tradeNo, hintCancelled: link.looksCancelled);
   }
 
   /// 回前台 / 手动「刷新支付状态」兜底（规范 §4.2）。
