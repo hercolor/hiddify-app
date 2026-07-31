@@ -24,7 +24,10 @@ class PaymentSessionState {
   /// 是否还存在需要兜底查单的订单（规范 §4.2）。
   bool get hasUnsettledOrder =>
       tradeNo != null &&
-      (stage == PaymentStage.awaitingBrowser || stage == PaymentStage.confirming || stage == PaymentStage.unknown);
+      (stage == PaymentStage.awaitingBrowser ||
+          stage == PaymentStage.confirming ||
+          stage == PaymentStage.failed ||
+          stage == PaymentStage.unknown);
 
   PaymentSessionState copyWith({
     PaymentStage? stage,
@@ -52,8 +55,8 @@ enum PaymentOrderStatus {
   completed,
   unknown;
 
-  /// 已支付：`processing` 表示后端已收款、正在开通，对用户等价于成功。
-  bool get isPaid => this == PaymentOrderStatus.completed || this == PaymentOrderStatus.processing;
+  /// 只有服务端完成态才能宣告会员已生效；processing 继续轮询。
+  bool get isPaid => this == PaymentOrderStatus.completed;
 
   bool get isTerminal => isPaid || this == PaymentOrderStatus.cancelled;
 
@@ -75,8 +78,7 @@ class PaymentOrder {
   final int? totalAmountCents;
 
   /// 诊断用摘要：只暴露订单号后 6 位与状态，不带金额以外的用户信息。
-  String get safeSummary => 'order=***${tradeNo.length <= 6 ? tradeNo : tradeNo.substring(tradeNo.length - 6)} '
-      'status=${status.name}';
+  String get safeSummary => 'order=${maskedOrderId(tradeNo)} status=${status.name}';
 }
 
 /// 支付下单结果：拿到 `pay_url` 走系统浏览器；余额直付时后端可能直接返回已支付。
@@ -109,6 +111,8 @@ class BflyDeepLink {
     'sub_url',
   };
 
+  static const _allowedStatuses = {'success', 'cancel', 'cancelled', 'fail', 'failed', 'unknown'};
+
   final BflyLinkAction action;
   final String? orderId;
   final String? status;
@@ -128,11 +132,12 @@ class BflyDeepLink {
 
     final host = uri.host.toLowerCase();
     final path = uri.path.toLowerCase().replaceAll(RegExp(r'/+$'), '');
-    final orderId = _firstNonEmpty(params, const ['order_id', 'orderid', 'trade_no', 'tradeno']);
-    final status = _firstNonEmpty(params, const ['status']);
+    final orderId = _normalizeOrderId(_firstNonEmpty(params, const ['order_id', 'orderid', 'trade_no', 'tradeno']));
+    final rawStatus = _firstNonEmpty(params, const ['status'])?.toLowerCase();
+    final status = _allowedStatuses.contains(rawStatus) ? rawStatus : null;
 
     if (host == 'pay' && (path == '/result' || path.isEmpty)) {
-      return BflyDeepLink(action: BflyLinkAction.payResult, orderId: orderId, status: status?.toLowerCase());
+      return BflyDeepLink(action: BflyLinkAction.payResult, orderId: orderId, status: status);
     }
     if (host == 'app' && (path == '/refresh' || path.isEmpty)) {
       return const BflyDeepLink(action: BflyLinkAction.refresh);
@@ -146,9 +151,7 @@ class BflyDeepLink {
   /// 脱敏摘要，可安全写入诊断缓冲。
   String get safeSummary {
     final order = orderId;
-    final tail = order == null || order.isEmpty
-        ? 'none'
-        : '***${order.length <= 6 ? order : order.substring(order.length - 6)}';
+    final tail = maskedOrderId(order);
     return 'deeplink action=${action.name} order=$tail status=${status ?? 'none'}';
   }
 
@@ -159,4 +162,17 @@ class BflyDeepLink {
     }
     return null;
   }
+}
+
+String maskedOrderId(String? orderId) {
+  if (orderId == null || orderId.isEmpty) return 'none';
+  final sanitized = orderId.replaceAll(RegExp('[^A-Za-z0-9._-]'), '');
+  if (sanitized.length <= 6) return '***';
+  return '***${sanitized.substring(sanitized.length - 6)}';
+}
+
+String? _normalizeOrderId(String? orderId) {
+  final normalized = orderId?.trim();
+  if (normalized == null || !RegExp(r'^[A-Za-z0-9._-]{1,128}$').hasMatch(normalized)) return null;
+  return normalized;
 }

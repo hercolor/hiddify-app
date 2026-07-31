@@ -18,9 +18,17 @@ final pendingPaymentOrderProvider = PreferencesNotifier.create<String?, String?>
   null,
   mapFrom: (value) => value == null || value.isEmpty ? null : value,
   mapTo: (value) => value ?? '',
+  redactValueInLogs: true,
 );
 
 final paymentNotifierProvider = StateNotifierProvider<PaymentNotifier, PaymentSessionState>(PaymentNotifier.new);
+
+typedef PaymentUriLauncher = Future<bool> Function(Uri uri);
+
+final paymentUriLauncherProvider = Provider<PaymentUriLauncher>(
+  (ref) =>
+      (uri) => UriUtils.tryLaunch(uri, redactUriInLogs: true),
+);
 
 /// 支付闭环编排：下单 → 系统浏览器 → scheme/回前台唤回 → 查单 → 刷会员。
 ///
@@ -44,8 +52,9 @@ class PaymentNotifier extends StateNotifier<PaymentSessionState> with InfraLogge
 
   /// 发起购买：创建订单 → 结账拿支付地址 → 系统浏览器打开。
   Future<void> startPurchase({required int planId, required String period, String? planName}) async {
-    if (state.isBusy) {
-      loggy.debug('purchase ignored, session busy');
+    if (state.isBusy || state.hasUnsettledOrder) {
+      loggy.debug('purchase ignored, session active');
+      _ref.read(inAppNotificationControllerProvider).showInfoToast('请先确认当前订单状态');
       return;
     }
     final authData = _authData();
@@ -60,37 +69,49 @@ class PaymentNotifier extends StateNotifier<PaymentSessionState> with InfraLogge
       final tradeNo = await api.createOrder(authData, planId: planId, period: period);
       await _rememberPendingOrder(tradeNo);
       state = state.copyWith(tradeNo: tradeNo);
-
-      final methods = await api.fetchPaymentMethods(authData);
-      final checkout = await api.checkout(
-        authData,
-        tradeNo: tradeNo,
-        methodId: methods.isEmpty ? null : methods.first.id,
-      );
-      DiagnosticEventBuffer.addSafe(
-        'payment checkout ready: ${_orderTail(tradeNo)} redirect=${checkout.payUrl != null}',
-      );
-
-      if (checkout.settledWithoutRedirect) {
-        await confirmPendingOrder();
-        return;
-      }
-
-      final payUrl = checkout.payUrl;
-      if (payUrl == null) {
-        _fail('发起支付失败，请稍后重试');
-        return;
-      }
-      final launched = await UriUtils.tryLaunch(Uri.parse(payUrl));
-      if (!launched) {
-        _fail('无法打开浏览器，请稍后重试');
-        return;
-      }
-      state = state.copyWith(stage: PaymentStage.awaitingBrowser, message: '请在浏览器完成支付');
+      await _openCheckout(api, authData, tradeNo);
     } catch (error, stackTrace) {
       loggy.warning('purchase failed', error, stackTrace);
       DiagnosticEventBuffer.addSafe('payment purchase failed');
       _fail(_failureMessage(error, fallback: '发起支付失败，请稍后重试'));
+    }
+  }
+
+  /// 用已存在的服务端订单重新获取支付地址，避免重复创建订单。
+  Future<void> retryPendingCheckout() async {
+    if (state.stage == PaymentStage.confirming) return;
+    final tradeNo = state.tradeNo ?? _ref.read(pendingPaymentOrderProvider);
+    if (tradeNo == null || tradeNo.isEmpty) {
+      state = PaymentSessionState.initial;
+      return;
+    }
+    final authData = _authData();
+    if (authData == null) {
+      _fail('请先登录账号');
+      return;
+    }
+
+    state = state.copyWith(stage: PaymentStage.confirming, tradeNo: tradeNo, message: '正在恢复支付');
+    try {
+      final api = await _ref.read(paymentApiServiceProvider.future);
+      final order = await api.fetchOrder(authData, tradeNo: tradeNo);
+      DiagnosticEventBuffer.addSafe('payment retry check: ${order.safeSummary}');
+      if (await _applyTerminalOrder(order)) return;
+
+      switch (order.status) {
+        case PaymentOrderStatus.pending:
+          await _openCheckout(api, authData, tradeNo);
+        case PaymentOrderStatus.processing:
+          await _confirmOrder(tradeNo);
+        case PaymentOrderStatus.unknown:
+          state = state.copyWith(stage: PaymentStage.unknown, message: '订单状态待确认，请稍后刷新');
+        case PaymentOrderStatus.cancelled || PaymentOrderStatus.completed:
+          return;
+      }
+    } catch (error, stackTrace) {
+      loggy.warning('payment retry failed', error, stackTrace);
+      DiagnosticEventBuffer.addSafe('payment retry failed: ${_orderTail(tradeNo)}');
+      _fail(_failureMessage(error, fallback: '恢复支付失败，请稍后重试'));
     }
   }
 
@@ -130,7 +151,7 @@ class PaymentNotifier extends StateNotifier<PaymentSessionState> with InfraLogge
     await _confirmOrder(tradeNo);
   }
 
-  /// 用户主动放弃当前订单，回到可重新选择套餐的状态。
+  /// 关闭已结束的支付提示。
   Future<void> dismissSession() async {
     await _rememberPendingOrder(null);
     state = PaymentSessionState.initial;
@@ -160,25 +181,12 @@ class PaymentNotifier extends StateNotifier<PaymentSessionState> with InfraLogge
         if (attempt < _pollAttempts - 1) await Future<void>.delayed(_pollInterval);
       }
       DiagnosticEventBuffer.addSafe('payment confirm: ${order?.safeSummary ?? 'no order'}');
-
-      if (order != null && order.status.isPaid) {
-        await _rememberPendingOrder(null);
-        await _refreshMembership();
-        state = state.copyWith(stage: PaymentStage.paid, message: '会员已生效', clearTradeNo: true);
-        _ref.read(inAppNotificationControllerProvider).showSuccessToast('会员已生效，可以连接');
-        return;
-      }
-      if (order != null && order.status == PaymentOrderStatus.cancelled) {
-        await _rememberPendingOrder(null);
-        state = state.copyWith(stage: PaymentStage.cancelled, message: '订单已取消，可重新选择套餐', clearTradeNo: true);
-        return;
-      }
-      // 仍是 pending：保留订单，交给回前台/手动刷新继续兜底。
+      if (order != null && await _applyTerminalOrder(order)) return;
+      // 服务端仍未终结：即使回跳提示取消，也必须保留订单继续查单。
       state = state.copyWith(
-        stage: hintCancelled ? PaymentStage.cancelled : PaymentStage.unknown,
-        message: hintCancelled ? '支付已取消，可重新发起' : '支付状态确认中，可稍后刷新或联系客服',
+        stage: PaymentStage.unknown,
+        message: hintCancelled ? '已收到取消提示，正在等待服务端确认' : '支付状态确认中，可稍后刷新或联系客服',
       );
-      if (hintCancelled) await _rememberPendingOrder(null);
     } catch (error, stackTrace) {
       loggy.warning('order confirm failed', error, stackTrace);
       DiagnosticEventBuffer.addSafe('payment confirm failed: ${_orderTail(tradeNo)}');
@@ -186,6 +194,43 @@ class PaymentNotifier extends StateNotifier<PaymentSessionState> with InfraLogge
     } finally {
       _confirming = false;
     }
+  }
+
+  Future<void> _openCheckout(PaymentApiService api, String authData, String tradeNo) async {
+    final methods = await api.fetchPaymentMethods(authData);
+    final checkout = await api.checkout(authData, tradeNo: tradeNo, methodId: methods.first.id);
+    DiagnosticEventBuffer.addSafe('payment checkout ready: ${_orderTail(tradeNo)} redirect=${checkout.payUrl != null}');
+
+    if (checkout.settledWithoutRedirect) {
+      await _confirmOrder(tradeNo);
+      return;
+    }
+
+    final payUrl = checkout.payUrl;
+    if (payUrl == null) throw const AuthFailure.badResponse('发起支付失败');
+    final payUri = Uri.tryParse(payUrl);
+    if (payUri == null || payUri.scheme.toLowerCase() != 'https' || payUri.host.isEmpty) {
+      throw const AuthFailure.badResponse('支付地址不安全，已阻止打开');
+    }
+    final launched = await _ref.read(paymentUriLauncherProvider)(payUri);
+    if (!launched) throw const AuthFailure.badResponse('无法打开浏览器');
+    state = state.copyWith(stage: PaymentStage.awaitingBrowser, message: '请在浏览器完成支付');
+  }
+
+  Future<bool> _applyTerminalOrder(PaymentOrder order) async {
+    if (order.status.isPaid) {
+      await _rememberPendingOrder(null);
+      await _refreshMembership();
+      state = state.copyWith(stage: PaymentStage.paid, message: '会员已生效', clearTradeNo: true);
+      _ref.read(inAppNotificationControllerProvider).showSuccessToast('会员已生效，可以连接');
+      return true;
+    }
+    if (order.status == PaymentOrderStatus.cancelled) {
+      await _rememberPendingOrder(null);
+      state = state.copyWith(stage: PaymentStage.cancelled, message: '订单已取消，可重新选择套餐', clearTradeNo: true);
+      return true;
+    }
+    return false;
   }
 
   Future<void> _refreshMembership() async {
@@ -214,8 +259,7 @@ class PaymentNotifier extends StateNotifier<PaymentSessionState> with InfraLogge
     _ref.read(inAppNotificationControllerProvider).showErrorToast(message);
   }
 
-  String _orderTail(String tradeNo) =>
-      'order=***${tradeNo.length <= 6 ? tradeNo : tradeNo.substring(tradeNo.length - 6)}';
+  String _orderTail(String tradeNo) => 'order=${maskedOrderId(tradeNo)}';
 
   /// 只透传后端明确的业务提示，其余一律用产品文案，避免把技术错误抛给用户。
   String _failureMessage(Object error, {required String fallback}) =>

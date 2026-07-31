@@ -856,7 +856,7 @@ class _PlanOptionCard extends StatelessWidget {
   }
 }
 
-/// 支付会话状态条：确认中 / 成功 / 失败，以及「刷新支付状态」兜底入口（规范 §4.2–§4.3）。
+/// 支付会话状态条：确认中 / 成功 / 失败，以及原订单恢复入口（规范 §4.2–§4.3）。
 class _PaymentStatusBanner extends ConsumerWidget {
   const _PaymentStatusBanner();
 
@@ -904,12 +904,15 @@ class _PaymentStatusBanner extends ConsumerWidget {
                 ],
               ),
             ),
-            if (session.stage != PaymentStage.paid)
+            if (session.hasUnsettledOrder && session.stage != PaymentStage.confirming)
               TextButton(
-                onPressed: session.stage == PaymentStage.confirming
-                    ? null
-                    : () => unawaited(ref.read(paymentNotifierProvider.notifier).confirmPendingOrder()),
-                child: const Text('刷新支付状态'),
+                onPressed: () => unawaited(ref.read(paymentNotifierProvider.notifier).retryPendingCheckout()),
+                child: const Text('刷新并继续支付'),
+              )
+            else if (session.stage == PaymentStage.confirming)
+              const TextButton(
+                onPressed: null,
+                child: Text('正在确认'),
               )
             else
               TextButton(
@@ -929,8 +932,9 @@ Future<void> _startPurchase(BuildContext context, WidgetRef ref, PremiumPlan pla
     ref.read(inAppNotificationControllerProvider).showInfoToast('该套餐未配置价格，请联系客服');
     return;
   }
-  if (ref.read(paymentNotifierProvider).isBusy) {
-    ref.read(inAppNotificationControllerProvider).showInfoToast('已有进行中的支付，请先确认结果');
+  final paymentSession = ref.read(paymentNotifierProvider);
+  if (paymentSession.isBusy || paymentSession.hasUnsettledOrder) {
+    ref.read(inAppNotificationControllerProvider).showInfoToast('已有未完成订单，请先确认结果');
     return;
   }
 

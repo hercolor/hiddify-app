@@ -50,6 +50,22 @@ void main() {
       expect(link.status, 'success');
     });
 
+    test('drops unrecognised status values from diagnostics', () {
+      final link = BflyDeepLink.tryParse('bflyvpn://pay/result?order_id=ORDER123&status=SECRET%0Afake-log');
+
+      expect(link!.status, isNull);
+      expect(link.safeSummary, isNot(contains('SECRET')));
+      expect(link.safeSummary, isNot(contains('fake-log')));
+    });
+
+    test('drops unsafe order ids from diagnostics', () {
+      final link = BflyDeepLink.tryParse('bflyvpn://pay/result?order_id=SECRET%0Afake-log&status=success');
+
+      expect(link!.orderId, isNull);
+      expect(link.safeSummary, isNot(contains('SECRET')));
+      expect(link.safeSummary, isNot(contains('fake-log')));
+    });
+
     // P-17：scheme 含禁止字段时必须忽略，且不得进入摘要/日志。
     test('drops forbidden credential params and keeps them out of the log summary', () {
       final link = BflyDeepLink.tryParse(
@@ -85,8 +101,9 @@ void main() {
       expect(PaymentOrderStatus.fromCode(99), PaymentOrderStatus.unknown);
     });
 
-    test('treats processing as paid so 开通中 does not look like failure', () {
-      expect(PaymentOrderStatus.processing.isPaid, isTrue);
+    test('keeps processing non-terminal until the server completes the order', () {
+      expect(PaymentOrderStatus.processing.isPaid, isFalse);
+      expect(PaymentOrderStatus.processing.isTerminal, isFalse);
       expect(PaymentOrderStatus.completed.isPaid, isTrue);
       expect(PaymentOrderStatus.pending.isPaid, isFalse);
       expect(PaymentOrderStatus.cancelled.isPaid, isFalse);
@@ -98,10 +115,12 @@ void main() {
     test('flags sessions that still need a fallback query', () {
       const awaiting = PaymentSessionState(stage: PaymentStage.awaitingBrowser, tradeNo: 'T1');
       const unknown = PaymentSessionState(stage: PaymentStage.unknown, tradeNo: 'T1');
+      const failedAfterOrder = PaymentSessionState(stage: PaymentStage.failed, tradeNo: 'T1');
       const paid = PaymentSessionState(stage: PaymentStage.paid);
 
       expect(awaiting.hasUnsettledOrder, isTrue);
       expect(unknown.hasUnsettledOrder, isTrue);
+      expect(failedAfterOrder.hasUnsettledOrder, isTrue);
       expect(paid.hasUnsettledOrder, isFalse);
       expect(PaymentSessionState.initial.hasUnsettledOrder, isFalse);
     });
@@ -112,6 +131,15 @@ void main() {
       expect(state.copyWith(clearTradeNo: true).tradeNo, isNull);
       expect(state.copyWith(clearMessage: true).message, isNull);
       expect(state.copyWith(stage: PaymentStage.paid).tradeNo, 'T1');
+    });
+  });
+
+  group('maskedOrderId', () {
+    test('never exposes a short order id in full', () {
+      expect(maskedOrderId('T99'), '***');
+      expect(maskedOrderId('ORDER123'), '***DER123');
+      expect(maskedOrderId('SECRET\nfake-log'), '***ke-log');
+      expect(maskedOrderId(null), 'none');
     });
   });
 }

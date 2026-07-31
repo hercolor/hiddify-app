@@ -4,7 +4,15 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesEntry<T, P> with InfraLogger {
-  PreferencesEntry({required this.preferences, required this.key, required this.defaultValue, this.mapFrom, this.mapTo, this.validator});
+  PreferencesEntry({
+    required this.preferences,
+    required this.key,
+    required this.defaultValue,
+    this.mapFrom,
+    this.mapTo,
+    this.validator,
+    this.redactValueInLogs = false,
+  });
 
   final SharedPreferences preferences;
   final String key;
@@ -12,6 +20,7 @@ class PreferencesEntry<T, P> with InfraLogger {
   final T Function(P value)? mapFrom;
   final P Function(T value)? mapTo;
   final bool Function(T value)? validator;
+  final bool redactValueInLogs;
 
   T read() {
     try {
@@ -44,10 +53,11 @@ class PreferencesEntry<T, P> with InfraLogger {
     if (mapTo != null) {
       mapped = mapTo!(value);
     }
-    loggy.debug("updating preference [$key]($T) to [$mapped]");
+    final logValue = redactValueInLogs ? '<redacted>' : mapped;
+    loggy.debug("updating preference [$key]($T) to [$logValue]");
     try {
       if (!(validator?.call(value) ?? true)) {
-        loggy.warning("invalid value [$value] for preference [$key]($T)");
+        loggy.warning("invalid value [$logValue] for preference [$key]($T)");
         return false;
       }
 
@@ -86,7 +96,9 @@ class PreferencesEntry<T, P> with InfraLogger {
 }
 
 class PreferencesNotifier<T, P> extends StateNotifier<T> {
-  PreferencesNotifier._({required Ref ref, required this.entry, this.overrideValue, this.possibleValues}) : _ref = ref, super(overrideValue ?? entry.read());
+  PreferencesNotifier._({required Ref ref, required this.entry, this.overrideValue, this.possibleValues})
+    : _ref = ref,
+      super(overrideValue ?? entry.read());
 
   final Ref _ref;
   final PreferencesEntry<T, P> entry;
@@ -100,25 +112,49 @@ class PreferencesNotifier<T, P> extends StateNotifier<T> {
     T Function(P value)? mapFrom,
     P Function(T value)? mapTo,
     bool Function(T value)? validator,
+    bool redactValueInLogs = false,
     T? overrideValue,
     List<T>? possibleValues,
   }) => StateNotifierProvider(
     (ref) => PreferencesNotifier._(
       ref: ref,
-      entry: PreferencesEntry<T, P>(preferences: ref.read(sharedPreferencesProvider).requireValue, key: key, defaultValue: defaultValueFunction?.call(ref) ?? defaultValue, mapFrom: mapFrom, mapTo: mapTo, validator: validator),
+      entry: PreferencesEntry<T, P>(
+        preferences: ref.read(sharedPreferencesProvider).requireValue,
+        key: key,
+        defaultValue: defaultValueFunction?.call(ref) ?? defaultValue,
+        mapFrom: mapFrom,
+        mapTo: mapTo,
+        validator: validator,
+        redactValueInLogs: redactValueInLogs,
+      ),
       overrideValue: overrideValue,
       possibleValues: possibleValues,
     ),
   );
 
-  static AutoDisposeStateNotifierProvider<PreferencesNotifier<T, P>, T> createAutoDispose<T, P>(String key, T defaultValue, {T Function(P value)? mapFrom, P Function(T value)? mapTo, bool Function(T value)? validator, T? overrideValue}) =>
-      StateNotifierProvider.autoDispose(
-        (ref) => PreferencesNotifier._(
-          ref: ref,
-          entry: PreferencesEntry<T, P>(preferences: ref.read(sharedPreferencesProvider).requireValue, key: key, defaultValue: defaultValue, mapFrom: mapFrom, mapTo: mapTo, validator: validator),
-          overrideValue: overrideValue,
-        ),
-      );
+  static AutoDisposeStateNotifierProvider<PreferencesNotifier<T, P>, T> createAutoDispose<T, P>(
+    String key,
+    T defaultValue, {
+    T Function(P value)? mapFrom,
+    P Function(T value)? mapTo,
+    bool Function(T value)? validator,
+    bool redactValueInLogs = false,
+    T? overrideValue,
+  }) => StateNotifierProvider.autoDispose(
+    (ref) => PreferencesNotifier._(
+      ref: ref,
+      entry: PreferencesEntry<T, P>(
+        preferences: ref.read(sharedPreferencesProvider).requireValue,
+        key: key,
+        defaultValue: defaultValue,
+        mapFrom: mapFrom,
+        mapTo: mapTo,
+        validator: validator,
+        redactValueInLogs: redactValueInLogs,
+      ),
+      overrideValue: overrideValue,
+    ),
+  );
 
   P raw() {
     final value = overrideValue ?? state;

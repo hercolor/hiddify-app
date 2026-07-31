@@ -15,16 +15,17 @@ abstract class UriUtils {
     return tryShareFile(uri);
   }
 
-  static Future<bool> tryLaunch(Uri uri) async {
+  static Future<bool> tryLaunch(Uri uri, {bool redactUriInLogs = false}) async {
+    final logTarget = redactUriInLogs ? '[redacted ${uri.scheme} URI]' : '[$uri]';
     try {
-      loggy.debug("launching [$uri]");
+      loggy.debug("launching $logTarget");
       if (!await canLaunchUrl(uri)) {
-        loggy.warning("can't launch [$uri]");
+        loggy.warning("can't launch $logTarget");
         return false;
       }
       return launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e, stackTrace) {
-      loggy.warning("error launching [$uri]", e, stackTrace);
+      loggy.warning("error launching $logTarget", e, stackTrace);
       return false;
     }
   }

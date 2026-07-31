@@ -22,7 +22,7 @@ abstract interface class PaymentApiService {
   /// 查单：**订单状态的唯一权威来源**。
   Future<PaymentOrder> fetchOrder(String authData, {required String tradeNo});
 
-  /// 可用支付方式；后端未开放时返回空表，由 checkout 走默认渠道。
+  /// 可用支付方式。付费订单没有可用方式时必须显式失败。
   Future<List<PaymentMethod>> fetchPaymentMethods(String authData);
 }
 
@@ -78,11 +78,12 @@ class XBoardPaymentApiService with InfraLogger implements PaymentApiService {
       if (payUrl == null || payUrl.isEmpty) {
         throw const AuthFailure.badResponse('发起支付失败');
       }
-      if (!payUrl.toLowerCase().startsWith('https://')) {
+      final payUri = Uri.tryParse(payUrl);
+      if (payUri == null || payUri.scheme.toLowerCase() != 'https' || payUri.host.isEmpty) {
         // 规范 §5.4：pay_url 仅允许 HTTPS。
         throw const AuthFailure.badResponse('支付地址不安全，已阻止打开');
       }
-      return PaymentCheckout(tradeNo: tradeNo, payUrl: payUrl);
+      return PaymentCheckout(tradeNo: tradeNo, payUrl: payUri.toString());
     } catch (error, stackTrace) {
       throw _toAuthFailure(error, stackTrace, action: 'order checkout failed');
     }
@@ -117,8 +118,10 @@ class XBoardPaymentApiService with InfraLogger implements PaymentApiService {
       );
       _ensureOk(response.statusCode, response.data, fallbackMessage: '支付方式返回异常');
       final payload = _unwrap(response.data);
-      if (payload is! List) return const [];
-      return payload
+      if (payload is! List) {
+        throw const AuthFailure.badResponse('支付方式返回异常');
+      }
+      final methods = payload
           .map((item) {
             final id = _intValue(_valueByKey(item, 'id'));
             final name = _stringValue(_valueByKey(item, 'name'))?.trim();
@@ -127,9 +130,12 @@ class XBoardPaymentApiService with InfraLogger implements PaymentApiService {
           })
           .whereType<PaymentMethod>()
           .toList();
+      if (methods.isEmpty) {
+        throw const AuthFailure.badResponse('暂无可用支付方式');
+      }
+      return methods;
     } catch (error, stackTrace) {
-      loggy.debug('payment method fetch skipped', error, stackTrace);
-      return const [];
+      throw _toAuthFailure(error, stackTrace, action: 'payment method fetch failed');
     }
   }
 
