@@ -1,11 +1,12 @@
 display_name: BflyVPN
 publisher_display_name: BflyVPN
+# Microsoft Store-assigned stable identity; do not change it with display_name.
 identity_name: HuDieJiaSu.Desktop
 msix_version: 4.1.2.0
 logo_path: windows\runner\resources\app_icon.ico
 capabilities: internetClient, internetClientServer, privateNetworkClientServer
 languages: ar, en-us, es-es, fa-ir, fr-fr, id-id, pt-br, ru-ru, tr-tr, zh-cn, zh-tw
-protocol_activation: hudiejiasu, v2ray, v2rayn, v2rayng, clash, clashmeta, sing-box
+protocol_activation: bflyvpn
 execution_alias: BflyVPN
 certificate_path: windows\sign.pfx
 certificate_password:
@@ -16,6 +17,6 @@ startup_task:
   parameters: --autostart
 
 # For testing with a self-signed certificate
-# publisher: CN=HuDieJiaSu-Test
+# publisher: CN=BflyVPN-Test
 # certificate_password: "1234"
 # install_certificate: "true"

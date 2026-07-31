@@ -16,10 +16,6 @@ add_executable(${BINARY_NAME} WIN32
   "runner.exe.manifest"
 )
 
-# Keep the CMake target name ASCII for generator compatibility while emitting
-# the branded executable name shown to users.
-set_target_properties(${BINARY_NAME} PROPERTIES OUTPUT_NAME "BflyVPN")
-
 # Apply the standard set of build settings. This can be removed for applications
 # that need different build settings.
 apply_standard_settings(${BINARY_NAME})

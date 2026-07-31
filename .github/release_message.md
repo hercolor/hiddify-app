@@ -22,7 +22,7 @@ sha256sum -c <file>.sha256
 
 ## 升级注意
 
-- Android 包名保持 `pro.y88.accelerator`，用于覆盖升级旧版本。
+- Android 包名为 `pro.y88.bflyvpn`；它是新安装身份，不覆盖旧版 `pro.y88.accelerator`。
 - Windows 可执行文件为 `BflyVPN.exe`。
 - 客户端版本需要与后台版本管理接口保持一致，否则用户端不会提示升级。
 - 普通用户界面不展示订阅地址、节点真实地址、协议、端口、DNS 等技术信息。

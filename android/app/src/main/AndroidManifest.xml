@@ -68,26 +68,6 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
 
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="hiddify" />
-                <data android:scheme="v2ray" />
-                <data android:scheme="v2rayn" />
-                <data android:scheme="v2rayng" />
-                <data android:scheme="clash" />
-                <data android:scheme="clashmeta" />
-                <data android:scheme="sing-box" />
-
-                <!-- <data android:host="import" />
-                <data android:host="install-config" />
-                <data android:host="import-remote-profile" />
-                <data android:host="install-sub" /> -->
-            </intent-filter>
-
             <!-- 自有 scheme：支付回跳与通用刷新。见 docs/package-and-scheme-spec.md §3 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
