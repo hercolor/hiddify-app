@@ -1,21 +1,61 @@
 import 'package:flutter/material.dart';
 
-abstract final class BrandColors {
-  static const porcelain = Color(0xFFFFFFFF);
-  static const mist = Color(0xFFF5F8FC);
-  static const mistBlue = Color(0xFFEAF4FF);
-  static const card = Color(0xFFFFFFFF);
-  static const cardBlue = Color(0xFFF5F7FA);
-  static const signalBlue = Color(0xFF007AFF);
-  static const iceCyan = Color(0xFF38BDF8);
-  static const deepSignal = Color(0xFF1238B7);
-  static const slate = Color(0xFF111827);
-  static const muted = Color(0xFF6B7280);
-  static const subtle = Color(0xFFB0BEC5);
-  static const border = Color(0xFFE7EEF7);
-  static const success = Color(0xFF34C759);
+/// BflyVPN 设计系统 v1 的唯一颜色来源。见 `docs/bflyvpn-design-system-v1.md` §2。
+///
+/// 中性色采用 slate 体系（与既有页面里用量最大的一套一致），品牌色为靛紫→青。
+/// **新代码不得再写字面量颜色。**
+abstract final class BrandPalette {
+  // 中性色
+  static const ink = Color(0xFF0F172A);
+  static const inkMuted = Color(0xFF64748B);
+  static const inkFaint = Color(0xFF94A3B8);
+  static const line = Color(0xFFE2E8F0);
+  static const wash = Color(0xFFF1F5F9);
+  static const canvas = Color(0xFFF8FAFC);
+  static const surface = Color(0xFFFFFFFF);
+
+  // 品牌色
+  static const brand = Color(0xFF4F46E5);
+  static const brandDeep = Color(0xFF3730A3);
+
+  /// 白底对比度仅 1.81:1 —— **只能做渐变端点或大面积图形填充，
+  /// 禁止用作文字与需要辨识的图标颜色**（设计系统 §2.2）。
+  static const brandGlow = Color(0xFF22D3EE);
+
+  // 语义色
+  static const success = Color(0xFF10B981);
   static const warning = Color(0xFFF59E0B);
-  static const error = Color(0xFFEF4444);
+  static const danger = Color(0xFFEF4444);
+
+  /// 危险色浅底：警示区块与销毁类按钮的填充，不用于文字。
+  static const dangerWash = Color(0xFFFEF2F2);
+  static const dangerWashHover = Color(0xFFFEE2E2);
+
+  // 会员：浅色界面里唯一的深色锚点，与主渐变区分开
+  static const vipCardTop = Color(0xFF2A2D3E);
+  static const vip = Color(0xFFFFD700);
+  static const vipDeep = Color(0xFFFFA000);
+
+  /// 金色徽标上的文字色，金底对比度 7.4:1。
+  static const vipInk = Color(0xFF5C4000);
+}
+
+abstract final class BrandColors {
+  static const porcelain = BrandPalette.surface;
+  static const mist = BrandPalette.canvas;
+  static const mistBlue = Color(0xFFEEF2FF);
+  static const card = BrandPalette.surface;
+  static const cardBlue = BrandPalette.wash;
+  static const signalBlue = BrandPalette.brand;
+  static const iceCyan = BrandPalette.brandGlow;
+  static const deepSignal = BrandPalette.brandDeep;
+  static const slate = BrandPalette.ink;
+  static const muted = BrandPalette.inkMuted;
+  static const subtle = BrandPalette.inkFaint;
+  static const border = BrandPalette.line;
+  static const success = BrandPalette.success;
+  static const warning = BrandPalette.warning;
+  static const error = BrandPalette.danger;
   static const dark = Color(0xFF07111F);
 }
 

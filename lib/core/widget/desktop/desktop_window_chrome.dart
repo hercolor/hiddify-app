@@ -69,17 +69,17 @@ class _DesktopWindowCloseButtonState extends State<_DesktopWindowCloseButton> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: _hovered ? const Color(0xFFFEE2E2) : Colors.white,
+              color: _hovered ? BrandPalette.dangerWashHover : Colors.white,
               shape: BoxShape.circle,
               border: Border.all(
-                color: _hovered ? BrandDesktopColors.error.withOpacity(.3) : const Color(0xFFF1F5F9),
+                color: _hovered ? BrandDesktopColors.error.withOpacity(.3) : BrandPalette.wash,
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
                   color: _hovered
                       ? BrandDesktopColors.error.withOpacity(.15)
-                      : const Color(0xFF0F172A).withOpacity(.03),
+                      : BrandPalette.ink.withOpacity(.03),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -88,7 +88,7 @@ class _DesktopWindowCloseButtonState extends State<_DesktopWindowCloseButton> {
             child: Icon(
               Icons.close_rounded,
               size: 20,
-              color: _hovered ? BrandDesktopColors.error : const Color(0xFF0F172A),
+              color: _hovered ? BrandDesktopColors.error : BrandPalette.ink,
             ),
           ),
         ),

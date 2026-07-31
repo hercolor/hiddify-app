@@ -6,7 +6,6 @@ import 'package:hiddify/features/connection/model/client_connection_state.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/client_node_store.dart';
 import 'package:hiddify/features/proxy/widget/safe_node_display_name.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
 import 'package:hiddify/utils/number_formatters.dart';
@@ -30,14 +29,14 @@ class DesktopHomePage extends HookConsumerWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.power_settings_new_rounded, color: Color(0xFFEF4444), size: 22),
+              decoration: BoxDecoration(color: BrandPalette.dangerWash, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.power_settings_new_rounded, color: BrandPalette.danger, size: 22),
             ),
             const Gap(12),
             const Text('退出 BflyVPN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           ],
         ),
-        content: const Text('选择退出方式', style: TextStyle(fontSize: 14, color: Color(0xFF64748B))),
+        content: const Text('选择退出方式', style: TextStyle(fontSize: 14, color: BrandPalette.inkMuted)),
         contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
@@ -51,7 +50,7 @@ class DesktopHomePage extends HookConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).pop('hide'),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: const BorderSide(color: BrandPalette.line),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
@@ -65,7 +64,7 @@ class DesktopHomePage extends HookConsumerWidget {
                   child: ElevatedButton.icon(
                     onPressed: () => Navigator.of(context).pop('exit'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF4444),
+                      backgroundColor: BrandPalette.danger,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
@@ -115,7 +114,7 @@ class DesktopHomePage extends HookConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: BrandPalette.canvas,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22.0),
@@ -157,8 +156,6 @@ class DesktopHomePage extends HookConsumerWidget {
               _ConnectionHero(state: state),
               const Spacer(),
               _HomeNodeCard(nodeName: nodeName),
-              const Gap(12),
-              const _RouteModeSegmentedControl(),
               const Gap(14),
             ],
           ),
@@ -184,12 +181,12 @@ class _TopRoundIcon extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          border: Border.all(color: BrandPalette.wash, width: 1.5),
           boxShadow: [
-            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(color: BrandPalette.ink.withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
           ],
         ),
-        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
+        child: Icon(icon, color: BrandPalette.ink, size: 20),
       ),
     );
   }
@@ -209,9 +206,9 @@ class _SpeedCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+        border: Border.all(color: BrandPalette.wash, width: 1.5),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 16, offset: const Offset(0, 4)),
+          BoxShadow(color: BrandPalette.ink.withOpacity(.03), blurRadius: 16, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -262,7 +259,7 @@ class _ConnectionHero extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
-              color: connected ? BrandDesktopColors.accent.withOpacity(.08) : const Color(0xFFF1F5F9),
+              color: connected ? BrandDesktopColors.accent.withOpacity(.08) : BrandPalette.wash,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
@@ -346,12 +343,12 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
     final busy = widget.state.isBusy;
     final failed = widget.state.phase == ClientConnectionPhase.failed;
     final color = connected
-        ? const Color(0xFF2563EB)
+        ? BrandPalette.brand
         : failed
-        ? const Color(0xFFEF4444)
+        ? BrandPalette.danger
         : busy
-        ? const Color(0xFFF59E0B)
-        : const Color(0xFF94A3B8);
+        ? BrandPalette.warning
+        : BrandPalette.inkFaint;
 
     return Semantics(
       button: true,
@@ -384,7 +381,7 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                         shape: BoxShape.circle,
                         color: connected
                             ? BrandDesktopColors.accent.withOpacity(.08)
-                            : const Color(0xFFE2E8F0).withOpacity(.20),
+                            : BrandPalette.line.withOpacity(.20),
                       ),
                     ),
                   ),
@@ -397,7 +394,7 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                         shape: BoxShape.circle,
                         color: connected
                             ? BrandDesktopColors.accent.withOpacity(.15)
-                            : const Color(0xFFE2E8F0).withOpacity(.40),
+                            : BrandPalette.line.withOpacity(.40),
                       ),
                     ),
                   ),
@@ -409,21 +406,21 @@ class _DesktopPowerButtonState extends ConsumerState<_DesktopPowerButton> with S
                       shape: BoxShape.circle,
                       gradient: connected
                           ? const LinearGradient(
-                              colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                              colors: [BrandPalette.brand, BrandPalette.brandDeep],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             )
                           : const LinearGradient(
-                              colors: [Color(0xFFFFFFFF), Color(0xFFF8FAFC)],
+                              colors: [BrandPalette.surface, BrandPalette.canvas],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                      border: Border.all(color: connected ? Colors.transparent : const Color(0xFFE2E8F0), width: 1.5),
+                      border: Border.all(color: connected ? Colors.transparent : BrandPalette.line, width: 1.5),
                       boxShadow: [
                         BoxShadow(
                           color: connected
-                              ? const Color(0xFF1D4ED8).withOpacity(.4)
-                              : const Color(0xFF0F172A).withOpacity(.08),
+                              ? BrandPalette.brandDeep.withOpacity(.4)
+                              : BrandPalette.ink.withOpacity(.08),
                           blurRadius: connected ? 24 : 16,
                           spreadRadius: connected ? 4 : 0,
                           offset: const Offset(0, 8),
@@ -464,9 +461,9 @@ class _HomeNodeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          border: Border.all(color: BrandPalette.wash, width: 1.5),
           boxShadow: [
-            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 16, offset: const Offset(0, 4)),
+            BoxShadow(color: BrandPalette.ink.withOpacity(.03), blurRadius: 16, offset: const Offset(0, 4)),
           ],
         ),
         child: Row(
@@ -503,9 +500,9 @@ class _DesktopNodeFlag extends StatelessWidget {
       width: 38,
       height: 38,
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: BrandPalette.canvas,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: BrandPalette.line),
       ),
       child: Center(
         child: Text(_nodeFlagFor(nodeName), style: BrandDesktopText.bodyPrimary.copyWith(fontWeight: FontWeight.w700)),
@@ -514,116 +511,22 @@ class _DesktopNodeFlag extends StatelessWidget {
   }
 }
 
-class _RouteModeSegmentedControl extends ConsumerWidget {
-  const _RouteModeSegmentedControl();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isGlobalMode = ref.watch(ConfigOptions.globalRouteMode);
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _RouteModeChoice(
-              selected: !isGlobalMode,
-              icon: Icons.alt_route_rounded,
-              title: '智能路由',
-              onTap: () => ref.read(ConfigOptions.globalRouteMode.notifier).update(false),
-            ),
-          ),
-          Expanded(
-            child: _RouteModeChoice(
-              selected: isGlobalMode,
-              icon: Icons.public_rounded,
-              title: '全局代理',
-              onTap: () => ref.read(ConfigOptions.globalRouteMode.notifier).update(true),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RouteModeChoice extends StatelessWidget {
-  const _RouteModeChoice({required this.selected, required this.icon, required this.title, required this.onTap});
-
-  final bool selected;
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: BrandDesktopColors.accent.withOpacity(.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: selected ? Colors.white : BrandDesktopColors.textMuted, size: 18),
-            const Gap(6),
-            Text(
-              title,
-              style: BrandDesktopText.bodyPrimary.copyWith(
-                color: selected ? Colors.white : BrandDesktopColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 _StatusInfo _statusInfo(ClientConnectionState state) {
   return switch (state.phase) {
-    ClientConnectionPhase.connected => const _StatusInfo('已连接', Color(0xFF2563EB), Icons.check_circle_rounded),
+    ClientConnectionPhase.connected => const _StatusInfo('已连接', BrandPalette.brand, Icons.check_circle_rounded),
     ClientConnectionPhase.connecting ||
     ClientConnectionPhase.preparing ||
     ClientConnectionPhase.requestingVpnPermission => const _StatusInfo(
       '正在连接...',
-      Color(0xFFF59E0B),
+      BrandPalette.warning,
       Icons.sync_rounded,
     ),
-    ClientConnectionPhase.reconnecting => const _StatusInfo('重连中...', Color(0xFFF59E0B), Icons.restart_alt_rounded),
-    ClientConnectionPhase.stopping => const _StatusInfo('停止中...', Color(0xFFF59E0B), Icons.power_settings_new_rounded),
-    ClientConnectionPhase.failed => const _StatusInfo('连接失败', Color(0xFFEF4444), Icons.error_rounded),
-    ClientConnectionPhase.loggedOut => const _StatusInfo('未登录', Color(0xFF0F172A), Icons.person_off_rounded),
-    ClientConnectionPhase.initializing => const _StatusInfo('初始化中...', Color(0xFF64748B), Icons.hourglass_top_rounded),
-    _ => const _StatusInfo('未连接', Color(0xFF0F172A), Icons.radio_button_unchecked_rounded),
+    ClientConnectionPhase.reconnecting => const _StatusInfo('重连中...', BrandPalette.warning, Icons.restart_alt_rounded),
+    ClientConnectionPhase.stopping => const _StatusInfo('停止中...', BrandPalette.warning, Icons.power_settings_new_rounded),
+    ClientConnectionPhase.failed => const _StatusInfo('连接失败', BrandPalette.danger, Icons.error_rounded),
+    ClientConnectionPhase.loggedOut => const _StatusInfo('未登录', BrandPalette.ink, Icons.person_off_rounded),
+    ClientConnectionPhase.initializing => const _StatusInfo('初始化中...', BrandPalette.inkMuted, Icons.hourglass_top_rounded),
+    _ => const _StatusInfo('未连接', BrandPalette.ink, Icons.radio_button_unchecked_rounded),
   };
 }
 

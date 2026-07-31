@@ -308,12 +308,12 @@ class _TopRoundIcon extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          border: Border.all(color: BrandPalette.wash, width: 1.5),
           boxShadow: [
-            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(color: BrandPalette.ink.withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
           ],
         ),
-        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
+        child: Icon(icon, color: BrandPalette.ink, size: 20),
       ),
     );
   }
@@ -330,7 +330,7 @@ class _PlanCard extends ConsumerWidget {
     final planName = _displayText(subscription?.planName);
     return DesktopCard(
       gradient: const LinearGradient(
-        colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
+        colors: [BrandPalette.vipCardTop, BrandPalette.ink],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -408,22 +408,22 @@ class _DesktopPlanBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        gradient: const LinearGradient(colors: [BrandPalette.vip, BrandPalette.vipDeep]),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: BrandPalette.vip.withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: BrandPalette.vipInk),
           const Gap(4),
           Text(
             label == '--' ? 'BflyVPN Pro' : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandDesktopText.bodyPrimary.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
+            style: BrandDesktopText.bodyPrimary.copyWith(color: BrandPalette.vipInk, fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -473,7 +473,7 @@ class _SmallPlanButton extends StatelessWidget {
     final style = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(52, 34)),
       padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
-      foregroundColor: const WidgetStatePropertyAll(Color(0xFFFFD700)),
+      foregroundColor: const WidgetStatePropertyAll(BrandPalette.vip),
       backgroundColor: WidgetStatePropertyAll(Colors.white.withOpacity(.10)),
       side: WidgetStatePropertyAll(BorderSide(color: Colors.white.withOpacity(.12))),
       shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -496,7 +496,7 @@ class _MemberActions extends StatelessWidget {
           _ActionRow(
             icon: Icons.support_agent_rounded,
             title: '联系客服',
-            iconColor: const Color(0xFF2563EB),
+            iconColor: BrandPalette.brand,
             onTap: () => context.pushNamed('premiumContact'),
           ),
           const _DesktopActionDivider(),
@@ -504,21 +504,21 @@ class _MemberActions extends StatelessWidget {
             icon: Icons.card_giftcard_rounded,
             title: '邀请有礼',
             subtitle: '邀请好友得免费时长',
-            iconColor: const Color(0xFFFF9500),
+            iconColor: BrandPalette.warning,
             onTap: () => context.pushNamed('premiumInvite'),
           ),
           const _DesktopActionDivider(),
           _ActionRow(
             icon: Icons.feedback_outlined,
             title: '反馈问题',
-            iconColor: const Color(0xFF2563EB),
+            iconColor: BrandPalette.brand,
             onTap: () => context.pushNamed('premiumFeedback'),
           ),
           const _DesktopActionDivider(),
           _ActionRow(
             icon: Icons.info_outline_rounded,
             title: '关于 BflyVPN',
-            iconColor: const Color(0xFF64748B),
+            iconColor: BrandPalette.inkMuted,
             onTap: () => context.pushNamed('premiumAbout'),
           ),
         ],
@@ -532,7 +532,7 @@ class _DesktopActionDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 1, indent: 56, endIndent: 24, color: Color(0xFFF5F7FA));
+    return const Divider(height: 1, indent: 56, endIndent: 24, color: BrandPalette.wash);
   }
 }
 

@@ -285,7 +285,7 @@ class _PremiumFeedbackPageState extends ConsumerState<PremiumFeedbackPage> {
               maxLines: 6,
               decoration: InputDecoration(
                 hintText: '请详细描述您遇到的问题或建议...',
-                hintStyle: BrandDesktopText.bodySecondary.copyWith(color: const Color(0xFF94A3B8)),
+                hintStyle: BrandDesktopText.bodySecondary.copyWith(color: BrandPalette.inkFaint),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.all(16),
               ),
@@ -299,7 +299,7 @@ class _PremiumFeedbackPageState extends ConsumerState<PremiumFeedbackPage> {
               controller: _contactController,
               decoration: InputDecoration(
                 hintText: '留下您的邮箱或联系方式，方便我们联系您',
-                hintStyle: BrandDesktopText.bodySecondary.copyWith(color: const Color(0xFF94A3B8)),
+                hintStyle: BrandDesktopText.bodySecondary.copyWith(color: BrandPalette.inkFaint),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
@@ -339,7 +339,7 @@ class PremiumWebsitePage extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.language_rounded, size: 64, color: Color(0xFF10B981)),
+              const Icon(Icons.language_rounded, size: 64, color: BrandPalette.success),
               const Gap(18),
               const Text('访问 BflyVPN 官方支持', style: BrandDesktopText.sectionTitle),
               const Gap(6),
@@ -379,7 +379,7 @@ class PremiumContactPage extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.support_agent_rounded, size: 64, color: Color(0xFF2563EB)),
+              const Icon(Icons.support_agent_rounded, size: 64, color: BrandPalette.brand),
               const Gap(18),
               const Text('BflyVPN 客服支持', style: BrandDesktopText.sectionTitle),
               const Gap(6),
@@ -439,7 +439,7 @@ class _PremiumAboutPageState extends ConsumerState<PremiumAboutPage> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Icon(Icons.bolt_rounded, size: 64, color: Color(0xFF2563EB)),
+          const Icon(Icons.bolt_rounded, size: 64, color: BrandPalette.brand),
           const Gap(16),
           const Center(child: Text('BflyVPN', style: BrandDesktopText.heroStatus)),
           const Gap(6),
@@ -453,13 +453,13 @@ class _PremiumAboutPageState extends ConsumerState<PremiumAboutPage> {
                   title: '隐私政策',
                   onTap: () => context.pushNamed('privacyPolicy'),
                 ),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const Divider(height: 1, color: BrandPalette.wash),
                 _AboutRow(
                   icon: Icons.description_outlined,
                   title: '用户协议',
                   onTap: () => context.pushNamed('termsOfService'),
                 ),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const Divider(height: 1, color: BrandPalette.wash),
                 _AboutRow(
                   icon: Icons.info_outline_rounded,
                   title: '软件版本',
@@ -515,12 +515,12 @@ class PremiumPreferencesPage extends ConsumerWidget {
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               title: const Text('全局代理模式', style: BrandDesktopText.sectionTitle),
               subtitle: Text(isGlobalMode ? '所有流量将通过 BflyVPN 传输' : '智能分流，仅代理必要流量', style: BrandDesktopText.caption),
-              activeThumbColor: const Color(0xFF2563EB),
+              activeThumbColor: BrandPalette.brand,
               value: isGlobalMode,
               onChanged: (value) => ref.read(ConfigOptions.globalRouteMode.notifier).update(value),
               secondary: Icon(
                 isGlobalMode ? Icons.public_rounded : Icons.alt_route_rounded,
-                color: isGlobalMode ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+                color: isGlobalMode ? BrandPalette.brand : BrandPalette.inkFaint,
               ),
             ),
           ),
@@ -545,13 +545,13 @@ class _PremiumScaffold extends StatelessWidget {
     final isDesktop = PlatformUtils.isWindows;
     if (!isDesktop) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: BrandPalette.canvas,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leading: const _PremiumBackButton(),
           title: Text(title),
           centerTitle: false,
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: BrandPalette.canvas,
           elevation: 0,
           titleTextStyle: BrandText.pageTitle,
           toolbarHeight: 72,
@@ -562,7 +562,7 @@ class _PremiumScaffold extends StatelessWidget {
     return DesktopTheme(
       child: DesktopBackdrop(
         child: Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: BrandPalette.canvas,
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22.0),
@@ -605,12 +605,12 @@ class _TopRoundIcon extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          border: Border.all(color: BrandPalette.wash, width: 1.5),
           boxShadow: [
-            BoxShadow(color: const Color(0xFF0F172A).withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(color: BrandPalette.ink.withOpacity(.03), blurRadius: 12, offset: const Offset(0, 4)),
           ],
         ),
-        child: Icon(icon, color: const Color(0xFF0F172A), size: 20),
+        child: Icon(icon, color: BrandPalette.ink, size: 20),
       ),
     );
   }
@@ -649,7 +649,7 @@ class _LoginRequiredPanel extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.person_outline_rounded, size: 56, color: Color(0xFF2563EB)),
+            const Icon(Icons.person_outline_rounded, size: 56, color: BrandPalette.brand),
             const Gap(14),
             const Text('请先登录', style: BrandDesktopText.sectionTitle),
             const Gap(6),
@@ -683,13 +683,13 @@ class _CurrentPlanCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2A2D3E), Color(0xFF0F172A)],
+          colors: [BrandPalette.vipCardTop, BrandPalette.ink],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF0F172A).withOpacity(.22), blurRadius: 18, offset: const Offset(0, 8)),
+          BoxShadow(color: BrandPalette.ink.withOpacity(.22), blurRadius: 18, offset: const Offset(0, 8)),
         ],
       ),
       child: Row(
@@ -698,7 +698,7 @@ class _CurrentPlanCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(color: Colors.white.withOpacity(.10), shape: BoxShape.circle),
-            child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD700)),
+            child: const Icon(Icons.workspace_premium_rounded, color: BrandPalette.vip),
           ),
           const Gap(14),
           Expanded(
@@ -746,10 +746,10 @@ class _PlanOptionCard extends StatelessWidget {
       child: Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: highlighted ? const Color(0xFF2563EB).withOpacity(.05) : Colors.white,
+        color: highlighted ? BrandPalette.brand.withOpacity(.05) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: highlighted ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0), width: 2),
-        boxShadow: highlighted ? [BoxShadow(color: const Color(0xFF2563EB).withOpacity(.10), blurRadius: 10)] : null,
+        border: Border.all(color: highlighted ? BrandPalette.brand : BrandPalette.line, width: 2),
+        boxShadow: highlighted ? [BoxShadow(color: BrandPalette.brand.withOpacity(.10), blurRadius: 10)] : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,15 +776,15 @@ class _PlanOptionCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             gradient: highlighted
-                                ? const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)])
+                                ? const LinearGradient(colors: [BrandPalette.vip, BrandPalette.vipDeep])
                                 : null,
-                            color: highlighted ? null : const Color(0xFFF1F5F9),
+                            color: highlighted ? null : BrandPalette.wash,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             tag,
                             style: BrandDesktopText.caption.copyWith(
-                              color: highlighted ? const Color(0xFF5C4000) : BrandDesktopColors.textSecondary,
+                              color: highlighted ? BrandPalette.vipInk : BrandDesktopColors.textSecondary,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -814,7 +814,7 @@ class _PlanOptionCard extends StatelessWidget {
                   ),
                   if (!plan.isAvailable) ...[
                     const Gap(4),
-                    Text('暂不可售', style: BrandDesktopText.caption.copyWith(color: const Color(0xFFEF4444))),
+                    Text('暂不可售', style: BrandDesktopText.caption.copyWith(color: BrandPalette.danger)),
                   ],
                 ],
               ),
@@ -866,13 +866,13 @@ class _PaymentStatusBanner extends ConsumerWidget {
     if (session.stage == PaymentStage.idle) return const SizedBox.shrink();
 
     final (icon, color, title) = switch (session.stage) {
-      PaymentStage.awaitingBrowser => (Icons.open_in_browser_rounded, const Color(0xFF2563EB), '请在浏览器完成支付'),
-      PaymentStage.confirming => (Icons.hourglass_top_rounded, const Color(0xFF2563EB), '正在确认支付结果'),
-      PaymentStage.paid => (Icons.verified_rounded, const Color(0xFF16A34A), '会员已生效'),
-      PaymentStage.cancelled => (Icons.cancel_outlined, const Color(0xFF64748B), '支付已取消'),
-      PaymentStage.failed => (Icons.error_outline_rounded, const Color(0xFFEF4444), '支付未完成'),
-      PaymentStage.unknown => (Icons.help_outline_rounded, const Color(0xFFF59E0B), '支付状态待确认'),
-      PaymentStage.idle => (Icons.info_outline, const Color(0xFF64748B), ''),
+      PaymentStage.awaitingBrowser => (Icons.open_in_browser_rounded, BrandPalette.brand, '请在浏览器完成支付'),
+      PaymentStage.confirming => (Icons.hourglass_top_rounded, BrandPalette.brand, '正在确认支付结果'),
+      PaymentStage.paid => (Icons.verified_rounded, BrandPalette.success, '会员已生效'),
+      PaymentStage.cancelled => (Icons.cancel_outlined, BrandPalette.inkMuted, '支付已取消'),
+      PaymentStage.failed => (Icons.error_outline_rounded, BrandPalette.danger, '支付未完成'),
+      PaymentStage.unknown => (Icons.help_outline_rounded, BrandPalette.warning, '支付状态待确认'),
+      PaymentStage.idle => (Icons.info_outline, BrandPalette.inkMuted, ''),
     };
 
     return Padding(
@@ -974,7 +974,7 @@ class _PlanFeatureChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(color: BrandPalette.wash, borderRadius: BorderRadius.circular(999)),
       child: Text(label, style: BrandDesktopText.caption.copyWith(color: BrandDesktopColors.textSecondary)),
     );
   }
@@ -1026,7 +1026,7 @@ class _PlanListError extends StatelessWidget {
           children: [
             const Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+                Icon(Icons.error_outline_rounded, color: BrandPalette.danger),
                 Gap(10),
                 Text('套餐列表加载失败', style: BrandDesktopText.sectionTitle),
               ],
@@ -1059,7 +1059,7 @@ class _EmptyPlanList extends StatelessWidget {
 }
 
 BoxDecoration _skeletonDecoration() {
-  return BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(999));
+  return BoxDecoration(color: BrandPalette.wash, borderRadius: BorderRadius.circular(999));
 }
 
 String _planSpeedText(int? speedLimit) {
@@ -1216,7 +1216,7 @@ class _InviteCodeSection extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: BrandPalette.canvas, borderRadius: BorderRadius.circular(12)),
                     child: Row(
                       children: [
                         const Icon(Icons.confirmation_number_outlined, size: 18, color: BrandDesktopColors.accent),
@@ -1260,7 +1260,7 @@ class _PremiumErrorPanel extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 56, color: Color(0xFFEF4444)),
+            const Icon(Icons.error_outline_rounded, size: 56, color: BrandPalette.danger),
             const Gap(14),
             const Text('加载失败', style: BrandDesktopText.sectionTitle),
             const Gap(6),
@@ -1300,7 +1300,7 @@ class _SoftInfoBox extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF2563EB)),
+          Icon(icon, color: BrandPalette.brand),
           const Gap(12),
           Expanded(
             child: Column(

@@ -15,6 +15,7 @@ import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/desktop_membership_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
+import 'package:hiddify/features/settings/widget/route_mode_selector.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -282,7 +283,7 @@ class _SecurityActionMenu extends StatelessWidget {
           icon: Icons.phone_iphone_rounded,
           title: '绑定手机',
           subtitle: phone == null || phone.isEmpty ? '绑定后可使用手机号登录和找回密码' : '当前手机号：$phone',
-          iconColor: const Color(0xFF10B981),
+          iconColor: BrandPalette.success,
           onTap: () => _showSecurityActionModal(
             context,
             title: '绑定手机',
@@ -313,7 +314,7 @@ Future<void> _showSecurityActionModal(BuildContext context, {required String tit
             constraints: BoxConstraints(maxWidth: 680, maxHeight: maxHeight),
             child: DecoratedBox(
               decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
+                color: BrandPalette.canvas,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: SingleChildScrollView(
@@ -650,6 +651,8 @@ class _MemberCenter extends StatelessWidget {
                     const Gap(16),
                     _SupportCard(subscription: subscription),
                     const Gap(16),
+                    const _AdvancedCard(),
+                    const Gap(16),
                     _LogoutButton(),
                   ],
                 ),
@@ -677,7 +680,7 @@ class _HeroMemberCard extends HookConsumerWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2A2D3E), Color(0xFF111827)],
+          colors: [BrandPalette.vipCardTop, BrandPalette.ink],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -758,22 +761,22 @@ class _PlanBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
+        gradient: const LinearGradient(colors: [BrandPalette.vip, BrandPalette.vipDeep]),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: const Color(0xFFFFD700).withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(color: BrandPalette.vip.withOpacity(.36), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.workspace_premium_rounded, size: 16, color: Color(0xFF5C4000)),
+          const Icon(Icons.workspace_premium_rounded, size: 16, color: BrandPalette.vipInk),
           const Gap(4),
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: BrandText.caption.copyWith(color: const Color(0xFF5C4000), fontWeight: FontWeight.w900),
+            style: BrandText.caption.copyWith(color: BrandPalette.vipInk, fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -1134,7 +1137,7 @@ class _SmallLightButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: Colors.white.withOpacity(.14)),
         ),
-        child: Text(label, style: BrandText.smallButton.copyWith(color: const Color(0xFFFFD700))),
+        child: Text(label, style: BrandText.smallButton.copyWith(color: BrandPalette.vip)),
       ),
     );
   }
@@ -1160,7 +1163,7 @@ class _SupportCard extends HookConsumerWidget {
         _ActionTile(
           icon: Icons.support_agent_rounded,
           title: '联系客服',
-          iconColor: const Color(0xFF2563EB),
+          iconColor: BrandPalette.brand,
           onTap: () => context.pushNamed('premiumContact'),
         ),
         const _ActionDivider(),
@@ -1168,22 +1171,66 @@ class _SupportCard extends HookConsumerWidget {
           icon: Icons.card_giftcard_rounded,
           title: '邀请有礼',
           subtitle: '邀请好友得免费时长',
-          iconColor: const Color(0xFFFF9500),
+          iconColor: BrandPalette.warning,
           onTap: () => context.pushNamed('premiumInvite'),
         ),
         const _ActionDivider(),
         _ActionTile(
           icon: Icons.feedback_outlined,
           title: '反馈问题',
-          iconColor: const Color(0xFF2563EB),
+          iconColor: BrandPalette.brand,
           onTap: () => context.pushNamed('premiumFeedback'),
         ),
         const _ActionDivider(),
         _ActionTile(
           icon: Icons.info_outline_rounded,
           title: '关于 BflyVPN',
-          iconColor: const Color(0xFF64748B),
+          iconColor: BrandPalette.inkMuted,
           onTap: () => context.pushNamed('premiumAbout'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 「我的 › 高级」。分流开关从连接页迁入此处（设计系统 v1 §5.3）：
+/// 连接页只保留一个主决策，技术性选择收到二级入口。
+class _AdvancedCard extends StatelessWidget {
+  const _AdvancedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PremiumCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.tune_rounded, size: 20, color: BrandPalette.inkMuted),
+                  Gap(10),
+                  Text('代理模式', style: BrandText.sectionTitle),
+                ],
+              ),
+              const Gap(6),
+              const Text(
+                '智能分流仅代理必要流量；全局代理让所有流量走加速通道。',
+                style: TextStyle(fontSize: 12, color: BrandPalette.inkMuted),
+              ),
+              const Gap(12),
+              const RouteModeSelector(),
+            ],
+          ),
+        ),
+        const _ActionDivider(),
+        _ActionTile(
+          icon: Icons.monitor_heart_outlined,
+          title: '诊断信息',
+          subtitle: '仅供排查连接问题使用',
+          iconColor: BrandPalette.inkMuted,
+          onTap: () => context.pushNamed('diagnostics'),
         ),
       ],
     );
@@ -1192,10 +1239,9 @@ class _SupportCard extends HookConsumerWidget {
 
 class _ActionDivider extends StatelessWidget {
   const _ActionDivider();
-
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 1, indent: 56, endIndent: 24, color: Color(0xFFF5F7FA));
+    return const Divider(height: 1, indent: 56, endIndent: 24, color: BrandPalette.wash);
   }
 }
 

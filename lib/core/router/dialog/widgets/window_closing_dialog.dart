@@ -34,7 +34,7 @@ class _WindowClosingDialogState extends ConsumerState<WindowClosingDialog> {
             borderRadius: BorderRadius.circular(28),
             border: Border.all(color: BrandDesktopColors.border),
             boxShadow: [
-              BoxShadow(color: const Color(0xFF0F172A).withOpacity(.18), blurRadius: 32, offset: const Offset(0, 18)),
+              BoxShadow(color: BrandPalette.ink.withOpacity(.18), blurRadius: 32, offset: const Offset(0, 18)),
             ],
           ),
           child: Padding(
