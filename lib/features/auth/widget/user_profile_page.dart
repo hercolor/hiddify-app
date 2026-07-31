@@ -15,7 +15,6 @@ import 'package:hiddify/features/auth/model/user_subscription.dart';
 import 'package:hiddify/features/auth/notifier/auth_notifier.dart';
 import 'package:hiddify/features/auth/widget/desktop_membership_page.dart';
 import 'package:hiddify/features/diagnostics/diagnostic_event_buffer.dart';
-import 'package:hiddify/features/settings/widget/route_mode_selector.dart';
 import 'package:hiddify/utils/platform_utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -651,8 +650,6 @@ class _MemberCenter extends StatelessWidget {
                     const Gap(16),
                     _SupportCard(subscription: subscription),
                     const Gap(16),
-                    const _AdvancedCard(),
-                    const Gap(16),
                     _LogoutButton(),
                   ],
                 ),
@@ -1187,50 +1184,6 @@ class _SupportCard extends HookConsumerWidget {
           title: '关于 BflyVPN',
           iconColor: BrandPalette.inkMuted,
           onTap: () => context.pushNamed('premiumAbout'),
-        ),
-      ],
-    );
-  }
-}
-
-/// 「我的 › 高级」。分流开关从连接页迁入此处（设计系统 v1 §5.3）：
-/// 连接页只保留一个主决策，技术性选择收到二级入口。
-class _AdvancedCard extends StatelessWidget {
-  const _AdvancedCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return _PremiumCard(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.tune_rounded, size: 20, color: BrandPalette.inkMuted),
-                  Gap(10),
-                  Text('代理模式', style: BrandText.sectionTitle),
-                ],
-              ),
-              const Gap(6),
-              const Text(
-                '智能分流仅代理必要流量；全局代理让所有流量走加速通道。',
-                style: TextStyle(fontSize: 12, color: BrandPalette.inkMuted),
-              ),
-              const Gap(12),
-              const RouteModeSelector(),
-            ],
-          ),
-        ),
-        const _ActionDivider(),
-        _ActionTile(
-          icon: Icons.monitor_heart_outlined,
-          title: '诊断信息',
-          subtitle: '仅供排查连接问题使用',
-          iconColor: BrandPalette.inkMuted,
-          onTap: () => context.pushNamed('diagnostics'),
         ),
       ],
     );

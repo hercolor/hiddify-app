@@ -8,7 +8,6 @@ String _readUtf8(String path) => utf8.decode(File(path).readAsBytesSync());
 void main() {
   test('legacy /settings route is a membership/login compatibility boundary', () {
     final routerText = _readUtf8('lib/core/router/go_router/routing_config_notifier.dart');
-    final connectionText = _readUtf8('lib/features/home/widget/connection_button.dart');
     final desktopHomeText = _readUtf8('lib/features/home/widget/desktop_home_page.dart');
     final settingsText = _readUtf8('lib/features/settings/overview/settings_page.dart');
     final adaptiveLayoutText = _readUtf8('lib/core/router/adaptive_layout/my_adaptive_layout.dart');
@@ -17,7 +16,6 @@ void main() {
     expect(routerText, contains('child: const SettingsPage()'));
     expect(settingsText, contains('UserProfilePage'));
 
-    expect(connectionText, contains("context.goNamed('settings')"));
     expect(desktopHomeText, contains("context.goNamed('settings')"));
 
     expect(adaptiveLayoutText, contains("'连接'"));
@@ -49,12 +47,21 @@ void main() {
     final emptyProfilesHomeText = _readUtf8('lib/features/home/widget/empty_profiles_home_body.dart');
     final profileTileText = _readUtf8('lib/features/profile/widget/profile_tile.dart');
 
-    expect(mobileMembershipText, contains(r"return '最多 $max 台';"));
+    expect(mobileMembershipText, contains(r"return '设备：最多 $max 台';"));
     expect(desktopMembershipText, contains(r"return '最多 $max 台';"));
     expect(mobileMembershipText, isNot(contains(" / \${max")));
     expect(desktopMembershipText, isNot(contains(" / \${max")));
     expect(premiumText, contains('选择您的套餐方案'));
     expect(premiumText, isNot(contains('选择您的订阅方案')));
+    expect(mobileMembershipText, isNot(contains('RouteModeSelector')));
+    for (final forbidden in ['代理模式', '智能分流', '全局代理']) {
+      expect(mobileMembershipText, isNot(contains(forbidden)), reason: 'normal membership UI must hide $forbidden');
+    }
+    expect(
+      File('lib/features/settings/widget/route_mode_selector.dart').existsSync(),
+      isFalse,
+      reason: 'the normal-user route mode control must not remain as a reusable UI surface',
+    );
 
     for (final source in [profilesPageText, profilesModalText]) {
       expect(source, isNot(contains('foregroundProfilesUpdateNotifierProvider')));
